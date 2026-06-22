@@ -32,6 +32,7 @@ open import Grammar.Equivalence.Base Alphabet
 open import Grammar.LinearProduct.Base Alphabet
 open import Grammar.Sum.Binary.AsPrimitive Alphabet
 open import Grammar.Product.Binary.AsPrimitive Alphabet
+open import Grammar.Product.Base Alphabet
 open import Grammar.String.Properties Alphabet
 
 open import Term.Base Alphabet
@@ -39,7 +40,7 @@ open import Term.Base Alphabet
 private
   variable
     w : String
-    ℓA ℓB ℓC ℓD : Level
+    ℓA ℓB ℓC ℓD ℓX : Level
     A : Grammar ℓA
     B : Grammar ℓB
     C : Grammar ℓC
@@ -391,6 +392,68 @@ opaque
 
     11≡-Eq : s' .fst .fst Eq.≡ s .fst .fst
     11≡-Eq = ++-cancelʳEq (s .fst .snd) chain
+
+-- Indexed (&ᴰ) analogues of ⌈⌉-⊗&-distL⁻Eq / ⌈⌉-⊗&-distR⁻Eq: a common
+-- ⌈ w ⌉ factor can be pulled out of an indexed product `&[ x ∈ X ]`.
+opaque
+  unfolding _⊗_ _&_
+  ⌈⌉-⊗&ᴰ-distL⁻Eq :
+    ∀ {X : Type ℓX} {w : String} {A : X → Grammar ℓA} →
+    (⌈ w ⌉ ⊗ ⊤) & (&[ x ∈ X ] (⌈ w ⌉ ⊗ A x))
+      ⊢ ⌈ w ⌉ ⊗ (&[ x ∈ X ] A x)
+  ⌈⌉-⊗&ᴰ-distL⁻Eq {w = w} {A = A} w' (s⊤ , f) =
+    s⊤ .fst ,
+    ( s⊤ .snd .fst
+    , λ x → Eq.transport (A x) (12≡-Eq x) (f x .snd .snd))
+    where
+    12≡-Eq : ∀ x → f x .fst .fst .snd Eq.≡ s⊤ .fst .fst .snd
+    12≡-Eq x = ++-cancelˡEq (s⊤ .fst .fst .fst) chain
+      where
+      w≡s⊤11 : w Eq.≡ s⊤ .fst .fst .fst
+      w≡s⊤11 = uniquely-supported-⌈⌉Eq w (s⊤ .fst .fst .fst) (s⊤ .snd .fst)
+
+      w≡x11 : w Eq.≡ f x .fst .fst .fst
+      w≡x11 = uniquely-supported-⌈⌉Eq w (f x .fst .fst .fst) (f x .snd .fst)
+
+      s11≡ : s⊤ .fst .fst .fst Eq.≡ f x .fst .fst .fst
+      s11≡ = Eq.sym w≡s⊤11 Eq.∙ w≡x11
+
+      chain :
+        s⊤ .fst .fst .fst ++ f x .fst .fst .snd
+          Eq.≡ s⊤ .fst .fst .fst ++ s⊤ .fst .fst .snd
+      chain =
+        Eq.ap (_++ f x .fst .fst .snd) s11≡
+        Eq.∙ Eq.sym (f x .fst .snd)
+        Eq.∙ s⊤ .fst .snd
+
+  ⌈⌉-⊗&ᴰ-distR⁻Eq :
+    ∀ {X : Type ℓX} {w : String} {A : X → Grammar ℓA} →
+    (⊤ ⊗ ⌈ w ⌉) & (&[ x ∈ X ] (A x ⊗ ⌈ w ⌉))
+      ⊢ (&[ x ∈ X ] A x) ⊗ ⌈ w ⌉
+  ⌈⌉-⊗&ᴰ-distR⁻Eq {w = w} {A = A} w' (s⊤ , f) =
+    s⊤ .fst ,
+    ( (λ x → Eq.transport (A x) (11≡-Eq x) (f x .snd .fst))
+    , s⊤ .snd .snd)
+    where
+    11≡-Eq : ∀ x → f x .fst .fst .fst Eq.≡ s⊤ .fst .fst .fst
+    11≡-Eq x = ++-cancelʳEq (s⊤ .fst .fst .snd) chain
+      where
+      w≡s⊤12 : w Eq.≡ s⊤ .fst .fst .snd
+      w≡s⊤12 = uniquely-supported-⌈⌉Eq w (s⊤ .fst .fst .snd) (s⊤ .snd .snd)
+
+      w≡x12 : w Eq.≡ f x .fst .fst .snd
+      w≡x12 = uniquely-supported-⌈⌉Eq w (f x .fst .fst .snd) (f x .snd .snd)
+
+      s12≡ : f x .fst .fst .snd Eq.≡ s⊤ .fst .fst .snd
+      s12≡ = Eq.sym w≡x12 Eq.∙ w≡s⊤12
+
+      chain :
+        f x .fst .fst .fst ++ s⊤ .fst .fst .snd
+          Eq.≡ s⊤ .fst .fst .fst ++ s⊤ .fst .fst .snd
+      chain =
+        Eq.ap (f x .fst .fst .fst ++_) (Eq.sym s12≡)
+        Eq.∙ Eq.sym (f x .fst .snd)
+        Eq.∙ s⊤ .fst .snd
 
 char-⊗&-distR≅ : (A & B) ⊗ char ≅ (A ⊗ char) & (B ⊗ char)
 char-⊗&-distR≅ .fun = ⊗&-distR

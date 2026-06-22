@@ -26,3 +26,11 @@ module _
   isSetGrammar&ᴰ : (∀ x → isSetGrammar (A x)) → isSetGrammar (&ᴰ A)
   isSetGrammar&ᴰ isSetGrammarA w = isSetΠ λ x → isSetGrammarA x w
 
+module _ {X : Type ℓX} {A : Grammar ℓA}{B : X → Grammar ℓB} where
+  opaque
+    unfolding _⊗_
+    &ᴰ-distL : (&[ x ∈ X ] B x) ⊗ A ⊢ &[ x ∈ X ] (B x ⊗ A)
+    &ᴰ-distL _ (s , f , a) x = s , f x , a
+
+    &ᴰ-distR : A ⊗ (&[ x ∈ X ] B x) ⊢ &[ x ∈ X ] (A ⊗ B x)
+    &ᴰ-distR _ (s , a , f) x = s , a , f x
