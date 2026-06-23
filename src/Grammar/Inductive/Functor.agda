@@ -94,3 +94,26 @@ module _ where
       cong (ϕ .fst x ∘g_) (ψ .snd x)
       ∙ cong (_∘g map (F x) (ψ .fst)) (ϕ .snd x)
       ∙ cong (η x ∘g_) (sym (map-∘ (F x) (ϕ .fst) (ψ .fst)))
+
+  module _ {X : Type ℓX} (F : X → Functor X) where
+    Coalgebra : (X → Grammar ℓA) → Type (ℓ-max ℓX ℓA)
+    Coalgebra A = ∀ x → A x ⊢ ⟦ F x ⟧ A
+
+    module _ {A : X → Grammar ℓA}{B : X → Grammar ℓB} (α : Coalgebra A) (β : Coalgebra B) where
+      isCoHomo : (∀ x → A x ⊢ B x) → Type _
+      isCoHomo ϕ = (∀ x → map (F x) ϕ ∘g α x ≡ β x ∘g ϕ x)
+
+      CoHomomorphism : Type _
+      CoHomomorphism = Σ _ isCoHomo
+
+    idCoHomo : ∀ {A : X → Grammar ℓA} → (α : Coalgebra A) → CoHomomorphism α α
+    idCoHomo α = (λ x → id) , λ x → cong (_∘g α x) (map-id (F x))
+
+    compCoHomo : ∀ {A : X → Grammar ℓA}{B : X → Grammar ℓB}{C : X → Grammar ℓC}
+      (α : Coalgebra A)(β : Coalgebra B)(η : Coalgebra C)
+      → CoHomomorphism β η → CoHomomorphism α β → CoHomomorphism α η
+    compCoHomo α β η ϕ ψ .fst x = ϕ .fst x ∘g ψ .fst x
+    compCoHomo α β η ϕ ψ .snd x =
+      cong (_∘g α x) (map-∘ (F x) (ϕ .fst) (ψ .fst))
+      ∙ cong (map (F x) (ϕ .fst) ∘g_) (ψ .snd x)
+      ∙ cong (_∘g ψ .fst x) (ϕ .snd x)

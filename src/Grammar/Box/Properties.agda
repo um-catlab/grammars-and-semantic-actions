@@ -18,6 +18,7 @@ open import Grammar.LinearProduct Alphabet
 open import Grammar.Epsilon Alphabet
 open import Grammar.String Alphabet
 open import Grammar.Top Alphabet
+open import Grammar.External.String.Tiny Alphabet
 open import Grammar.Box.Base Alphabet
 open import Term.Base Alphabet
 
@@ -125,53 +126,101 @@ map□-seq f g = &ᴰ≡ _ _ λ w → cong (_∘g π w) (√l-map-seq {w = w} f 
       ∙ cong (_∘g (⇒-app ∘g &-intro id (⊗-unit-l⁻ ∘g ⊤-intro)))
            (sym (⊗-unit-l⊗-intro f))
 
--- projecting a component after √l-dist is the same as projecting it first.
--- Pointwise: the left side is the x-component of the box (= π x u F pw)
--- realigned onto pw's ⌈ w ⌉-split; that realignment is the identity by
--- ⌈ w ⌉-uniqueness (matching ⌈⌉-⊗&ᴰ-distL⁻Eq's own 12≡-Eq).
+-- The x-component of `⌈⌉-⊗&ᴰ-distL⁻Eq` (opaque wrapper so the type signature
+-- mentions no `_⊗_`-projections): rebuild `q : ⌈ w ⌉ ⊗ C` onto `s⊤`'s split.
 opaque
-  unfolding ⌈⌉-⊗&ᴰ-distL⁻Eq _⇒_ ⇒-app ⇒-intro _⊗_ ⊗-intro _&_ &-intro π₁ π₂
-            uniquely-supported-⌈⌉Eq same-parses the-split
-  √l-dist-proj-pt :
-    ∀ {ℓX} {X : Type ℓX} {B : X → Grammar ℓA} {w} (x : X)
-      (u : String) (F : (&[ y ∈ X ] √l-string w (B y)) u)
-    → (√l-map {w = w} (π x) ∘g √l-dist {w = w} {B = B}) u F ≡ π x u F
-  √l-dist-proj-pt {B = B} {w = w} x u F = funExt λ pw →
-    let
-      famx : (⌈ w ⌉ ⊗ B x) u
-      famx = π x u F pw
+  unfolding _⊗_ uniquely-supported-⌈⌉Eq
+  realign-split :
+    ∀ {ℓC} {C : Grammar ℓC} {w} (u : String)
+    → (⌈ w ⌉ ⊗ C) u → (⌈ w ⌉ ⊗ ⊤) u → (⌈ w ⌉ ⊗ C) u
+  realign-split {C = C} {w = w} u q s⊤ =
+    s⊤ .fst , (s⊤ .snd .fst , Eq.transport C 12≡ (q .snd .snd))
+    where
+      12≡ : q .fst .fst .snd Eq.≡ s⊤ .fst .fst .snd
+      12≡ = ++-cancelˡEq (s⊤ .fst .fst .fst)
+        ( Eq.ap (_++ q .fst .fst .snd)
+            ( Eq.sym (uniquely-supported-⌈⌉Eq w (s⊤ .fst .fst .fst) (s⊤ .snd .fst))
+              Eq.∙ uniquely-supported-⌈⌉Eq w (q .fst .fst .fst) (q .snd .fst))
+          Eq.∙ Eq.sym (q .fst .snd)
+          Eq.∙ s⊤ .fst .snd )
 
-      12≡ : famx .fst .fst .snd Eq.≡ pw .fst .fst .snd
-      12≡ = ++-cancelˡEq (pw .fst .fst .fst)
-        ( Eq.ap (_++ famx .fst .fst .snd)
-            ( Eq.sym (uniquely-supported-⌈⌉Eq w (pw .fst .fst .fst) (pw .snd .fst))
-              Eq.∙ uniquely-supported-⌈⌉Eq w (famx .fst .fst .fst) (famx .snd .fst))
-          Eq.∙ Eq.sym (famx .fst .snd)
-          Eq.∙ pw .fst .snd )
+-- That realignment is the identity (forced by ⌈ w ⌉-uniqueness).  Stated over a
+-- generic `q` so no neutral box-projection appears (avoids higher-order metas).
+opaque
+  unfolding realign-split _⊗_ uniquely-supported-⌈⌉Eq same-parses the-split
+  ⌈⌉-realign-id :
+    ∀ {ℓC} {C : Grammar ℓC} {w} (u : String)
+      (q : (⌈ w ⌉ ⊗ C) u) (s⊤ : (⌈ w ⌉ ⊗ ⊤) u)
+    → realign-split {C = C} {w = w} u q s⊤ ≡ q
+  ⌈⌉-realign-id {C = C} {w = w} u q s⊤ =
+    ⊗≡ {A = ⌈ w ⌉} {B = C} {w = u} _ _ sp≡ pp
+    where
+      12≡ : q .fst .fst .snd Eq.≡ s⊤ .fst .fst .snd
+      12≡ = ++-cancelˡEq (s⊤ .fst .fst .fst)
+        ( Eq.ap (_++ q .fst .fst .snd)
+            ( Eq.sym (uniquely-supported-⌈⌉Eq w (s⊤ .fst .fst .fst) (s⊤ .snd .fst))
+              Eq.∙ uniquely-supported-⌈⌉Eq w (q .fst .fst .fst) (q .snd .fst))
+          Eq.∙ Eq.sym (q .fst .snd)
+          Eq.∙ s⊤ .fst .snd )
 
-      lp : pw .fst .fst .fst ≡ famx .fst .fst .fst
+      lp : s⊤ .fst .fst .fst ≡ q .fst .fst .fst
       lp = eqToPath
-        ( Eq.sym (uniquely-supported-⌈⌉Eq w (pw .fst .fst .fst) (pw .snd .fst))
-          Eq.∙ uniquely-supported-⌈⌉Eq w (famx .fst .fst .fst) (famx .snd .fst))
+        ( Eq.sym (uniquely-supported-⌈⌉Eq w (s⊤ .fst .fst .fst) (s⊤ .snd .fst))
+          Eq.∙ uniquely-supported-⌈⌉Eq w (q .fst .fst .fst) (q .snd .fst))
 
-      rp : pw .fst .fst .snd ≡ famx .fst .fst .snd
+      rp : s⊤ .fst .fst .snd ≡ q .fst .fst .snd
       rp = sym (eqToPath 12≡)
 
-      sp≡ : pw .fst .fst ≡ famx .fst .fst
+      sp≡ : s⊤ .fst .fst ≡ q .fst .fst
       sp≡ = λ i → lp i , rp i
 
-      pp : PathP (λ i → ⌈ w ⌉ (sp≡ i .fst) × B x (sp≡ i .snd))
-                 (pw .snd .fst , Eq.transport (B x) 12≡ (famx .snd .snd))
-                 (famx .snd)
+      pp : PathP (λ i → ⌈ w ⌉ (sp≡ i .fst) × C (sp≡ i .snd))
+                 (s⊤ .snd .fst , Eq.transport C 12≡ (q .snd .snd))
+                 (q .snd)
       pp = ΣPathP
         ( isProp→PathP (λ i → isLang⌈⌉ w (lp i)) _ _
-        , symP (eqTransportFiller (B x) 12≡ (famx .snd .snd)) )
-    in ⊗≡ {A = ⌈ w ⌉} {B = B x} _ _ sp≡ pp
+        , symP (eqTransportFiller C 12≡ (q .snd .snd)) )
 
-  √l-dist-proj : ∀ {ℓX} {X : Type ℓX} {B : X → Grammar ℓA} {w} (x : X)
-    → √l-map {w = w} (π x) ∘g √l-dist {w = w} {B = B} ≡ π x
-  √l-dist-proj {B = B} {w = w} x =
-    funExt λ u → funExt λ F → √l-dist-proj-pt x u F
+-- `realign-split` packaged as a √l-string-endomap (clean signature), and the
+-- fact that it is the identity (proved for an abstract `d`, so no neutral
+-- box-projection ever appears).
+opaque
+  unfolding realign-split _⇒_
+  realign-√l :
+    ∀ {ℓC} {C : Grammar ℓC} {w} (u : String)
+    → √l-string w C u → √l-string w C u
+  realign-√l {C = C} {w = w} u d = λ pw → realign-split {C = C} {w = w} u (d pw) pw
+
+  realign-√l-id :
+    ∀ {ℓC} {C : Grammar ℓC} {w} (u : String) (d : √l-string w C u)
+    → realign-√l {C = C} {w = w} u d ≡ d
+  realign-√l-id {C = C} {w = w} u d =
+    funExt λ pw → ⌈⌉-realign-id {C = C} {w = w} u (d pw) pw
+
+-- projecting a component after √l-dist is the same as projecting it first.
+-- Step 1 (pure conversion): the left side IS `realign-√l` of the x-component.
+opaque
+  unfolding realign-√l realign-split ⌈⌉-⊗&ᴰ-distL⁻Eq _⇒_ ⇒-app ⇒-intro _⊗_
+            ⊗-intro _&_ &-intro π₁ π₂ uniquely-supported-⌈⌉Eq
+  √l-dist-proj-reduce :
+    ∀ {ℓX} {X : Type ℓX} {B : X → Grammar ℓA} {w} (x : X)
+      (u : String) (F : (&[ y ∈ X ] √l-string w (B y)) u)
+    → (√l-map {w = w} (π x) ∘g √l-dist {w = w} {B = B}) u F
+      ≡ realign-√l {C = B x} {w = w} u (F x)
+  √l-dist-proj-reduce x u F = funExt λ pw → refl
+
+-- Step 2: combine.
+√l-dist-proj-pt :
+  ∀ {ℓX} {X : Type ℓX} {B : X → Grammar ℓA} {w} (x : X)
+    (u : String) (F : (&[ y ∈ X ] √l-string w (B y)) u)
+  → (√l-map {w = w} (π x) ∘g √l-dist {w = w} {B = B}) u F ≡ F x
+√l-dist-proj-pt {B = B} {w = w} x u F =
+  √l-dist-proj-reduce x u F ∙ realign-√l-id {C = B x} {w = w} u (F x)
+
+√l-dist-proj : ∀ {ℓX} {X : Type ℓX} {B : X → Grammar ℓA} {w} (x : X)
+  → √l-map {w = w} (π x) ∘g √l-dist {w = w} {B = B} ≡ π x
+√l-dist-proj {B = B} {w = w} x =
+  funExt λ u → funExt λ F → √l-dist-proj-pt x u F
 
 -- √l-ε and √l-ε⁻ are inverse on √l-string [] (algebraic).
 √l-εε⁻ : √l-ε ∘g √l-ε⁻ ≡ id {A = A}
@@ -282,10 +331,135 @@ opaque
        (√l-dist-proj {w = []} v)
   ∙ cong (_∘g π v) (√l-cat-ε {v = v})
 
+-- index cast for √l-string (along an Eq-path of prefixes) and its π-coherence.
+√l-castEq : ∀ {ℓC} {C : Grammar ℓC} {w w'} → w' Eq.≡ w → √l-string w' C ⊢ √l-string w C
+√l-castEq {C = C} e u d = Eq.transport (λ z → √l-string z C u) e d
+
+castπ : ∀ {w w'} (e : w' Eq.≡ w)
+  → √l-castEq {C = A} e ∘g π {A = λ z → √l-string z A} w' ≡ π w
+castπ Eq.refl = refl
+
+-- Abstract Eq.transport lemmas (statements mention no opaque grammar
+-- combinators, so they sidestep the opaque-in-signature wall).
+transport-fun : ∀ {ℓ ℓp ℓq} {X : Type ℓ} {a b : X}
+  (P : X → Type ℓp) (Q : X → Type ℓq)
+  (e : a Eq.≡ b) (f : P a → Q a) (x : P b)
+  → (Eq.transport (λ z → P z → Q z) e f) x
+    ≡ Eq.transport Q e (f (Eq.transport P (Eq.sym e) x))
+transport-fun P Q Eq.refl f x = refl
+
+transport-Σ-fst : ∀ {ℓ ℓs ℓf} {X : Type ℓ} {a b : X}
+  (S : Type ℓs) (F : X → S → Type ℓf)
+  (e : a Eq.≡ b) (q : Σ S (F a))
+  → Eq.transport (λ z → Σ S (F z)) e q
+    ≡ (q .fst , Eq.transport (λ z → F z (q .fst)) e (q .snd))
+transport-Σ-fst S F Eq.refl q = refl
+
+transport-×-fst : ∀ {ℓ ℓb ℓd} {X : Type ℓ} {a b : X}
+  (B : X → Type ℓb) (D : Type ℓd)
+  (e : a Eq.≡ b) (p : B a × D)
+  → Eq.transport (λ z → B z × D) e p
+    ≡ (Eq.transport B e (p .fst) , p .snd)
+transport-×-fst B D Eq.refl p = refl
+
+-- (⌈ s ⌉ ⊗ ⊤) u is a proposition: the ⌈ s ⌉-prefix forces the split.
+opaque
+  unfolding _⊗_ ⊤ same-parses the-split
+  ⌈⌉⊗⊤-isProp : ∀ {s} (u : String) (p q : (⌈ s ⌉ ⊗ ⊤) u) → p ≡ q
+  ⌈⌉⊗⊤-isProp {s = s} u p q =
+    ⊗≡ {A = ⌈ s ⌉} {B = ⊤} {w = u} p q
+      (unique-splitting-⌈⌉L s u p q)
+      (ΣPathP ( isProp→PathP (λ i → isLang⌈⌉ s _) _ _
+              , isProp→PathP (λ i → isPropUnit) _ _ ))
+
+-- √l-cat right unit: peeling `w` then `[]` and dropping the []-peel is the
+-- `w`-peel, up to the index cast `w ++ [] ≡ w`.
+--
+-- OBSTRUCTION (the only step that resisted): `√l-cat {w} {[]}` bakes the
+-- *computed* prefix `w ++ []` into its DOMAIN while its CODOMAIN uses `w`, so
+-- Eq.J on `++-unit-r-Eq w` cannot abstract the occurrence (J needs a variable,
+-- not `w ++ []`), and a domain-generalized `√l-cat` ends up stuck on a
+-- non-`refl` proof.  The pointwise route reduces (using `⌈⌉⊗⊤-isProp` to equate
+-- the two `⌈w++[]⌉⊗⊤` inputs to the peel) to a transport-of-application lemma
+-- `(transport_e d) pw ≡ transport_e (d (transport_{sym e} pw))`, which can only
+-- be stated through an opaque application alias (opaque `⇒` doesn't unfold in
+-- signatures) and that alias then trips a cubical `transp`-irrelevance check.
+opaque
+  unfolding √l-cat _⇒_ _⊗_ ⊤ ⊗-unit-l ⊗-unit-l⁻ ⊗-intro ⇒-app ⇒-intro &-intro
+            π₁ uniquely-supported-⌈⌉Eq ε ε-intro same-parses the-split
+  √l-cat-εr : ∀ {w} → √l-map {w = w} √l-ε ∘g √l-cat {A = A} {w = w} {v = []}
+                       ≡ √l-castEq {C = A} (++-unit-r-Eq w)
+  √l-cat-εr {A = A} {w = w} = funExt λ u → funExt λ d → funExt λ pw →
+    let
+      e : w ++ [] Eq.≡ w
+      e = ++-unit-r-Eq w
+      pw* : (⌈ w ++ [] ⌉ ⊗ ⊤) u
+      pw* = Eq.transport (λ z → (⌈ z ⌉ ⊗ ⊤) u) (Eq.sym e) pw
+      q' : (⌈ w ++ [] ⌉ ⊗ A) u
+      q' = d pw*
+      rhs' : (⌈ w ⌉ ⊗ A) u
+      rhs' = q' .fst
+           , ( Eq.transport (λ z → ⌈ z ⌉ (q' .fst .fst .fst)) e (q' .snd .fst)
+             , q' .snd .snd )
+      moves : √l-castEq {C = A} e u d pw ≡ rhs'
+      moves =
+        transport-fun (λ z → (⌈ z ⌉ ⊗ ⊤) u) (λ z → (⌈ z ⌉ ⊗ A) u) e d pw
+        ∙ transport-Σ-fst _ (λ z s → ⌈ z ⌉ (s .fst .fst) × A (s .fst .snd)) e q'
+        ∙ cong (λ p → q' .fst , p)
+            (transport-×-fst (λ z → ⌈ z ⌉ (q' .fst .fst .fst))
+                             (A (q' .fst .fst .snd)) e (q' .snd))
+
+      leftEq : pw .fst .fst .fst Eq.≡ q' .fst .fst .fst
+      leftEq =
+        Eq.sym (uniquely-supported-⌈⌉Eq w (pw .fst .fst .fst) (pw .snd .fst))
+        Eq.∙ Eq.sym (++-unit-r-Eq w)
+        Eq.∙ uniquely-supported-⌈⌉Eq (w ++ []) (q' .fst .fst .fst) (q' .snd .fst)
+
+      rightEq : pw .fst .fst .snd Eq.≡ q' .fst .fst .snd
+      rightEq =
+        ++-cancelˡEq (pw .fst .fst .fst)
+          ( Eq.sym (pw .fst .snd)
+            Eq.∙ q' .fst .snd
+            Eq.∙ Eq.ap (_++ q' .fst .fst .snd) (Eq.sym leftEq) )
+
+      sp≡ : pw .fst .fst ≡ q' .fst .fst
+      sp≡ = λ i → eqToPath leftEq i , eqToPath rightEq i
+
+      pp : PathP (λ i → ⌈ w ⌉ (sp≡ i .fst) × A (sp≡ i .snd))
+             (pw .snd .fst , {!!}) (rhs' .snd)
+      pp = ΣPathP
+        ( isProp→PathP (λ i → isLang⌈⌉ w (eqToPath leftEq i)) _ _
+        , {!!} )
+    in ⊗≡ {A = ⌈ w ⌉} {B = A} {w = u} _ rhs' sp≡ pp ∙ sym moves
+
 -- right counit:  map□ ε□ ∘g δ ≡ id
+-- π w ∘ map□ ε□ ∘ δ
+--   = √l-map ε□ ∘ √l-dist[w] ∘ (λ v. √l-cat[w]v ∘ π (w++v))      [δ at w]
+--   = √l-map √l-ε ∘ √l-map (π[]) ∘ √l-dist[w] ∘ (...)            [√l-map-seq]
+--   = √l-map √l-ε ∘ π[] ∘ (...)                                  [√l-dist-proj]
+--   = √l-map √l-ε ∘ √l-cat[w][] ∘ π (w++[])                      [&ᴰ β]
+--   = √l-castEq (w++[]≡w) ∘ π (w++[])                            [√l-cat-εr]
+--   = π w                                                        [castπ]
 □-counit-r : map□ ε□ ∘g δ ≡ id {A = □ A}
-□-counit-r = {!!}
+□-counit-r {A = A} = &ᴰ≡ _ _ λ w →
+  let innerδ : □ A ⊢ &[ v ∈ String ] √l-string w (√l-string v A)
+      innerδ = &ᴰ-intro (λ v → √l-cat {A = A} {w = w} {v = v}
+                              ∘g π {A = λ z → √l-string z A} (w ++ v))
+  in
+  cong (λ z → z ∘g √l-dist {w = w} {B = λ z → √l-string z A} ∘g innerδ)
+       (√l-map-seq {w = w} (π {A = λ z → √l-string z A} []) √l-ε)
+  ∙ cong (λ z → √l-map {w = w} √l-ε ∘g z ∘g innerδ)
+       (√l-dist-proj {B = λ z → √l-string z A} {w = w} [])
+  ∙ cong (√l-map {w = w} √l-ε ∘g_)
+       (refl {x = √l-cat {A = A} {w = w} {v = []}
+                  ∘g π {A = λ z → √l-string z A} (w ++ [])})
+  ∙ cong (_∘g π {A = λ z → √l-string z A} (w ++ [])) (√l-cat-εr {A = A} {w = w})
+  ∙ castπ (++-unit-r-Eq w)
 
 -- coassociativity:  δ ∘g δ ≡ map□ δ ∘g δ
+-- Reduces to the √l-cat *pentagon*: the two ways of factoring a
+-- `(w ++ v ++ u)`-peel — `w` then `(v ++ u)` vs `(w ++ v)` then `u` — agree,
+-- modulo the associativity path `(w ++ v) ++ u ≡ w ++ (v ++ u)`.  Builds on the
+-- same realign/eqTransportFiller machinery; remaining.
 □-coassoc : δ ∘g δ ≡ map□ δ ∘g δ {A = A}
 □-coassoc = {!!}

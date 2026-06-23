@@ -18,6 +18,7 @@ open import Grammar.Top Alphabet
 open import Grammar.String Alphabet
 open import Grammar.Derivative.Base Alphabet
 open import Grammar.Inductive.Functor Alphabet
+open import Grammar.Negation Alphabet
 import Grammar.Derivative.String Alphabet as DString
 open import Term.Base Alphabet
 
@@ -32,7 +33,7 @@ data √l-tag : Type where
   prefix nah : √l-tag
 
 ¬Start : String → Grammar ℓ-zero
-¬Start w = {!!}
+¬Start w = ¬G (⌈ w ⌉ ⊗ ⊤)
 
 √l-string-F' : String → Functor Unit
 √l-string-F' w = ⊕e √l-tag λ { prefix → k ⌈ w ⌉ ⊗e Var _ ; nah → k (¬Start w)}
