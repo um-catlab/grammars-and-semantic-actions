@@ -10,6 +10,7 @@ open import Cubical.Data.Unit
 open import Grammar Alphabet
 open import Grammar.Maybe.Base Alphabet
 open import Grammar.External.String.Tiny Alphabet
+open import Grammar.External.HLevels.Properties Alphabet
 open import Grammar.Later.Base Alphabet
 open import Grammar.Later.Properties Alphabet
 open import Parser.Base Alphabet hiding (Parser)
@@ -52,14 +53,22 @@ requireEnd =
 parse : Parser A → string ⊢ Maybe A
 parse p = requireEnd ∘g p
 
-fixP : ▷ (MaybeLeft A) ⊢ MaybeLeft A → Parser A
-fixP body = lob body ∘g ⊤-intro
+-- MaybeLeft A = (A ⊗ string) ⊕ ⊤ is a set grammar whenever A is.
+isSetMaybeLeft : isSetGrammar A → isSetGrammar (MaybeLeft A)
+isSetMaybeLeft isSetA =
+  isSetGrammar⊕
+    (isSetGrammar⊗ isSetA
+      (isLang→isSetGrammar (unambiguous→isLang unambiguous-string)))
+    isSetGrammar⊤
 
-fixPr : ▷r (MaybeLeft A) ⊢ MaybeLeft A → Parser A
-fixPr body = lob-r body ∘g ⊤-intro
+fixP : isSetGrammar A → ▷ (MaybeLeft A) ⊢ MaybeLeft A → Parser A
+fixP isSetA body = lob (isSetMaybeLeft isSetA) body ∘g ⊤-intro
+
+fixPr : isSetGrammar A → ▷r (MaybeLeft A) ⊢ MaybeLeft A → Parser A
+fixPr isSetA body = lob-r (isSetMaybeLeft isSetA) body ∘g ⊤-intro
 
 opaque
-  unfolding unfoldGrammarDefs unfoldParserDefs lob lob-r
+  unfolding unfoldGrammarDefs unfoldParserDefs
 
   unfoldRecursiveDescentDefs : Unit
   unfoldRecursiveDescentDefs = tt
