@@ -140,8 +140,45 @@ step' =
 step : ▷ (MaybeLeft EXP) ⊢ MaybeLeft EXP
 step = step' ∘g id ,& string-intro
 
+isSetTagExp : isSet (Tag Exp)
+isSetTagExp = isSetRetract enc dec retr isSetBool where
+  enc : Tag Exp → Bool
+  enc done = false
+  enc add  = true
+  dec : Bool → Tag Exp
+  dec false = done
+  dec true  = add
+  retr : (x : Tag Exp) → dec (enc x) ≡ x
+  retr done = refl
+  retr add  = refl
+
+isSetTagAtom : isSet (Tag Atom)
+isSetTagAtom = isSetRetract enc dec retr isSetBool where
+  enc : Tag Atom → Bool
+  enc num    = false
+  enc parens = true
+  dec : Bool → Tag Atom
+  dec false = num
+  dec true  = parens
+  retr : (x : Tag Atom) → dec (enc x) ≡ x
+  retr num    = refl
+  retr parens = refl
+
+isSetGrammarAnyNum : isSetGrammar anyNum
+isSetGrammarAnyNum = isSetGrammar⊕ᴰ isSetℕ (λ _ → isSetGrammarLiteral _)
+
+isSetValuedBinOpTy : ∀ N → isSetValued (BinOpTy N)
+isSetValuedBinOpTy Exp =
+  isSetTagExp , λ { done → tt* ; add → tt* , (isSetGrammarLiteral _ , tt*) }
+isSetValuedBinOpTy Atom =
+  isSetTagAtom , λ { num → isSetGrammarAnyNum
+                   ; parens → isSetGrammarLiteral _ , (tt* , isSetGrammarLiteral _) }
+
+isSetGrammarEXP : isSetGrammar EXP
+isSetGrammarEXP = isSetGrammarμ BinOpTy isSetValuedBinOpTy Exp
+
 parseEXP : Parser EXP
-parseEXP = fixP step
+parseEXP = fixP isSetGrammarEXP step
 
 recognizeEXP : string ⊢ Maybe EXP
 recognizeEXP = parse parseEXP

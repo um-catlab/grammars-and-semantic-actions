@@ -12,7 +12,7 @@ open import Term.Base Alphabet
 
 open import Cubical.Data.List using (rev)
 open import Cubical.Categories.Direct.Base using (WFOrder ; wfPullback)
-open import Cubical.Categories.Direct.Instances.Suffix (Alphabet .fst) (Alphabet .snd)
+open import Grammar.Later.SuffixOrder Alphabet
 open import Cubical.Categories.Direct.Instances.Poset using (löbWF)
 
 private

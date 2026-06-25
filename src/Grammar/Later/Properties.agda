@@ -23,11 +23,10 @@ open import Grammar.SequentialUnambiguity.Nullable Alphabet
 open import Grammar.Equivalence.Base Alphabet
 open import Term.Base Alphabet
 
-open import Cubical.Data.List using (rev ; rev-++ ; rev-rev)
+open import Cubical.Data.List using (rev ; rev-rev)
 open import Cubical.Data.Empty as Empty
 import Cubical.Data.Equality as Eq
-open import Cubical.Categories.Direct.Instances.Suffix (Alphabet .fst) (Alphabet .snd)
-  using (_<ˢ_)
+open import Grammar.Later.SuffixOrder Alphabet using (_<ˢ_)
 
 open StrongEquivalence
 
@@ -51,10 +50,10 @@ opaque
       r = split .fst .snd
       w≡l : w .fst Eq.≡ l
       w≡l = uniquely-supported-⌈⌉Eq (w .fst) l cv
-      lne : l ≡ [] → Empty.⊥
-      lne e = w .snd (Eq.eqToPath w≡l ∙ e)
+      lne : l Eq.≡ [] → Empty.⊥
+      lne e = w .snd (Eq.eqToPath (w≡l Eq.∙ e))
       residual<ˢs : r <ˢ s
-      residual<ˢs = l , lne , sym (Eq.eqToPath (split .snd))
+      residual<ˢs = l , lne , Eq.sym (split .snd)
 
   -- Symmetric: peel a known nonempty suffix w; the residual prefix is strict.
   ▷r-app-⌈⌉ : ∀ (w : NonEmptyString) →
@@ -67,12 +66,12 @@ opaque
       r = split .fst .snd
       w≡r : w .fst Eq.≡ r
       w≡r = uniquely-supported-⌈⌉Eq (w .fst) r cv
-      rne : rev r ≡ [] → Empty.⊥
-      rne e = w .snd (Eq.eqToPath w≡r ∙ sym (rev-rev r) ∙ cong rev e)
+      rne : rev r Eq.≡ [] → Empty.⊥
+      rne e = w .snd (Eq.eqToPath w≡r ∙ sym (rev-rev r) ∙ cong rev (Eq.eqToPath e))
       residual<ᵖs : rev l <ˢ rev s
       residual<ᵖs =
         rev r , rne ,
-        ( sym (rev-++ l r) ∙ cong rev (sym (Eq.eqToPath (split .snd))) )
+        ( Eq.sym (++-rev-Eq l r) Eq.∙ Eq.ap rev (Eq.sym (split .snd)) )
 
 ▷-app-NE-keep-⌈⌉ : ∀ {ℓC} {C : Grammar ℓC} (w : NonEmptyString) →
   (⌈ w .fst ⌉ ⊗ C) & ▷ A ⊢ ⌈ w .fst ⌉ ⊗ (C & A)

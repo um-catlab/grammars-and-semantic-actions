@@ -68,7 +68,7 @@ fixPr : isSetGrammar A → ▷r (MaybeLeft A) ⊢ MaybeLeft A → Parser A
 fixPr isSetA body = lob-r (isSetMaybeLeft isSetA) body ∘g ⊤-intro
 
 opaque
-  unfolding unfoldGrammarDefs unfoldParserDefs
+  unfolding unfoldGrammarDefs unfoldParserDefs ▷-app-⌈⌉ ▷r-app-⌈⌉
 
   unfoldRecursiveDescentDefs : Unit
   unfoldRecursiveDescentDefs = tt
