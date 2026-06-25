@@ -3,7 +3,7 @@
    A comonad here is a bona-fide endofunctor on grammars (an F₀ on objects
    together with a functorial action F₁) equipped with a counit ε and a
    comultiplication δ satisfying the comonad laws. This deliberately does NOT
-   go through the `Functor` syntactic codes of Grammar.Inductive.Functor:
+   go through the `SPFunctor` syntactic codes of Grammar.Inductive.Functor:
    those codes only describe strictly-positive polynomial functors and cannot
    name something like □ (which is built from the cartesian arrow ⇒).
 

@@ -26,13 +26,13 @@ module _ where
     -- opaque. If it's not opaque this passes the positivity check.
     -- https://github.com/agda/agda/issues/6970
     {-# NO_POSITIVITY_CHECK #-}
-    record ν (F : X → Functor X) (x : X) (w : String) : Type ℓX where
+    record ν (F : X → SPFunctor X) (x : X) (w : String) : Type ℓX where
       coinductive
       field
         unroll : ⟦ F x ⟧ (ν F) w
     open ν public
 
-  module _ {X : Type ℓX} (F : X → Functor X) where
+  module _ {X : Type ℓX} (F : X → SPFunctor X) where
     finalCoalgebra : Coalgebra F (ν F)
     finalCoalgebra x w t = t .unroll
 

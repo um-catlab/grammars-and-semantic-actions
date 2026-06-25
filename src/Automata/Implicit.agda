@@ -130,7 +130,7 @@ record ImplicitDeterministicAutomaton ℓ : Type (ℓ-suc ℓ) where
     stepᵢ : (c : ⟨ Alphabet ⟩) → Tag b initial
     stepFail : (c : ⟨ Alphabet ⟩) → Tag b fail
 
-  TraceTy : Bool → (q : FreelyAddFail+Initial Q) → Functor (FreelyAddFail+Initial Q)
+  TraceTy : Bool → (q : FreelyAddFail+Initial Q) → SPFunctor (FreelyAddFail+Initial Q)
   TraceTy b q =
     ⊕e (Tag b q) λ where
       (stop q x) → k ε*

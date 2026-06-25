@@ -2,7 +2,7 @@
    functors* and *initial algebras*.
 
    This module builds, from a single-sorted strictly-positive code
-   `F : Functor (Unit* {ℓ})`:
+   `F : SPFunctor (Unit* {ℓ})`:
 
      1. a c-c-l `Functor (|GRAMMAR| ℓ) (|GRAMMAR| ℓ)`, `⟦ F ⟧F`, whose
         object action is `A ↦ ⟦ F ⟧ (λ _ → ⟨ A ⟩)` (packaged as a
@@ -26,7 +26,6 @@ open import Cubical.Data.Unit
 
 open import Cubical.Categories.Category
 open import Cubical.Categories.Functor
-  renaming (Functor to CatFunctor)
 open import Cubical.Categories.Instances.Opposite
 open import Cubical.Categories.Instances.Power
 open import Cubical.Categories.Displayed.Instances.Algebras
@@ -49,15 +48,15 @@ private
 -- §1.  Semantic functor from a single-sorted code.
 ------------------------------------------------------------------------
 
--- A single-sorted code is a `Functor (Unit* {ℓ})`. We package it as the
+-- A single-sorted code is a `SPFunctor (Unit* {ℓ})`. We package it as the
 -- constant family over `Unit*` to feed the indexed `μ`/`Algebra`/`rec` API.
-module SingleSorted {ℓ} (F : Functor (Unit* {ℓ})) (isSetValF : isSetValued F) where
+module SingleSorted {ℓ} (F : SPFunctor (Unit* {ℓ})) (isSetValF : isSetValued F) where
 
   open Category
-  open CatFunctor
+  open Functor
 
-  -- the constant family `Unit* → Functor Unit*`
-  Fᴹ : Unit* {ℓ} → Functor (Unit* {ℓ})
+  -- the constant family `Unit* → SPFunctor Unit*`
+  Fᴹ : Unit* {ℓ} → SPFunctor (Unit* {ℓ})
   Fᴹ _ = F
 
   -- Note on definitional equalities exploited throughout:
@@ -71,7 +70,7 @@ module SingleSorted {ℓ} (F : Functor (Unit* {ℓ})) (isSetValF : isSetValued F
   ⟦F⟧-ob A .fst = ⟦ F ⟧ (λ _ → A .fst)
   ⟦F⟧-ob A .snd = isSet⟦F⟧ F isSetValF (λ _ → A)
 
-  ⟦_⟧F : CatFunctor (|GRAMMAR| ℓ) (|GRAMMAR| ℓ)
+  ⟦_⟧F : Functor (|GRAMMAR| ℓ) (|GRAMMAR| ℓ)
   ⟦_⟧F .F-ob = ⟦F⟧-ob
   ⟦_⟧F .F-hom {A}{B} f = map F (λ _ → f)
   ⟦_⟧F .F-id {A} = map-id F
@@ -93,7 +92,7 @@ module SingleSorted {ℓ} (F : Functor (Unit* {ℓ})) (isSetValF : isSetValued F
   -- Its source `⟦ F ⟧ (μ Fᴹ)` is `F-ob ⟦_⟧F μF-ob .fst` definitionally
   -- (by the Unit*-η remark above), so it is exactly an `⟦_⟧F`-algebra
   -- structure on `μF-ob`.
-  μF-str : |GRAMMAR| ℓ [ CatFunctor.F-ob ⟦_⟧F μF-ob , μF-ob ]
+  μF-str : |GRAMMAR| ℓ [ Functor.F-ob ⟦_⟧F μF-ob , μF-ob ]
   μF-str = roll
 
   -- the object of `AlgebrasCategory ⟦_⟧F`
@@ -106,7 +105,7 @@ module SingleSorted {ℓ} (F : Functor (Unit* {ℓ})) (isSetValF : isSetValued F
     private
       B : SetGrammar ℓ
       B = Bβ .fst
-      β : |GRAMMAR| ℓ [ CatFunctor.F-ob ⟦_⟧F B , B ]
+      β : |GRAMMAR| ℓ [ Functor.F-ob ⟦_⟧F B , B ]
       β = Bβ .snd
 
       -- `β` as a gsa `Algebra Fᴹ (λ _ → ⟨ B ⟩)`
@@ -216,7 +215,7 @@ module SingleSorted {ℓ} (F : Functor (Unit* {ℓ})) (isSetValF : isSetValued F
 -- §4.  The general mutual / X-indexed case.
 ------------------------------------------------------------------------
 
--- For a general index type `X : Type ℓX` and a family `F : X → Functor X`,
+-- For a general index type `X : Type ℓX` and a family `F : X → SPFunctor X`,
 -- the inductive type `μ F` is the carrier of an initial algebra for an
 -- endofunctor on the *power category* `|GRAMMAR| ℓX ^ X`, i.e. the
 -- X-indexed product `PowerCategory X (|GRAMMAR| ℓX)`.
@@ -236,15 +235,15 @@ module SingleSorted {ℓ} (F : Functor (Unit* {ℓ})) (isSetValF : isSetValued F
 -- exactly this (the power category over `Unit*` is `|GRAMMAR| ℓ` itself,
 -- modulo the Unit*-η identifications).
 --
--- NOTE on levels: the codes `F : X → Functor X` only mention `Grammar ℓX`
+-- NOTE on levels: the codes `F : X → SPFunctor X` only mention `Grammar ℓX`
 -- / `Type ℓX` (see `Grammar.Inductive.Functor`), and `μ F x : Grammar ℓX`,
 -- so the grammar level is forced to coincide with the index level `ℓX`.
 
 module Indexed {ℓX} {X : Type ℓX}
-  (F : X → Functor X) (isSetValF : ∀ x → isSetValued (F x)) where
+  (F : X → SPFunctor X) (isSetValF : ∀ x → isSetValued (F x)) where
 
   open Category
-  open CatFunctor
+  open Functor
 
   -- The power category over X: ob = `X → SetGrammar ℓX`, and a morphism
   -- `A → B` is a family `∀ x → ⟨ A x ⟩ ⊢ ⟨ B x ⟩`. Hom-equality is
@@ -259,7 +258,7 @@ module Indexed {ℓX} {X : Type ℓX}
   ⟦F⟧Pow-ob A x .snd = isSet⟦F⟧ (F x) (isSetValF x) A
 
   -- The X-indexed semantic endofunctor built from the codes `F`.
-  ⟦F⟧Pow : CatFunctor PowerCat PowerCat
+  ⟦F⟧Pow : Functor PowerCat PowerCat
   ⟦F⟧Pow .F-ob = ⟦F⟧Pow-ob
   ⟦F⟧Pow .F-hom {A}{B} ϕ x = map (F x) ϕ
   ⟦F⟧Pow .F-id {A} = funExt (λ x → map-id (F x))
@@ -280,7 +279,7 @@ module Indexed {ℓX} {X : Type ℓX}
   -- structure map: `λ x → roll`. Its source `λ x → ⟦ F x ⟧ (μ F)` is
   -- `F-ob ⟦F⟧Pow μF-ob` definitionally, so it is exactly an
   -- `⟦F⟧Pow`-algebra structure on `μF-ob`.
-  μF-str : PowerCat [ CatFunctor.F-ob ⟦F⟧Pow μF-ob , μF-ob ]
+  μF-str : PowerCat [ Functor.F-ob ⟦F⟧Pow μF-ob , μF-ob ]
   μF-str x = roll
 
   μF-alg : Category.ob AlgCat
@@ -292,7 +291,7 @@ module Indexed {ℓX} {X : Type ℓX}
     private
       B : X → SetGrammar ℓX
       B = Bβ .fst
-      β : PowerCat [ CatFunctor.F-ob ⟦F⟧Pow B , B ]
+      β : PowerCat [ Functor.F-ob ⟦F⟧Pow B , B ]
       β = Bβ .snd
 
       -- `β` as a gsa `Algebra F (λ x → ⟨ B x ⟩)`.

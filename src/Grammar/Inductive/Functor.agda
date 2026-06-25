@@ -20,17 +20,17 @@ private
   variable ℓA ℓB ℓC ℓX : Level
 
 module _ where
-  data Functor (X : Type ℓX) : Type (ℓ-suc ℓX) where
-    k : (A : Grammar ℓX) → Functor X
-    Var : (x : X) → Functor X -- reference one of the mutually inductive types being defined
-    &e ⊕e : ∀ (Y : Type ℓX) → (F : Y → Functor X) → Functor X
-    _⊗e_ : (F : Functor X) → (F' : Functor X) → Functor X
-    _&e2_ : (F : Functor X) → (F' : Functor X) → Functor X
+  data SPFunctor (X : Type ℓX) : Type (ℓ-suc ℓX) where
+    k : (A : Grammar ℓX) → SPFunctor X
+    Var : (x : X) → SPFunctor X -- reference one of the mutually inductive types being defined
+    &e ⊕e : ∀ (Y : Type ℓX) → (F : Y → SPFunctor X) → SPFunctor X
+    _⊗e_ : (F : SPFunctor X) → (F' : SPFunctor X) → SPFunctor X
+    _&e2_ : (F : SPFunctor X) → (F' : SPFunctor X) → SPFunctor X
 
   infixr 25 _⊗e_
 
   module _ {X : Type ℓX}{ℓA} where
-    ⟦_⟧ : Functor X → (X → Grammar ℓA) → Grammar (ℓ-max ℓX ℓA)
+    ⟦_⟧ : SPFunctor X → (X → Grammar ℓA) → Grammar (ℓ-max ℓX ℓA)
     ⟦ k B ⟧ A = LiftG ℓA B
     ⟦ Var x ⟧ A = LiftG ℓX (A x)
     ⟦ &e Y F ⟧ A = &[ y ∈ Y ] ⟦ F y ⟧ A
@@ -38,7 +38,7 @@ module _ where
     ⟦ F ⊗e F' ⟧ A = ⟦ F ⟧ A ⊗ ⟦ F' ⟧ A
     ⟦ F &e2 F' ⟧ A = ⟦ F ⟧ A & ⟦ F' ⟧ A
 
-  map : ∀ {X : Type ℓX}(F : Functor X) {A : X → Grammar ℓA}{B : X → Grammar ℓB}
+  map : ∀ {X : Type ℓX}(F : SPFunctor X) {A : X → Grammar ℓA}{B : X → Grammar ℓB}
         → (∀ x → A x ⊢ B x)
         → ⟦ F ⟧ A ⊢ ⟦ F ⟧ B
   map (k A) f = liftG ∘g lowerG
@@ -52,7 +52,7 @@ module _ where
     opaque
       unfolding _⊗_ ⊗-intro &-intro π₁
 
-      map-id : ∀ (F : Functor X) {A : X → Grammar ℓA} →
+      map-id : ∀ (F : SPFunctor X) {A : X → Grammar ℓA} →
         map F (λ x → id {A = A x}) ≡ id
       map-id (k A) i = id
       map-id (Var x) i = id
@@ -62,7 +62,7 @@ module _ where
       map-id (F &e2 F') i = map-id F i ,&p map-id F' i
 
       map-∘ :  ∀ {A : X → Grammar ℓA}{B : X → Grammar ℓB}{C : X → Grammar ℓC}
-        (F : Functor X)
+        (F : SPFunctor X)
         (f : ∀ x → B x  ⊢ C x)(f' : ∀ x → A x ⊢ B x)
         → map F (λ x → f x ∘g f' x) ≡ map F f ∘g map F f'
       map-∘ (k A) f f' i = liftG ∘g lowerG
@@ -72,7 +72,7 @@ module _ where
       map-∘ (F ⊗e F') f f' i = map-∘ F f f' i ,⊗ map-∘ F' f f' i
       map-∘ (F &e2 F') f f' i = map-∘ F f f' i ,&p map-∘ F' f f' i
 
-  module _ {X : Type ℓX} (F : X → Functor X) where
+  module _ {X : Type ℓX} (F : X → SPFunctor X) where
     Algebra : (X → Grammar ℓA) → Type (ℓ-max ℓX ℓA)
     Algebra A = ∀ x → ⟦ F x ⟧ A ⊢ A x
 
@@ -95,7 +95,7 @@ module _ where
       ∙ cong (_∘g map (F x) (ψ .fst)) (ϕ .snd x)
       ∙ cong (η x ∘g_) (sym (map-∘ (F x) (ϕ .fst) (ψ .fst)))
 
-  module _ {X : Type ℓX} (F : X → Functor X) where
+  module _ {X : Type ℓX} (F : X → SPFunctor X) where
     Coalgebra : (X → Grammar ℓA) → Type (ℓ-max ℓX ℓA)
     Coalgebra A = ∀ x → A x ⊢ ⟦ F x ⟧ A
 

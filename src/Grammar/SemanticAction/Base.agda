@@ -135,7 +135,7 @@ semact-lift : ∀ {ℓ' ℓA} {A : Grammar ℓA} {X : Type ℓ}
 semact-lift x = x ∘g lowerG
 
 semact-rec :
-  ∀ {X : Type ℓX} {F : X → Functor X} {Y : X → Type ℓ}
+  ∀ {X : Type ℓX} {F : X → SPFunctor X} {Y : X → Type ℓ}
   → Algebra F (λ x → Δ (Y x))
   → (x : X) → SemanticAction (μ F x) (Y x)
 semact-rec alg x = rec _ alg x

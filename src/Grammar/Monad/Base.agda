@@ -4,7 +4,7 @@
    structure map F₀ A ⊢ A compatible with η and μ.
 
    As with the comonad, we fix a single level ℓ and do not route through the
-   `Functor` syntactic codes. -}
+   `SPFunctor` syntactic codes. -}
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.HLevels
 

@@ -4,7 +4,7 @@
    □ is the "all suffixes" comonad: □ A (u) ≅ ∏_{r a suffix of u} A r, with
    counit ε□ reading off the full-string suffix and comultiplication δ. It is
    a genuine covariant endofunctor (witnessed by map□) but is NOT in the image
-   of the `Functor` syntactic codes — its definition goes through the
+   of the `SPFunctor` syntactic codes — its definition goes through the
    cartesian arrow ⇒. So box coalgebras are precisely the coalgebras of this
    comonad, which we set up via the *semantic* comonad of Grammar.Comonad.Base. -}
 open import Cubical.Foundations.Prelude
