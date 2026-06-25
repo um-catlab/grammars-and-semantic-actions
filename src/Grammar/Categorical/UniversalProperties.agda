@@ -27,14 +27,17 @@ open import Cubical.Data.Sigma
 
 open import Cubical.Categories.Category
 open import Cubical.Categories.Functor
+open import Cubical.Categories.NaturalTransformation hiding (_⇒_)
 open import Cubical.Categories.Instances.Opposite
 open import Cubical.Categories.Instances.Sets
 open import Cubical.Categories.Presheaf.Base
 open import Cubical.Categories.Presheaf.Representable
+open import Cubical.Categories.Presheaf.Representable.More
 open import Cubical.Categories.Limits.Terminal
 open import Cubical.Categories.Limits.Terminal.More
 open import Cubical.Categories.Limits.BinProduct.More
 open import Cubical.Categories.Presheaf.Constructions.Exponential
+open import Cubical.Categories.Presheaf.Constructions.BinProduct.LocalRepresentability
 open import Cubical.Categories.Exponentials.Small
 
 open import Grammar.Base Alphabet
@@ -55,6 +58,8 @@ private
     ℓ : Level
 
 open Category
+open Functor
+open NatTrans
 open UniversalElement
 
 ------------------------------------------------------------------------
@@ -195,7 +200,31 @@ module _ (c d : SetGrammar ℓ) where
   -- The inverse of currying is ⇒-intro, with β/η from ⇒-β/⇒-η, but the
   -- proof must unfold G .F-hom = (-×c Γ).intro (… ⋆ʳᶜ f), i.e. reason via
   -- BinProductsWithNotation's ×β₁/×β₂.  Left as the documented hole.
-  ⇒-Exponential .universal Γ = {!!}
+  ⇒-Exponential .universal Γ =
+    subst isEquiv (funExt (λ f → sym (action≡ f))) currying-isEquiv
+    where
+    G : Functor (|GRAMMAR| ℓ) (|GRAMMAR| ℓ)
+    G = LRPsh→Functor (((|GRAMMAR| ℓ) [-, c ]) , -×c)
+
+    -- The presheaf action of ⇒-app on f : Γ ⊢ (c⇒d) coincides with
+    -- the ⇒-intro⁻ of f.  The action is ⇒-app ∘g (G .F-hom f), and
+    -- G .F-hom f equals the &-pairing ((f ∘g π₁) ,& π₂) by the
+    -- BinProduct universal property of (Γ' & c).
+    module bpΓ = BinProductNotation (-×c (⇒-Exponential .vertex))
+
+    Ghom≡ : (f : ⟨ Γ ⟩ ⊢ ⟨ ⇒-Exponential .vertex ⟩)
+      → G .F-hom f ≡ &-intro (f ∘g π₁) π₂
+    Ghom≡ f = &≡ _ _
+      (πLRF (((|GRAMMAR| ℓ) [-, c ]) , -×c) .N-hom f
+        ∙ sym (&-β₁ (f ∘g π₁) π₂))
+      (bpΓ.×β₂ ∙ sym (&-β₂ (f ∘g π₁) π₂))
+
+    action≡ : (f : ⟨ Γ ⟩ ⊢ ⟨ ⇒-Exponential .vertex ⟩)
+      → (⇒-app ∘ᴾ⟨ P ⟩ f) ≡ ⇒-intro⁻ f
+    action≡ f = cong (⇒-app ∘g_) (Ghom≡ f)
+
+    currying-isEquiv : isEquiv {A = ⟨ Γ ⟩ ⊢ ⟨ ⇒-Exponential .vertex ⟩} ⇒-intro⁻
+    currying-isEquiv = isoToIsEquiv (iso ⇒-intro⁻ ⇒-intro ⇒-β ⇒-η)
 
 |GRAMMAR|-AllExponentiable :
   AllExponentiable (|GRAMMAR| ℓ) (|GRAMMAR|-BinProducts {ℓ})
