@@ -154,7 +154,7 @@ private
 -- Returns `nothing` if any character is neither `[` nor `]`.
 tokenizeUnicode : AS.String → MaybeD.Maybe String
 tokenizeUnicode s =
-  LexDU.runLex UM-uni ¬nullTrace-uni lexicon-uni (AS.primStringToList s)
+  LexDU.runLex isSetBracket UM-uni ¬nullTrace-uni lexicon-uni (AS.primStringToList s)
 
 -- Partial-but-total view: falls back to the empty token list when
 -- tokenization fails.  Convenient inside parser test sites because

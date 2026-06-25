@@ -9,6 +9,7 @@ module Lex.Det.Base
 
 open import Cubical.Data.Bool as Bool hiding (_⊕_)
 open import Cubical.Data.List using (List ; [] ; _∷_)
+open import Cubical.Data.List.Properties using (isOfHLevelList)
 import Cubical.Data.Maybe as MaybeD using (Maybe ; nothing ; just)
 import Cubical.Data.Sum as Sum
 import Cubical.Data.Empty as Empty
@@ -113,6 +114,7 @@ pickAction-collapse =
     (semact-pure MaybeD.nothing)
 
 module _ {Token : Type ℓ}
+         (isSetToken : isSet Token)
          (UM : ImplicitDeterministicAutomaton ℓ-zero)
          (¬nullTrace : ⟨ ¬Nullable (TraceDA UM true (q₀DA UM)) ⟩)
          (rules : Lexicon Token)
@@ -182,7 +184,8 @@ module _ {Token : Type ℓ}
     step = step' ∘g id ,& string-intro
 
   lexParser : RD.Parser (Δ (List Token))
-  lexParser = fixP step
+  lexParser = fixP (isSetGrammar⊕ᴰ (isOfHLevelList 0 isSetToken)
+                                   (λ _ → isSetGrammar⊤)) step
 
   lex : string ⊢ Maybe (Δ (List Token))
   lex = parse lexParser
