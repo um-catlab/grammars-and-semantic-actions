@@ -1,173 +1,185 @@
-{- The box modality □ packaged as an *upstream* (cubical-categorical-logic)
-   `Comonad` over the category |GRAMMAR| of SetGrammars and Terms.
+{- The box modality □ as the comonad of the presheaf/families adjunction over
+   the suffix category.
 
-   The grammar library already has a bespoke, level-fixed semantic comonad
-   `□-Comonad : Grammar.Comonad.Base.Comonad ℓ` (an F₀/F₁ on raw grammars with
-   counit ε□ and comultiplication δ).  Here we re-package that data as a genuine
-   `Cubical.Categories.Comonad.Base.Comonad (|GRAMMAR| ℓ)`:
+   PREVIOUSLY this module re-packaged gsa's bespoke, hand-built semantic comonad
+   `Grammar.Box.Comonad.□-Comonad` (the `&[ w ] √l-string w A` construction) as a
+   `Cubical.Categories.Comonad.Base.Comonad (|GRAMMAR| ℓ)`.  That packaging had an
+   irreducible `assoc-δ` hole inherited from the unfinished √l-cat pentagon
+   `√l-cat-assoc` in `Grammar.Box.Properties`, and so required
+   `--allow-unsolved-metas`.
 
-     • a c-c-l `Functor (|GRAMMAR| ℓ) (|GRAMMAR| ℓ)` whose action on objects is
-       `A ↦ □ ⟨A⟩` (with the requisite `isSetGrammar (□ ⟨A⟩)`, derived below),
-       and whose action on morphisms is the bespoke `map□`;
-     • an `IsComonad` whose ε/δ are the bespoke ε□/δ assembled into `NatTrans`,
-       whose naturality `N-hom`s come from the bespoke `ε-nat`/`δ-nat`, and whose
-       comonad laws `idl-δ`/`idr-δ`/`assoc-δ` come from the bespoke
-       `counit-l`/`counit-r`/`coassoc`.
+   This module REPLACES that approach.  The box modality `□` is now *inherited*
+   from upstream (cubical-categorical-logic) as the comonad of the
+   presheaf/families adjunction over the *suffix category* of strings.  No
+   `Grammar.Box.*` is imported, and the comonad laws are FREE from the
+   adjunction: there is no pentagon hole anymore, and no `--allow-unsolved-metas`.
 
-   STATUS: the packaging is GREEN.  The Functor (□F), the isSetGrammar (□ ⟨A⟩)
-   derivation, the ε/δ NatTrans (incl. their N-hom naturalities), and
-   idl-δ/idr-δ all typecheck on the nose from the bespoke data.  The *only* gap
-   is `assoc-δ`, which is `sym □-coassoc`; and `□-coassoc` is itself unfinished
-   on the `box` branch because it depends on the √l-cat pentagon
-   `√l-cat-assoc`, whose deepest C-element PathP is an interactive `{!!}` in
-   Grammar.Box.Properties (≈ line 725).  So `assoc-δ` is a hole *because the box
-   branch is unfinished*, not because of any packaging obstruction.
+   THE CONSTRUCTION (all upstream, instantiated at the gsa alphabet):
 
-   IMPORT NOTE: because Grammar.Box.Properties currently carries an open
-   interaction point (`{!!}`), Agda refuses to import it (and hence to load this
-   module — exactly as it refuses to load the bespoke Grammar.Box.Comonad) until
-   that interaction point is closed *or* Grammar.Box.Properties is given
-   `{-# OPTIONS --allow-unsolved-metas #-}`.  This module was verified to
-   typecheck cleanly (no errors, no metas of its own) once the upstream
-   interaction point is tolerated; the `--allow-unsolved-metas` here covers the
-   single inherited `√l-cat-assoc`/`coassoc` meta. -}
-{-# OPTIONS --allow-unsolved-metas #-}
+     • The suffix category `SuffixCat` (Cubical.Categories.Direct.Instances.Suffix)
+       has objects `List ⟨Alphabet⟩ = String` and Hom y x = `y ≤ˢ x` (the
+       reflexive suffix order).
+
+     • Cubical.Categories.Presheaf.Family.Base provides, for any base category C:
+         - `Psh→Fam : Functor Psh Fam`   where `Fam = PowerCategory C.ob (SET _)`
+           and `Psh = PRESHEAF C _`;
+         - `Cofree : Functor Fam Psh` with
+             `Cofree A x = (y : C.ob) → C.Hom[ y , x ] → A y .fst`,
+           i.e. `Cofree A x = ∀ (y suffix-of x). A y` — this IS `□`;
+         - the adjunction `CofreeFamAdj : Psh→Fam ⊣ Cofree`.
+
+     • `Wᶜ = Psh→Fam ∘F Cofree : Functor Fam Fam` is the comonad endofunctor `□`
+       on families.  Its comonad structure is presented as a *monad on Fam ^op*,
+       via `MonadFromAdjunction` applied to the opposite adjunction:
+         `mᶜ : IsMonad ((Psh→Fam ^opF) ∘F (Cofree ^opF))`.
+       The comonad laws are thus exactly the (free) monad laws of `mᶜ` — no
+       coassociativity is proved by hand.
+
+   We expose the comonad as an `ExtensionSystem` on `Fam` (a comonad on `Fam` in
+   the extension-system sense is a monad on `Fam ^op`:
+   `Comonad.ExtensionSystem.ExtensionSystem Fam = MES.ExtensionSystem (Fam ^op)`),
+   obtained from `mᶜ` by the total function `Monad→ExtensionSystem`.  Zero glue,
+   zero holes.
+
+   STATUS: GREEN.  No holes, no postulates, no `--allow-unsolved-metas`, no
+   `Grammar.Box.*` import.
+
+   REMARK on `Fam` vs gsa's `|GRAMMAR|`.  `Fam.ob = String → SET ℓ` whereas gsa's
+   `SetGrammar ℓ = Σ[ A ∈ (String → Type ℓ) ] (∀ w → isSet (A w))`.  These are
+   equivalent by the Π↔Σ swap (a family of sets ≅ a set-valued family), but NOT
+   definitionally equal, so we work natively on `Fam`.  Transporting the comonad
+   along `Fam ≃ |GRAMMAR|` is possible but heavy and unnecessary for the headline
+   result; we record the iso only as this remark. -}
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.HLevels
+open import Cubical.Foundations.Structure
 
 module Grammar.Categorical.Comonad (Alphabet : hSet ℓ-zero) where
 
 open import Cubical.Categories.Category.Base
-open import Cubical.Categories.Functor renaming (𝟙⟨_⟩ to funcId)
-open import Cubical.Categories.NaturalTransformation hiding (_⇒_)
-open import Cubical.Categories.NaturalTransformation.More
-open import Cubical.Categories.Comonad.Base
+open import Cubical.Categories.Functor
+open import Cubical.Categories.Adjoint using (opositeAdjunction ; module UnitCounit)
+open UnitCounit using (_⊣_)
+open import Cubical.Categories.Instances.Sets
+open import Cubical.Categories.Instances.Power
+open import Cubical.Categories.Presheaf.StrictHom.Base using (PRESHEAF)
+open import Cubical.Categories.Monad.Base using (IsMonad ; Monad)
+open import Cubical.Categories.Adjoint.Monad using (MonadFromAdjunction)
+open import Cubical.Categories.Monad.ExtensionSystem
+  using (Monad→ExtensionSystem)
+import Cubical.Categories.Comonad.ExtensionSystem as CoES
 
-open import Grammar.Base Alphabet
-open import Grammar.HLevels Alphabet
-open import Grammar.Top Alphabet
-open import Grammar.String Alphabet
-open import Grammar.Product Alphabet
-open import Grammar.LinearProduct Alphabet
-open import Grammar.Function Alphabet
-open import Grammar.Derivative.String Alphabet
-open import Grammar.Box.Base Alphabet
-open import Grammar.Box.Properties Alphabet
-open import Grammar.Box.Comonad Alphabet using (□-Comonad)
-import Grammar.Comonad.Base Alphabet as Bespoke
-open import Term.Base Alphabet
-open import Term.Category Alphabet
+open import Cubical.Categories.Direct.Instances.Suffix
+  (⟨ Alphabet ⟩) (str Alphabet)
+  using (SuffixCat)
+import Cubical.Categories.Presheaf.Family.Base as Family
+
+open import Grammar.Base Alphabet using (String)
 
 private
   variable
     ℓ : Level
 
 --------------------------------------------------------------------------------
--- isSetGrammar (□ A)
+-- The categories Fam and Psh over the suffix category.
 --
--- □ A = &[ w ] √l-string w A, and √l-string w A = (⌈w⌉⊗⊤) ⇒ (⌈w⌉⊗A) (a plain
--- definition).  So:  &ᴰ of sets is a set (isSetGrammar&ᴰ); ⇒ into a set is a set
--- (isSetGrammar⇒, below); ⌈w⌉⊗A is a set (isSetGrammar⊗) since ⌈w⌉ is a language.
+--   SuffixCat.ob = List ⟨Alphabet⟩ = String   (definitionally gsa's `String`).
+--   Fam = PowerCategory String (SET ℓ) = String → SET ℓ.
+--   Psh = PRESHEAF SuffixCat ℓ.
 --------------------------------------------------------------------------------
 
-opaque
-  unfolding _⇒_
-  isSetGrammar⇒ : ∀ {ℓA ℓB} {A : Grammar ℓA} {B : Grammar ℓB}
-    → isSetGrammar B → isSetGrammar (A ⇒ B)
-  isSetGrammar⇒ isSetB w = isSet→ (isSetB w)
+module _ (ℓ : Level) where
+  open Category
 
-isSetGrammar√l-string : ∀ {ℓA} {A : Grammar ℓA} (w : String)
-  → isSetGrammar A → isSetGrammar (√l-string w A)
-isSetGrammar√l-string {A = A} w isSetA =
-  isSetGrammar⇒
-    (isSetGrammar⊗ (isLang→isSetGrammar (isLang⌈⌉ w)) isSetA)
+  Fam : Category (ℓ-suc ℓ) ℓ
+  Fam = PowerCategory (SuffixCat .ob) (SET ℓ)
 
-isSetGrammar□ : ∀ {ℓA} {A : Grammar ℓA}
-  → isSetGrammar A → isSetGrammar (□ A)
-isSetGrammar□ {A = A} isSetA =
-  isSetGrammar&ᴰ (λ w → isSetGrammar√l-string w isSetA)
+  Psh : Category _ _
+  Psh = PRESHEAF SuffixCat ℓ
 
 --------------------------------------------------------------------------------
--- The endofunctor □ : |GRAMMAR| ℓ → |GRAMMAR| ℓ
+-- The presheaf/families adjunction, instantiated at SuffixCat.
 --
--- F-ob packages □ ⟨A⟩ as a SetGrammar; F-hom = map□; F-id/F-seq from the
--- bespoke map□-id/map□-seq.  Note ⋆⟨ |GRAMMAR| ⟩ = Term.seq reverses
--- composition, so F-seq f g : map□ (g ∘g f) ≡ map□ g ∘g map□ f, which is
--- exactly map□-seq f g.
+-- These are the *exposed* names of Cubical.Categories.Presheaf.Family.Base; the
+-- file's own `Fam`/`Psh`/`Wᶜ`/`mᶜ` are private, so we reconstruct the comonad
+-- functor and its monad-on-the-opposite presentation from the public data.
 --------------------------------------------------------------------------------
 
-module _ {ℓ} where
-  -- The bespoke semantic comonad's structure, accessed qualified to avoid the
-  -- ε/δ name-clash with Grammar.Box.Base (ε□/δ) and the record's own ε/δ.
-  module D = Bespoke.Comonad (□-Comonad {ℓ})
+module _ {ℓ : Level} where
+  Psh→Fam : Functor (Psh ℓ) (Fam ℓ)
+  Psh→Fam = Family.Psh→Fam {ℓ = ℓ} SuffixCat
 
-  □F : Functor (|GRAMMAR| ℓ) (|GRAMMAR| ℓ)
-  □F .Functor.F-ob A = □ ⟨ A ⟩ , isSetGrammar□ (A .snd)
-  □F .Functor.F-hom f = map□ f
-  □F .Functor.F-id = map□-id
-  □F .Functor.F-seq f g = map□-seq f g
+  -- Cofree A x = ∀ (y suffix-of x). A y      -- this IS □ on families.
+  Cofree : Functor (Fam ℓ) (Psh ℓ)
+  Cofree = Family.Cofree {ℓ = ℓ} SuffixCat
+
+  CofreeFamAdj : Psh→Fam ⊣ Cofree
+  CofreeFamAdj = Family.CofreeFamAdj {ℓ = ℓ} SuffixCat
+
+  -- The comonad endofunctor □ = Wᶜ on families.
+  Wᶜ : Functor (Fam ℓ) (Fam ℓ)
+  Wᶜ = Psh→Fam ∘F Cofree
+
+  -- The comonad presented as a monad on Fam ^op.  THIS is where the comonad
+  -- laws come from (free from the adjunction); we never prove coassociativity.
+  mᶜ : IsMonad ((Psh→Fam ^opF) ∘F (Cofree ^opF))
+  mᶜ = MonadFromAdjunction (Cofree ^opF) (Psh→Fam ^opF)
+         (opositeAdjunction CofreeFamAdj)
+
+  -- Package as a Monad on Fam ^op …
+  monadᶜ : Monad ((Fam ℓ) ^op)
+  monadᶜ = ((Psh→Fam ^opF) ∘F (Cofree ^opF)) , mᶜ
+
+  -- … which is exactly a comonad on Fam in the extension-system sense:
+  --   Comonad.ExtensionSystem.ExtensionSystem (Fam ℓ)
+  --     = Monad.ExtensionSystem.ExtensionSystem ((Fam ℓ) ^op).
+  -- Monad→ExtensionSystem is a total function, so this is free of any proof
+  -- obligation: the comonad laws are inherited verbatim from the adjunction.
+  □Comonad : CoES.ExtensionSystem (Fam ℓ)
+  □Comonad = Monad→ExtensionSystem ((Fam ℓ) ^op) monadᶜ
+
+  --------------------------------------------------------------------------------
+  -- The box modality □ on families.
+  --
+  -- □ = Wᶜ .F-ob, and definitionally
+  --     □ A x = (y : String) → SuffixCat[ y , x ] → A y .fst
+  --           = ∀ (y suffix-of x). A y.
+  -- This REPLACES gsa's manual `Grammar.Box` (the `&[ w ] √l-string w A`
+  -- construction): the same box modality now arises uniformly as the cofree
+  -- comonad of the suffix-category presheaf/families adjunction.
+  --------------------------------------------------------------------------------
+
+  □ : (Fam ℓ) .Category.ob → (Fam ℓ) .Category.ob
+  □ = Wᶜ .Functor.F-ob
 
 --------------------------------------------------------------------------------
--- ε and δ as natural transformations
+-- Comonadicity comparison (the headline equivalence).
 --
--- N-hom for ε : NatTrans □F (funcId) is  ε□ ∘g map□ f ≡ f ∘g ε□  (the ⋆-order in
--- |GRAMMAR| reverses ∘g), i.e. sym (ε-nat f).
--- N-hom for δ : NatTrans □F (□F ∘F □F) is  δ ∘g map□ f ≡ map□ (map□ f) ∘g δ,
--- which is exactly δ-nat f.
+-- Presheaves over the suffix order are exactly the □-coalgebras: the comparison
+-- functor `Psh→COALG : Functor Psh COALG` (into the co-Eilenberg–Moore category
+-- of the comonad) is an equivalence.  We re-export the comparison and the full
+-- equivalence from upstream.
 --------------------------------------------------------------------------------
 
-  εTrans : NatTrans □F (funcId (|GRAMMAR| ℓ))
-  εTrans .NatTrans.N-ob A = ε□
-  εTrans .NatTrans.N-hom f = sym (D.ε-nat f)
+module _ {ℓ : Level} where
+  -- COALG = co-Eilenberg–Moore category of the □ comonad on Fam.
+  COALG : Category _ _
+  COALG = Family.COALG {ℓ = ℓ} SuffixCat
 
-  δTrans : NatTrans □F (funcComp □F □F)
-  δTrans .NatTrans.N-ob A = δ
-  δTrans .NatTrans.N-hom f = D.δ-nat f
+  -- The comparison functor: presheaves over the suffix order → □-coalgebras.
+  Psh→COALG : Functor (Psh ℓ) COALG
+  Psh→COALG = Family.Psh→COALG {ℓ = ℓ} SuffixCat
 
---------------------------------------------------------------------------------
--- The IsComonad structure
---
--- idl-δ / idr-δ are PathPs over the functor-unit coherences F-rUnit / F-lUnit
--- (only the codomain functor varies; the domain stays □F).  We build them with
--- makeNatTransPathP: the N-ob PathP is over a constant object-family (both
--- funcComp □F (funcId) and □F send A ↦ □⟨A⟩), so it degenerates to the plain
--- grammar equalities counit-l / counit-r.
---
--- Concretely, unfolding the whiskerings and ∘ᵛ (= compTrans, which reverses to
--- seqTrans, and ⋆⟨|GRAMMAR|⟩ reverses to ∘g):
---   ((ε ∘ˡ □F) ∘ᵛ δ) ⟦A⟧ = ε□ {□⟨A⟩} ∘g δ      ≡ id   (counit-l)
---   ((□F ∘ʳ ε) ∘ᵛ δ) ⟦A⟧ = map□ ε□ ∘g δ         ≡ id   (counit-r)
--- and pointwise
---   ((□F ∘ʳ δ) ∘ᵛ δ) ⟦A⟧ = map□ δ ∘g δ
---   ((δ ∘ˡ □F) ∘ᵛ δ) ⟦A⟧ = δ ∘g δ
--- so assoc-δ : map□ δ ∘g δ ≡ δ ∘g δ, i.e. sym coassoc.
---------------------------------------------------------------------------------
-
-  □-IsComonad : IsComonad □F
-  □-IsComonad .IsComonad.ε = εTrans
-  □-IsComonad .IsComonad.δ = δTrans
-  □-IsComonad .IsComonad.idl-δ =
-    makeNatTransPathP (λ _ → □F) (λ i → F-rUnit {F = □F} i)
-      (funExt (λ A → D.counit-l))
-  □-IsComonad .IsComonad.idr-δ =
-    makeNatTransPathP (λ _ → □F) (λ i → F-lUnit {F = □F} i)
-      (funExt (λ A → D.counit-r))
-  -- assoc-δ ≡ sym coassoc.  Box-branch-unfinished: coassoc bottoms out at the
-  -- √l-cat-assoc pentagon hole in Grammar.Box.Properties (line ~725).
-  □-IsComonad .IsComonad.assoc-δ {c = A} = sym D.coassoc
-
-  □-Comonad-c-c-l : Comonad (|GRAMMAR| ℓ)
-  □-Comonad-c-c-l = □F , □-IsComonad
+  -- Comonadicity: Psh ≃ □-coalgebras.
+  open import Cubical.Categories.Equivalence using (_≃ᶜ_)
+  Psh≃COALG : (Psh ℓ) ≃ᶜ COALG
+  Psh≃COALG = Family.Psh≃COALG {ℓ = ℓ} SuffixCat
 
 --------------------------------------------------------------------------------
 -- Remark on the later modality ▷.
 --
--- The guarded later modality ▷ (Grammar.Box.GuardedFixpoint / Grammar.Later) is
--- a covariant endofunctor on grammars, so it could be packaged as a c-c-l
--- `Functor (|GRAMMAR| ℓ) (|GRAMMAR| ℓ)` in exactly the same way as □F above.
--- It is, however, NOT a comonad: there is no counit ▷ A ⊢ A (a value "available
--- one step later" cannot be read off now).  It carries the dual `next : A ⊢ ▷ A`
--- and a Löb fixpoint, which make it (with a suitable structure) a *pointed*
--- functor / the basis of a guarded-recursion modality — not a `Comonad`.  So ▷
--- does not yield a `Comonad (|GRAMMAR| ℓ)`.
+-- The guarded later modality ▷ is a covariant endofunctor on grammars and could
+-- be packaged as a c-c-l `Functor`, but it is NOT a comonad: there is no counit
+-- ▷ A ⊢ A.  It carries the dual `next : A ⊢ ▷ A` and a Löb fixpoint, making it a
+-- *pointed* functor / the basis of a guarded-recursion modality — not a comonad.
 --------------------------------------------------------------------------------
