@@ -16,8 +16,7 @@ open import Grammar.SequentialUnambiguity.Nullable Alphabet
 open import Grammar.SequentialUnambiguity.First Alphabet
 open import Grammar.SequentialUnambiguity.FollowLast Alphabet
 open import Grammar.PropositionalTruncation.Base Alphabet
-open import Grammar.External.LinearProduct.SplittingTrichotomy Alphabet
-open import Grammar.External.String.Tiny Alphabet
+import Grammar.Yoneda.Reflect Alphabet as YR
 open import Term Alphabet
 
 open import Cubical.Foundations.Powerset.More
@@ -135,78 +134,13 @@ module _
   (seq-unambig-C : A ⊛ C)
   where
 
-  private
-    uninhabitedFirstPrefixG :
-      firstPrefixG A B A C ⊢ ⊥
-    uninhabitedFirstPrefixG =
-      ⊕ᴰ-elim (λ w →
-      ⊕ᴰ-elim (λ x →
-      ⊕ᴰ-elim (λ y →
-      ⊕ᴰ-elim (λ z →
-      ⊕ᴰ-elim (λ {
-          ([] , notmt) → Empty.rec (notmt refl)
-        ; (c ∷ v , notmt) →
-          Sum.rec
-            (λ c∉FlA →
-              ⊥⊗
-              ∘g (c∉FlA ∘g (id ,⊗ id ,⊗ string-intro) ,&p id ∘g &-swap) ,⊗ id
-              ∘g ⌈⌉-⊗&-distR⁻ {w = x}
-              ∘g id ,&p ⊗-assoc
-              ∘g ((π₁ ∘g π₁) ,⊗ π₂) ,&p (π₁ ,⊗ π₂)
-            )
-            (λ c∉FC →
-              ⊗⊥
-              ∘g id ,⊗ (c∉FC ∘g &-swap)
-              ∘g id ,⊗ (π₁ ,&p (id ,⊗ string-intro ∘g ⊗-assoc⁻))
-              ∘g π₂
-            )
-            (seq-unambig-C c)
-        })))))
-
-    uninhabitedSecondPrefixG :
-      secondPrefixG A B A C ⊢ ⊥
-    uninhabitedSecondPrefixG =
-      ⊕ᴰ-elim (λ y →
-      ⊕ᴰ-elim (λ z →
-      ⊕ᴰ-elim (λ w →
-      ⊕ᴰ-elim (λ x →
-      ⊕ᴰ-elim (λ {
-          ([] , notmt) → Empty.rec (notmt refl)
-        ; (c ∷ v , notmt) →
-          Sum.rec
-            (λ c∉FlA →
-              ⊥⊗
-              ∘g (c∉FlA ∘g (id ,⊗ id ,⊗ string-intro) ,&p id ∘g &-swap) ,⊗ id
-              ∘g ⌈⌉-⊗&-distR⁻ {w = x}
-              ∘g id ,&p ⊗-assoc
-              ∘g ((π₁ ∘g π₁) ,⊗ π₂) ,&p (π₁ ,⊗ π₂)
-            )
-            (λ c∉FB →
-              ⊗⊥
-              ∘g id ,⊗ (c∉FB ∘g &-swap)
-              ∘g id ,⊗ (π₁ ,&p (id ,⊗ string-intro ∘g ⊗-assoc⁻))
-              ∘g π₂
-            )
-            (seq-unambig-B c)
-        })))))
-
+  -- Rebuilt on the Yoneda-slice keystone (Grammar.Yoneda.Reflect): the
+  -- splitting trichotomy + Tiny distribution laws are no longer needed.
   ⊗&-distL≅ :
     (A ⊗ B) & (A ⊗ C)
     ≅
     (A & A) ⊗ (B & C)
-  ⊗&-distL≅ =
-    ⊗&-split A B A C
-    ≅∙ ⊕≅
-      id≅
-      (
-      (⊕≅
-        (uninhabited→≅⊥ uninhabitedSecondPrefixG)
-        (uninhabited→≅⊥ uninhabitedFirstPrefixG)
-      )
-      ≅∙ ⊥⊕≅ ⊥
-      )
-    ≅∙ ⊕-swap≅
-    ≅∙ ⊥⊕≅ (A & A ⊗ B & C)
+  ⊗&-distL≅ = YR.⊗&-distL≅ A B C seq-unambig-B seq-unambig-C
 
 seq-unambig-εL : ε ⊛ A
 seq-unambig-εL c = Sum.inl ((disjoint-ε-char+ ∘g id ,&p (literal→char c ,⊗ id ∘g ⊗-unit-l)) ∘g &-swap)

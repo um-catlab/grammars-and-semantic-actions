@@ -40,7 +40,7 @@ module Handwritten where
   -- ↑ (A ⊸ B) and A ⊢ B,
   -- the constructors are represented below without
   -- explicit mention to ⊸
-  TraceTy : State → Functor State
+  TraceTy : State → SPFunctor State
   TraceTy s0 = ⊕e (Tag s0) λ where
     -- 0to2 : ↑ (＂ c ＂ ⊸ Trace s2 ⊸ Trace s0)
     0to2 → k ＂ c ＂ ⊗e Var s2
@@ -62,7 +62,7 @@ module Handwritten where
 
   -- Application of each of the constructors
   -- NOTE: the lifts here are artifacts of the
-  -- way that we define Functor
+  -- way that we define SPFunctor
   0TO2 : ＂ c ＂ ⊗ Trace s2 ⊢ Trace s0
   0TO2 = roll ∘g σ 0to2 ∘g liftG ,⊗ liftG
 

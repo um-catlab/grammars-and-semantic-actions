@@ -68,7 +68,7 @@ record NFA ℓN : Type (ℓ-suc ℓN) where
       step : ∀ t → (src t Eq.≡ q) → Tag q
       stepε : ∀ t → (ε-src t Eq.≡ q) → Tag q
 
-    TraceTy : (q : ⟨ Q ⟩) → Functor ⟨ Q ⟩
+    TraceTy : (q : ⟨ Q ⟩) → SPFunctor ⟨ Q ⟩
     TraceTy q = ⊕e (Tag q) λ
       { (stop x) → k ε*
       ; (step t x) → (k (literal* (label t))) ⊗e (Var (dst t))
@@ -95,7 +95,7 @@ record NFA ℓN : Type (ℓ-suc ℓN) where
     data Tag : Type ℓN where
         stop step stepε : Tag
 
-    TraceTy : Bool → (q : ⟨ Q ⟩) → Functor ⟨ Q ⟩
+    TraceTy : Bool → (q : ⟨ Q ⟩) → SPFunctor ⟨ Q ⟩
     TraceTy b q = ⊕e Tag λ {
         stop → ⊕e (Lift ℓN (b Eq.≡ isAcc q)) (λ
           (lift acc) → k (LiftG ℓN ε) )

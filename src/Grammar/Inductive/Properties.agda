@@ -15,7 +15,7 @@ open import Term.Base Alphabet
 private
   variable ℓA ℓB ℓX : Level
 
-module _ {X : Type ℓX} (F : X → Functor X) where
+module _ {X : Type ℓX} (F : X → SPFunctor X) where
   open StrongEquivalence
 
   unroll≅ : ∀ x → μ F x ≅ ⟦ F x ⟧ (μ F)

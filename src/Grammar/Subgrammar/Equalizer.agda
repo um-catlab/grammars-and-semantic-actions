@@ -66,7 +66,7 @@ module _
     ∙ cong (_∘g f'') eq-π-pf
     ∙ cong (f' ∘g_) p
 
-module _ {X : Type ℓX} (F : X → Functor X) (A : X → SetGrammar ℓA)
+module _ {X : Type ℓX} (F : X → SPFunctor X) (A : X → SetGrammar ℓA)
   (e e' : ∀ (x : X) → μ F x ⊢ ⟨ A x ⟩)
   (pf : ∀ (x : X) →
     e  x ∘g roll ∘g map (F x) (λ y → eq-π {B = A y} (e y) (e' y)) ≡

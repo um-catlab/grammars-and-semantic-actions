@@ -38,7 +38,7 @@ record DeterministicAutomaton (Q : Type ℓ) : Type (ℓ-suc ℓ) where
   isSetTag : isSet Tag
   isSetTag = isSetRetract (TagRep .fun) (TagRep .inv) (TagRep .ret) isSetBool
 
-  TraceTy : Bool → (q : Q) → Functor Q
+  TraceTy : Bool → (q : Q) → SPFunctor Q
   TraceTy b q = ⊕e Tag λ {
       stop → ⊕e (Lift ℓ (b Eq.≡ isAcc q)) λ { (lift acc) → k ε* }
       ; step → ⊕e (Lift ℓ ⟨ Alphabet ⟩) (λ { (lift c) → (k (literal* c)) ⊗e (Var (δ q c)) }) }

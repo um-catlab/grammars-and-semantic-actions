@@ -63,7 +63,7 @@ isSetDyckTag = isSetRetract enc dec retr isSetBool where
   retr nil' = refl
   retr balanced' = refl
 
-DyckTy : Unit → Functor Unit
+DyckTy : Unit → SPFunctor Unit
 DyckTy _ = ⊕e DyckTag (λ
   { nil' → k ε
   ; balanced' → (k (literal [)) ⊗e (Var _) ⊗e (k (literal ]) ⊗e (Var _)) })

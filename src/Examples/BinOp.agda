@@ -81,7 +81,7 @@ module LL⟨1⟩ where
     done add : Tag Exp
     num parens : Tag Atom
 
-  BinOpTy : Nonterminal → Functor Nonterminal
+  BinOpTy : Nonterminal → SPFunctor Nonterminal
   BinOpTy Exp =
     ⊕e (Tag Exp)
       λ where
@@ -199,13 +199,13 @@ module Automaton where
     add : AutomatonTag b n Adding
     unexpectedA : b Eq.≡ false → UnexpectedAdding → AutomatonTag b n Adding
 
-  DoneOpeningFun : ℕ → Maybe Tok → Functor (ℕ × AutomatonState)
+  DoneOpeningFun : ℕ → Maybe Tok → SPFunctor (ℕ × AutomatonState)
   DoneOpeningFun n tok? = Var (n , Tok→State tok?) &e2 k (PeekChar tok?)
 
-  DoneOpening : ℕ → Functor (ℕ × AutomatonState)
+  DoneOpening : ℕ → SPFunctor (ℕ × AutomatonState)
   DoneOpening n = ⊕e (Maybe Tok) (DoneOpeningFun n)
 
-  AutomatonTy : Bool → ℕ × AutomatonState → Functor (ℕ × AutomatonState)
+  AutomatonTy : Bool → ℕ × AutomatonState → SPFunctor (ℕ × AutomatonState)
   AutomatonTy b (n , Opening) =
     ⊕e (AutomatonTag b n Opening)
       λ where

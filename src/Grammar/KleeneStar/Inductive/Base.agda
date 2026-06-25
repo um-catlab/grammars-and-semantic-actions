@@ -35,7 +35,7 @@ module _ (A : Grammar ℓA) where
   data *Tag : Type ℓA where
     nil cons : *Tag
 
-  *Ty : Unit* {ℓA} → Functor Unit*
+  *Ty : Unit* {ℓA} → SPFunctor Unit*
   *Ty _ = ⊕e *Tag (λ { nil → k ε* ; cons → (k A) ⊗e (Var _)})
 
   isFinSet*Tag : isFinSet *Tag
@@ -60,7 +60,7 @@ module _ (A : Grammar ℓA) where
     nil  → [nil] ∘g lowerG ∘g lowerG
     cons → [cons] ∘g lowerG ,⊗ lowerG)
 
-  repeatTy : Lift ℓA ℕ → Functor (Lift ℓA ℕ)
+  repeatTy : Lift ℓA ℕ → SPFunctor (Lift ℓA ℕ)
   repeatTy (lift zero) = k ε*
   repeatTy (lift (suc n)) = (k A) ⊗e (Var (lift n))
 
@@ -151,7 +151,7 @@ module _ (A : Grammar ℓA) where
   data *TagL : Type ℓA where
     nil snoc : *TagL
 
-  *LTy : Unit* {ℓA} → Functor Unit*
+  *LTy : Unit* {ℓA} → SPFunctor Unit*
   *LTy _ = ⊕e *TagL (λ { nil → k ε* ; snoc → (Var _) ⊗e (k A)})
 
   *LAlg→*Alg : Algebra *LTy (λ _ → B)  → Algebra *Ty (λ _ → B ⟜ B)
@@ -180,7 +180,7 @@ module _ (A : Grammar ℓA) where
   *L≅unrolled*L : *L ≅ unrolled*L
   *L≅unrolled*L = unroll≅ *LTy _
 
-  repeatTyL : Lift ℓA ℕ → Functor (Lift ℓA ℕ)
+  repeatTyL : Lift ℓA ℕ → SPFunctor (Lift ℓA ℕ)
   repeatTyL (lift zero) = k ε*
   repeatTyL (lift (suc n)) = (Var (lift n)) ⊗e (k A)
 
