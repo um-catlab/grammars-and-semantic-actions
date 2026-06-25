@@ -122,7 +122,7 @@ step : ▷ (MaybeLeft Dyck) ⊢ MaybeLeft Dyck
 step = step' ∘g id ,& string-intro
 
 parseDyck : Parser Dyck
-parseDyck = fixP step
+parseDyck = fixP isSetGrammarDyck step
 
 recognizeDyck : string ⊢ Maybe Dyck
 recognizeDyck = parse parseDyck
