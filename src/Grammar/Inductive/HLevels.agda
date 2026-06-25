@@ -18,18 +18,11 @@ open import Grammar.Epsilon.Base Alphabet
 open import Grammar.LinearProduct.Base Alphabet
 open import Grammar.Lift.Base Alphabet
 open import Grammar.Inductive.Indexed Alphabet as Inductive
+open import Grammar.Inductive.SetValued Alphabet public
 open import Term.Base Alphabet
 
 private
   variable ℓA ℓB ℓX ℓY : Level
-
-isSetValued : ∀ {X : Type ℓX} → SPFunctor X → Type ℓX
-isSetValued (k A) = isSetGrammar A
-isSetValued {X = X} (Var x) = Unit*
-isSetValued (&e Y F) = ∀ y → isSetValued (F y)
-isSetValued (⊕e Y F) = isSet Y × (∀ y → isSetValued (F y))
-isSetValued (F ⊗e G) = isSetValued F × isSetValued G
-isSetValued (F &e2 G) = isSetValued F × isSetValued G
 
 module _ {X : Type ℓX} where
   FS : (F : SPFunctor X) → String → Type ℓX
@@ -126,21 +119,6 @@ module _ {X : Type ℓX} where
     reconstructF (F1 &e2 F2) w x (t1 , t2) i =
       (reconstructF F1 w x t1 i) ,
       (reconstructF F2 w x t2 i)
-
-    isSet⟦F⟧ : ∀ (F : SPFunctor X)
-      → isSetValued F
-      → (A : X → SetGrammar ℓA)
-      → isSetGrammar (⟦ F ⟧ (λ x → ⟨ A x ⟩))
-    isSet⟦F⟧ (k _) isSetF A = isSetGrammarLift isSetF
-    isSet⟦F⟧ (Var x) isSetF A = isSetGrammarLift (A x .snd)
-    isSet⟦F⟧ (&e Y F) isSetF A =
-      isSetGrammar&ᴰ (λ b → isSet⟦F⟧ (F b) (isSetF b) A)
-    isSet⟦F⟧ (⊕e Y F) isSetF A =
-      isSetGrammar⊕ᴰ (isSetF .fst) (λ b → isSet⟦F⟧ (F b) (isSetF .snd b) A)
-    isSet⟦F⟧ (Fl ⊗e Fr) isSetF A =
-      isSetGrammar⊗ (isSet⟦F⟧ Fl (isSetF .fst) A) (isSet⟦F⟧ Fr (isSetF .snd) A)
-    isSet⟦F⟧ (F1 &e2 F2) isSetF A =
-      isSetGrammar& (isSet⟦F⟧ F1 (isSetF .fst) A) (isSet⟦F⟧ F2 (isSetF .snd) A)
 
     isSetμIW : ∀ (F : X → SPFunctor X) → (∀ x → isSetValued (F x))
       → ∀ ix → isSet (μIW F ix)

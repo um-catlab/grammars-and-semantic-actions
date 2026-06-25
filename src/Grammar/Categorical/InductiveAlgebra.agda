@@ -38,6 +38,8 @@ open import Grammar.Base Alphabet
 open import Grammar.HLevels.Base Alphabet
 open import Grammar.Inductive.Indexed Alphabet
 open import Grammar.Inductive.HLevels Alphabet
+open import Grammar.Inductive.Semantic Alphabet
+  using (⟦SPF⟧Pow)
 open import Term.Base Alphabet
 open import Term.Category Alphabet
 
@@ -251,18 +253,10 @@ module Indexed {ℓX} {X : Type ℓX}
   PowerCat : Category (ℓ-max (ℓ-suc ℓX) ℓX) ℓX
   PowerCat = PowerCategory X (|GRAMMAR| ℓX)
 
-  -- object action, packaged pointwise as a SetGrammar (set-valuedness
-  -- per-x from `isSet⟦F⟧`, exactly as in the single-sorted `⟦F⟧-ob`).
-  ⟦F⟧Pow-ob : (X → SetGrammar ℓX) → (X → SetGrammar ℓX)
-  ⟦F⟧Pow-ob A x .fst = ⟦ F x ⟧ (λ y → A y .fst)
-  ⟦F⟧Pow-ob A x .snd = isSet⟦F⟧ (F x) (isSetValF x) A
-
-  -- The X-indexed semantic endofunctor built from the codes `F`.
+  -- The X-indexed semantic endofunctor built from the codes `F`,
+  -- reused from `Grammar.Inductive.Semantic` (single source of truth).
   ⟦F⟧Pow : Functor PowerCat PowerCat
-  ⟦F⟧Pow .F-ob = ⟦F⟧Pow-ob
-  ⟦F⟧Pow .F-hom {A}{B} ϕ x = map (F x) ϕ
-  ⟦F⟧Pow .F-id {A} = funExt (λ x → map-id (F x))
-  ⟦F⟧Pow .F-seq f g = funExt (λ x → map-∘ (F x) g f)
+  ⟦F⟧Pow = ⟦SPF⟧Pow F isSetValF
 
 ------------------------------------------------------------------------
 -- §5.  μ F as an InitialAlgebra of ⟦ F ⟧Pow (mirrors §2, X-indexed).
