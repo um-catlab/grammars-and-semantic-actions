@@ -23,6 +23,12 @@ open import Grammar.SequentialUnambiguity.Nullable Alphabet
 open import Grammar.Equivalence.Base Alphabet
 open import Term.Base Alphabet
 
+open import Cubical.Data.List using (rev ; rev-++ ; rev-rev)
+open import Cubical.Data.Empty as Empty
+import Cubical.Data.Equality as Eq
+open import Cubical.Categories.Direct.Instances.Suffix (Alphabet .fst) (Alphabet .snd)
+  using (_<ˢ_)
+
 open StrongEquivalence
 
 private
@@ -31,13 +37,42 @@ private
     A : Grammar ℓA
     B : Grammar ℓB
 
-▷-app-⌈⌉ : ∀ (w : NonEmptyString) →
-  (⌈ w .fst ⌉ ⊗ ⊤) & ▷ A ⊢ ⌈ w .fst ⌉ ⊗ A
-▷-app-⌈⌉ w = ⇒-app ∘g π w ,&p id ∘g &-swap
+opaque
+  unfolding _⊗_ _&_ ⊤
+  -- Peel a known nonempty prefix w: the residual is a strict suffix, so
+  -- ▷ A delivers A there.  Factors through ▷-elim-at (the `α (right split) …`).
+  ▷-app-⌈⌉ : ∀ (w : NonEmptyString) →
+    (⌈ w .fst ⌉ ⊗ ⊤) & ▷ A ⊢ ⌈ w .fst ⌉ ⊗ A
+  ▷-app-⌈⌉ {A = A} w s ((split , cv , _) , α) =
+    split , cv , α r residual<ˢs
+    where
+      l r : String
+      l = split .fst .fst
+      r = split .fst .snd
+      w≡l : w .fst Eq.≡ l
+      w≡l = uniquely-supported-⌈⌉Eq (w .fst) l cv
+      lne : l ≡ [] → Empty.⊥
+      lne e = w .snd (Eq.eqToPath w≡l ∙ e)
+      residual<ˢs : r <ˢ s
+      residual<ˢs = l , lne , sym (Eq.eqToPath (split .snd))
 
-▷r-app-⌈⌉ : ∀ (w : NonEmptyString) →
-  (⊤ ⊗ ⌈ w .fst ⌉) & ▷r A ⊢ A ⊗ ⌈ w .fst ⌉
-▷r-app-⌈⌉ w = ⇒-app ∘g π w ,&p id ∘g &-swap
+  -- Symmetric: peel a known nonempty suffix w; the residual prefix is strict.
+  ▷r-app-⌈⌉ : ∀ (w : NonEmptyString) →
+    (⊤ ⊗ ⌈ w .fst ⌉) & ▷r A ⊢ A ⊗ ⌈ w .fst ⌉
+  ▷r-app-⌈⌉ {A = A} w s ((split , _ , cv) , α) =
+    split , α l residual<ᵖs , cv
+    where
+      l r : String
+      l = split .fst .fst
+      r = split .fst .snd
+      w≡r : w .fst Eq.≡ r
+      w≡r = uniquely-supported-⌈⌉Eq (w .fst) r cv
+      rne : rev r ≡ [] → Empty.⊥
+      rne e = w .snd (Eq.eqToPath w≡r ∙ sym (rev-rev r) ∙ cong rev e)
+      residual<ᵖs : rev l <ˢ rev s
+      residual<ᵖs =
+        rev r , rne ,
+        ( sym (rev-++ l r) ∙ cong rev (sym (Eq.eqToPath (split .snd))) )
 
 ▷-app-NE-keep-⌈⌉ : ∀ {ℓC} {C : Grammar ℓC} (w : NonEmptyString) →
   (⌈ w .fst ⌉ ⊗ C) & ▷ A ⊢ ⌈ w .fst ⌉ ⊗ (C & A)
