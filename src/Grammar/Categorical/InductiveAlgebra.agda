@@ -29,6 +29,7 @@ open import Cubical.Categories.Functor
 open import Cubical.Categories.Instances.Opposite
 open import Cubical.Categories.Instances.Power
 open import Cubical.Categories.Displayed.Instances.Algebras
+  hiding (Algebra)
 open import Cubical.Categories.Displayed.Instances.StructureOver
 open import Cubical.Categories.Limits.Terminal
 open import Cubical.Categories.Limits.Terminal.More

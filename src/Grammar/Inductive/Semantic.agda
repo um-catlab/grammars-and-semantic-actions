@@ -27,6 +27,7 @@ open import Cubical.Categories.Category
 open import Cubical.Categories.Functor
 open import Cubical.Categories.Instances.Power
 open import Cubical.Categories.Displayed.Instances.Algebras public
+  hiding (Algebra)
 
 open import Grammar.Base Alphabet
 open import Grammar.HLevels.Base Alphabet
@@ -64,3 +65,11 @@ module _ {X : Type ℓX} (F : X → SPFunctor X) (isSetValF : ∀ x → isSetVal
   -- Definitionally `∀ x → ⟦ F x ⟧ ⟨ A ⟩ ⊢ ⟨ A x ⟩`.
   SPFAlgebra : (X → SetGrammar ℓX) → Type ℓX
   SPFAlgebra A = PowerCat [ Functor.F-ob ⟦SPF⟧Pow A , A ]
+
+  -- Dual alias: the c-c-l coalgebra *structure map* on a carrier `A`.
+  -- Definitionally `∀ x → ⟨ A x ⟩ ⊢ ⟦ F x ⟧ ⟨ A ⟩`, i.e. exactly the old
+  -- hand-rolled `Coalgebra F (λ x → ⟨ A x ⟩)`.  This is the structure-map
+  -- direction of an `⟦SPF⟧Pow`-coalgebra (an object of
+  -- `CoalgebrasCategory ⟦SPF⟧Pow`).
+  SPFCoalgebra : (X → SetGrammar ℓX) → Type ℓX
+  SPFCoalgebra A = PowerCat [ A , Functor.F-ob ⟦SPF⟧Pow A ]
