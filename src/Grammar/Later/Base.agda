@@ -60,47 +60,63 @@ private
   +-commEq (suc m) n =
     Eq.ap suc (+-commEq m n) Eq.∙ Eq.sym (+-suc-Eq n m)
 
+-- the Löb motive: an `A`-value at every string of a given length
+Plob : ∀ {ℓA} → Grammar ℓA → ℕ → Type ℓA
+Plob A n = (w'' : String) → length w'' Eq.≡ n → A w''
+
 opaque
   unfolding _⇒_ _⊗_ ⊤
 
-  lob : ∀ {ℓA} {A : Grammar ℓA} → (▷ A ⊢ A) → ⊤ ⊢ A
-  lob {ℓA = ℓA} {A = A} f w' _ = lob-len (length w') w' Eq.refl
+  -- Löb induction, with the recursion machinery exposed (rather than buried in
+  -- a `where`) so we can state its fixed-point unfolding.  `lob-build` packages
+  -- the "build a `▷ A w''` from `A` at strictly shorter strings" step (it is the
+  -- only piece that pattern-matches the √/⊗ structure, so it lives directly in
+  -- the opaque block); `lob` is the well-founded recursion; `lob-next` is `lob`'s
+  -- canonical delay; `lob-unfold` is the fixed-point equation (induction-compute).
+
+  lob-build : ∀ {ℓA} {A : Grammar ℓA} (w'' : String)
+    → (∀ v₂ → length v₂ < length w'' → A v₂) → ▷ A w''
+  lob-build w'' rec (v , vne) (((v₁ , v₂) , w''≡v₁v₂) , (cv , _)) =
+    ((v₁ , v₂) , w''≡v₁v₂) , (cv , rec v₂ lv₂<lw'')
     where
-      open WFI <-wellfounded
+      v≡v₁ : v ≡ v₁
+      v≡v₁ = uniquely-supported-⌈⌉ v v₁ cv
 
-      P : ℕ → Type ℓA
-      P n = (w'' : String) → length w'' Eq.≡ n → A w''
+      v₁ne : v₁ ≡ [] → Empty.⊥
+      v₁ne v₁≡[] = vne (v≡v₁ ∙ v₁≡[])
 
-      step : ∀ n → (∀ m → m < n → P m) → P n
-      step n IH w'' lw''≡n = f w'' build-▷
-        where
-          build-▷ : ▷ A w''
-          build-▷ (v , vne) (((v₁ , v₂) , w''≡v₁v₂) , (cv , _)) =
-            ((v₁ , v₂) , w''≡v₁v₂) , (cv , A-v₂)
-            where
-              v≡v₁ : v ≡ v₁
-              v≡v₁ = uniquely-supported-⌈⌉ v v₁ cv
+      0<lv₁ : 0 < length v₁
+      0<lv₁ = length-pos v₁ v₁ne
 
-              v₁ne : v₁ ≡ [] → Empty.⊥
-              v₁ne v₁≡[] = vne (v≡v₁ ∙ v₁≡[])
+      lv₂<lw'' : length v₂ < length w''
+      lv₂<lw'' =
+        Eq.transport (length v₂ <_)
+          (Eq.sym (Eq.ap length w''≡v₁v₂ Eq.∙ length++Eq v₁ v₂))
+          (<-+k 0<lv₁)
 
-              0<lv₁ : 0 < length v₁
-              0<lv₁ = length-pos v₁ v₁ne
+  module _ {ℓA} {A : Grammar ℓA} (f : ▷ A ⊢ A) where
+    open WFI <-wellfounded
 
-              lv₂<lw'' : length v₂ < length w''
-              lv₂<lw'' =
-                Eq.transport (length v₂ <_)
-                  (Eq.sym (Eq.ap length w''≡v₁v₂ Eq.∙ length++Eq v₁ v₂))
-                  (<-+k 0<lv₁)
+    private
+      lob-step : ∀ n → (∀ m → m < n → Plob A m) → Plob A n
+      lob-step n IH w'' lw''≡n =
+        f w'' (lob-build w'' (λ v₂ lv₂<lw'' →
+          IH (length v₂) (Eq.transport (length v₂ <_) lw''≡n lv₂<lw'') v₂ Eq.refl))
 
-              A-v₂ : A v₂
-              A-v₂ =
-                IH (length v₂)
-                   (Eq.transport (length v₂ <_) lw''≡n lv₂<lw'')
-                   v₂ Eq.refl
+      lob-rec : ∀ n → Plob A n
+      lob-rec = induction lob-step
 
-      lob-len : ∀ n → P n
-      lob-len = induction step
+    lob : ⊤ ⊢ A
+    lob w' _ = lob-rec (length w') w' Eq.refl
+
+    -- the canonical delay of `lob`: a `▷ A` assembled from `lob` at shorter strings
+    lob-next : ⊤ ⊢ ▷ A
+    lob-next w' _ = lob-build w' (λ v₂ _ → lob-rec (length v₂) v₂ Eq.refl)
+
+    -- the guarded fixed-point equation: `lob` unfolds to `f` applied to its delay
+    lob-unfold : lob ≡ f ∘g lob-next
+    lob-unfold = funExt λ w' → funExt λ x →
+      cong (λ z → z w' Eq.refl) (induction-compute lob-step (length w'))
 
   lob-r : ∀ {ℓA} {A : Grammar ℓA} → (▷r A ⊢ A) → ⊤ ⊢ A
   lob-r {ℓA = ℓA} {A = A} f w' _ = lob-len (length w') w' Eq.refl

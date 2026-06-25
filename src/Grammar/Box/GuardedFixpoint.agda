@@ -97,13 +97,7 @@ restrict = &ᴰ-intro (λ w → π (w .fst))
 √l-dist-retract {B = B} {w = w} =
   &ᴰ≡ _ _ (λ x → √l-dist-proj {B = B} {w = w} x)
 
--- Section direction (the other triangle: √w preserves the &ᴰ-product).  Proved
--- by the same `realign-√l`-is-the-identity (⌈⌉-uniqueness) argument as
--- √l-dist-proj, distributed over the whole family.
-√l-dist-section :
-  ∀ {X : Type ℓX} {B : X → Grammar ℓA} {w : String}
-  → √l-dist {w = w} {B = B} ∘g &ᴰ-intro (λ x → √l-map {w = w} (π x)) ≡ id
-√l-dist-section = {!!}
+-- Section direction (`√l-dist-section`) is proved in Grammar.Box.Properties.
 
 --------------------------------------------------------------------------------
 -- The √l-dist reindexing lemma feeding step ②: distributing √l-string over a
@@ -155,14 +149,29 @@ module _ (Acoalg : BoxCoalgebra {ℓ-zero}) where
   ▷-coalg : BoxCoalgebra {ℓ-zero}
   ▷-coalg .car = ▷ A
   ▷-coalg .γ   = ▷δ
-  ▷-coalg .counit-coh  = {!!}   -- copy of □-counit-l, inner index = NonEmptyString
+  -- Exactly □-counit-l, NonEmptyString index.  (cat-ne [] v ≡ v definitionally,
+  -- since [] ++ v = v, so π (cat-ne [] v) = π v.)
+  ▷-coalg .counit-coh = &ᴰ≡ _ _ λ v →
+    cong (_∘g (√l-dist {w = []} ∘g Hfam)) (√l-ε-nat (π v))
+    ∙ cong (λ z → √l-ε ∘g z ∘g Hfam)
+        (√l-dist-proj {B = λ v' → √l-string (v' .fst) A} {w = []} v)
+    ∙ cong (_∘g π v) (√l-cat-ε {A = A} {v = v .fst})
+    where
+      Hfam : ▷ A ⊢ &[ v ∈ NonEmptyString ] √l-string [] (√l-string (v .fst) A)
+      Hfam = &ᴰ-intro (λ v → √l-cat {A = A} {w = []} {v = v .fst} ∘g π (cat-ne [] v))
   ▷-coalg .coassoc-coh = {!!}   -- copy of □-coassoc, inner index = NonEmptyString
 
   ⊤-coalg : BoxCoalgebra {ℓ-zero}
   ⊤-coalg .car = ⊤
   ⊤-coalg .γ   = γ⊤
-  ⊤-coalg .counit-coh  = {!!}   -- unique into ⊤; √l-string w ⊤ is contractible
-  ⊤-coalg .coassoc-coh = {!!}
+  -- ε□ ∘g γ⊤ and id are both maps into ⊤, hence equal by terminality.
+  -- (is-terminal-⊤ .snd e : ⊤-intro ≡ e.)
+  ⊤-coalg .counit-coh  =
+    sym (is-terminal-⊤ .snd (ε□ ∘g γ⊤)) ∙ is-terminal-⊤ .snd (id {A = ⊤})
+  -- δ ∘g γ⊤ and map□ γ⊤ ∘g γ⊤ are both maps ⊤ ⊢ □ (□ ⊤), and □ (□ ⊤) is a prop
+  -- grammar (□ preserves props, ⊤ is a prop), so they agree pointwise.
+  ⊤-coalg .coassoc-coh =
+    funExt λ u → funExt λ x → □-isProp (□-isProp ⊤-isProp) u _ _
 
   ------------------------------------------------------------------------------
   -- ① a is a coalgebra hom (A , a) → (□ A , δ).  FREE: the square
@@ -211,17 +220,38 @@ module _ (Acoalg : BoxCoalgebra {ℓ-zero}) where
     fix : ⊤ ⊢ A
     fix = lob (f .hom)
 
+    -- Löb naturality: `a` applied to `fix` and restricted to proper suffixes
+    -- recovers `lob`'s canonical delay of `fix`.  Its *algebra* is discharged
+    -- here: by `lob-unfold` (fix = f.hom ∘g δfix) and `f`'s coalgebra-hom square
+    -- (`a ∘g f.hom = map□ f.hom ∘g ▷δ`), it reduces to the fixed-point identity
+    -- `M-fix` for the delay `δfix = lob-next (f.hom)` under the ▷-coaction.
+    --
+    -- `M-fix` is the irreducible core: it lives in the same √l-cat/√l-dist
+    -- geometry as `□-coassoc` (it must compute `▷δ ∘g δfix` through `√l-dist`/
+    -- `√l-cat`), so it is gated on that machinery, not on `a` being arbitrary.
+    M-fix : restrict ∘g map□ (f .hom) ∘g ▷δ ∘g lob-next (f .hom)
+            ≡ lob-next (f .hom)
+    M-fix = {!!}
+
+    next-eq : restrict ∘g a ∘g fix ≡ lob-next (f .hom)
+    next-eq =
+      cong ((restrict ∘g a) ∘g_) (lob-unfold (f .hom))
+      ∙ cong (λ z → restrict ∘g z ∘g lob-next (f .hom)) (sym (f .comm))
+      ∙ M-fix
+
     -- The user's defining equation: the four-step composite equals fix.
     --        ⊤ -[fix]-> A -[a]-> □A -[restrict]-> ▷A -[f]-> A   =   fix
-    -- (restrict ∘g a is the presheaf "next"; this is the Löb unfolding lemma,
-    --  not yet available in Grammar.Later.Base.)
+    -- Now a clean consequence: `restrict ∘g a` is the presheaf "next" (next-eq),
+    -- and `lob-unfold` says `fix = f ∘g (lob's canonical delay of fix)`.
     fix-eq : f .hom ∘g restrict ∘g a ∘g fix ≡ fix
-    fix-eq = {!!}
+    fix-eq = cong (f .hom ∘g_) next-eq ∙ sym (lob-unfold (f .hom))
 
     -- ④ fix is a coalgebra hom (⊤ , γ⊤) → (A , a): the square
-    --        map□ fix ∘g γ⊤ ≡ a ∘g fix
-    -- holds by Löb induction (the square at u depends only on shorter strings,
-    -- and Φ being a coalgebra endo-hom makes the inductive step type-check).
+    --        map□ fix ∘g γ⊤ ≡ a ∘g fix.
+    -- Under □ A ≅ A & ▷ A (ε□ = π₁, restrict = π₂): the ε□-part of both sides is
+    -- `fix` (by ε-nat + the two counit laws), and the restrict-part of both is
+    -- `lob-next (f .hom)` (by next-eq and the canonical delay computation).  So
+    -- it remains to package the ε□/restrict jointly-monic decomposition.
     fix-hom : BoxCoalgebraHom ⊤-coalg Acoalg
     fix-hom .hom  = fix
     fix-hom .comm = {!!}

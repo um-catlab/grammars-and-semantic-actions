@@ -7,172 +7,227 @@ open import Cubical.Foundations.Structure
 
 open import Cubical.Data.List
 open import Cubical.Data.Unit
+import Cubical.Data.Empty as Empty
+open import Cubical.Relation.Nullary.Base using (Discrete; Dec; yes; no)
 import Cubical.Data.Equality as Eq
 
 open import Grammar.Base Alphabet
+open import Grammar.Epsilon Alphabet
+open import Grammar.Literal Alphabet
+open import Grammar.Top Alphabet
+open import Grammar.Bottom Alphabet
 open import Grammar.Function Alphabet
-open import Grammar.LinearFunction Alphabet
+open import Grammar.Negation Alphabet
 open import Grammar.LinearProduct Alphabet
 open import Grammar.Product.Binary.AsPrimitive Alphabet
-open import Grammar.Top Alphabet
+open import Grammar.Sum Alphabet
+open import Grammar.Sum.Binary.AsPrimitive Alphabet
+open import Grammar.Distributivity Alphabet
 open import Grammar.String Alphabet
-open import Grammar.Derivative.Base Alphabet
-open import Grammar.Inductive.Functor Alphabet
-open import Grammar.Negation Alphabet
-import Grammar.Derivative.String Alphabet as DString
+open import Grammar.Equivalence.Base Alphabet
 open import Term.Base Alphabet
+
+open StrongEquivalence
 
 private
   variable
-    w : String
-    ℓA ℓB : Level
+    w v : String
+    ℓ ℓA ℓB : Level
     A : Grammar ℓA
     B : Grammar ℓB
+    X : Grammar ℓ
 
-data √l-tag : Type where
-  prefix nah : √l-tag
+------------------------------------------------------------------------------
+-- An alternative encoding of the string-indexed "amazing right adjoint" √l.
+--
+-- The exponential encoding (Grammar.Derivative.String) is
+--     √l-string w A = (⌈ w ⌉ ⊗ ⊤) ⇒ (⌈ w ⌉ ⊗ A).
+-- Using a parse only ever requires *triggering* the domain `⌈ w ⌉ ⊗ ⊤`, and
+-- `⌈ w ⌉ ⊗ ⊤` ("does the string start with w?") is DECIDABLE.  So we can split
+-- on it up front and replace the exponential by a SUM:
+--
+--     √w A  :=  (⌈ w ⌉ ⊗ A)  ⊕  ¬(⌈ w ⌉ ⊗ ⊤)
+--
+-- i.e. "either the string starts with w and carries an A on the residual, or it
+-- does not start with w at all".  The decidability witness
+--     ⊤ ⊢ (⌈ w ⌉ ⊗ ⊤) ⊕ ¬(⌈ w ⌉ ⊗ ⊤)
+-- lets us always inspect which case we are in — the move the exponential's
+-- application used to do implicitly.  The pay-off: the functor action, counit,
+-- and comultiplication become plain sum/product manipulations (no `transport`
+-- gymnastics over index paths, which dominated the exponential proofs).
+------------------------------------------------------------------------------
 
+-- "the string starts with w"
+Start : String → Grammar ℓ-zero
+Start w = ⌈ w ⌉ ⊗ ⊤
+
+-- "the string does NOT start with w"
 ¬Start : String → Grammar ℓ-zero
-¬Start w = ¬G (⌈ w ⌉ ⊗ ⊤)
+¬Start w = ¬G Start w
 
-√l-string-F' : String → Functor Unit
-√l-string-F' w = ⊕e √l-tag λ { prefix → k ⌈ w ⌉ ⊗e Var _ ; nah → k (¬Start w)}
+-- The disjunctive √l.
+√l-string : String → Grammar ℓA → Grammar ℓA
+√l-string w A = (⌈ w ⌉ ⊗ A) ⊕ ¬Start w
 
--- We want coalgebras for this functor
-√l-string-F : Functor Unit
-√l-string-F = &e String √l-string-F'
+------------------------------------------------------------------------------
+-- Functor action  (a one-liner: relabel the carried A on the prefix branch)
+------------------------------------------------------------------------------
 
--- -- String-indexed Brzozowski derivatives.
--- Dr-string : String → Grammar ℓA → Grammar ℓA
--- Dr-string w A = ⌈ w ⌉ ⊸ A
+√l-map : A ⊢ B → √l-string w A ⊢ √l-string w B
+√l-map f = ⊕-elim (inl ∘g (id ,⊗ f)) inr
 
--- Dl-string : Grammar ℓA → String → Grammar ℓA
--- Dl-string A w = A ⟜ ⌈ w ⌉
+------------------------------------------------------------------------------
+-- Counit  √l-string [] A ≅ A    (⌈ [] ⌉ = ε, and ¬Start [] is uninhabited)
+------------------------------------------------------------------------------
 
--- √l-string : String → Grammar ℓA → Grammar ℓA
--- √l-string w A = {!!}
--- (⌈ w ⌉ ⊗ ⊤) ⇒ (⌈ w ⌉ ⊗ A)
+-- ¬Start [] is absurd: every string starts with the empty prefix, so the
+-- negation can be fed its own always-present witness `ε ⊗ ⊤`.
+¬Start[]→⊥ : ¬Start [] ⊢ ⊥
+¬Start[]→⊥ = ⇒-app ∘g &-intro id (⊗-unit-l⁻ ∘g ⊤-intro)
 
--- √r-string : String → Grammar ℓA → Grammar ℓA
--- √r-string w A = (⊤ ⊗ ⌈ w ⌉) ⇒ (A ⊗ ⌈ w ⌉)
+√l-ε : √l-string [] A ⊢ A
+√l-ε = ⊕-elim ⊗-unit-l (⊥-elim ∘g ¬Start[]→⊥)
 
--- opaque
---   unfolding _⟜_ _⇒_ _⊗_ ⊤
---   √l-string-app : Dl-string (√l-string w A) w ⊢ A
---   √l-string-app {w = w} {A = A} w' d =
---     Eq.transport A uniq-suffix (step .snd .snd)
---     where
---       step : (⌈ w ⌉ ⊗ A) (w ++ w')
---       step = d w (mk⌈⌉ w) (((w , w') , Eq.refl) , (mk⌈⌉ w , _))
+√l-ε⁻ : A ⊢ √l-string [] A
+√l-ε⁻ = inl ∘g ⊗-unit-l⁻
 
---       uniq-suffix : step .fst .fst .snd Eq.≡ w'
---       uniq-suffix =
---         ++-cancelˡEq w
---           (Eq.sym
---             (Eq.transport (λ ww → w ++ w' Eq.≡ ww ++ step .fst .fst .snd)
---                           (Eq.sym (uniquely-supported-⌈⌉Eq w (step .fst .fst .fst)
---                                     (step .snd .fst)))
---                           (step .fst .snd)))
+------------------------------------------------------------------------------
+-- Splitting a concatenated prefix grammar (used by √l-cat's prefix branch)
+------------------------------------------------------------------------------
 
---   √r-string-app : Dr-string w (√r-string w A) ⊢ A
---   √r-string-app {w = w} {A = A} w' d =
---     Eq.transport A uniq-prefix (step .snd .fst)
---     where
---       step : (A ⊗ ⌈ w ⌉) (w' ++ w)
---       step = d w (mk⌈⌉ w) (((w' , w) , Eq.refl) , (_ , mk⌈⌉ w))
+⌈⌉-split : ∀ w v → ⌈ w ++ v ⌉ ⊢ ⌈ w ⌉ ⊗ ⌈ v ⌉
+⌈⌉-split [] v = ⊗-unit-l⁻
+⌈⌉-split (c ∷ w) v = ⊗-assoc ∘g (id ,⊗ ⌈⌉-split w v)
 
---       uniq-prefix : step .fst .fst .fst Eq.≡ w'
---       uniq-prefix =
---         ++-cancelʳEq w
---           (Eq.sym
---             (Eq.transport (λ ww → w' ++ w Eq.≡ step .fst .fst .fst ++ ww)
---                           (Eq.sym (uniquely-supported-⌈⌉Eq w (step .fst .fst .snd)
---                                     (step .snd .snd)))
---                           (step .fst .snd)))
+------------------------------------------------------------------------------
+-- Small pointwise lemmas about prefixes (`ε`, `literal` are `Eq.≡`-based).
+------------------------------------------------------------------------------
 
---   -- Composition of amazing right adjoints: peeling a `w ++ v`-prefix in
---   -- one go is the same as peeling `w` and then peeling `v` off the
---   -- residual. This is the coassociativity step of the □-comonad.
---   --
---   -- Pointwise, the outer `⌈ w ⌉ ⊗ ⊤` fixes the split `u = w' ++ rest`,
---   -- the inner `⌈ v ⌉ ⊗ ⊤` fixes `rest = v' ++ rest2`; recombining
---   -- `⌈ w ⌉ ⊗ ⌈ v ⌉` into `⌈ w ++ v ⌉` (via `⌈⌉-++`) feeds the original
---   -- `w ++ v`-peel, whose `A`-output lands on `rest2` by uniqueness of
---   -- the `⌈ w ++ v ⌉`-prefix.
---   √l-cat :
---     ∀ {ℓA} {A : Grammar ℓA} {w v : String} →
---     √l-string (w ++ v) A ⊢ √l-string w (√l-string v A)
---   √l-cat {A = A} {w = w} {v = v} u d pw =
---     pw .fst , (pw .snd .fst , innerfn)
---     where
---       w' rest : String
---       w'   = pw .fst .fst .fst
---       rest = pw .fst .fst .snd
+private
+  nil≢cons : ∀ {x : ⟨ Alphabet ⟩} {xs} → [] Eq.≡ x ∷ xs → Empty.⊥
+  nil≢cons p = Eq.transport (λ { [] → Unit ; (_ ∷ _) → Empty.⊥ }) p tt
 
---       ⌈w⌉w' : ⌈ w ⌉ w'
---       ⌈w⌉w' = pw .snd .fst
+opaque
+  unfolding _⊗_ _&_ _⇒_ ⊤ ⊥ ε literal
 
---       w≡w' : w Eq.≡ w'
---       w≡w' = uniquely-supported-⌈⌉Eq w w' ⌈w⌉w'
+  -- empty string does not start with `c ∷ …`
+  ¬first : ∀ {c} → ε ⊢ ¬G (＂ c ＂ ⊗ X)
+  ¬first {c = c} u eu ((( l , r ) , pf) , (litc , _)) =
+    nil≢cons (Eq.sym eu Eq.∙ pf Eq.∙ Eq.ap (_++ r) litc)
 
---       innerfn : √l-string v A rest
---       innerfn pv =
---         pv .fst , (pv .snd .fst , Eq.transport A ra≡rest2 (da .snd .snd))
---         where
---           v' rest2 : String
---           v'    = pv .fst .fst .fst
---           rest2 = pv .fst .fst .snd
+  -- starts with c, but the residual is NOT in X  ⟹  not (c then X)
+  c⊗¬X→¬cX : ∀ {c} → ＂ c ＂ ⊗ ¬G X ⊢ ¬G (＂ c ＂ ⊗ X)
+  c⊗¬X→¬cX {X = X} {c = c} u
+    ((( l , r ) , pf) , (litc , neg)) ((( l' , r' ) , pf') , (litc' , x)) =
+    neg (Eq.transport X (Eq.sym r≡r') x)
+    where
+      r≡r' : r Eq.≡ r'
+      r≡r' = ++-cancelˡEq (c ∷ [])
+        ( Eq.ap (_++ r) (Eq.sym litc)
+          Eq.∙ Eq.sym pf Eq.∙ pf'
+          Eq.∙ Eq.ap (_++ r') litc' )
 
---           ⌈v⌉v' : ⌈ v ⌉ v'
---           ⌈v⌉v' = pv .snd .fst
+  -- two distinct leading characters cannot both head the same string
+  firstChar-disjoint : ∀ {c c'} → (c ≡ c' → Empty.⊥)
+    → (＂ c ＂ ⊗ ⊤) & (＂ c' ＂ ⊗ ⊤) ⊢ ⊥
+  firstChar-disjoint {c = c} {c' = c'} c≢c' u
+    (((( l , r ) , pf) , (litc , _)) , ((( l' , r' ) , pf') , (litc' , _))) =
+    c≢c' (Eq.eqToPath c≡c')
+    where
+      c≡c' : c Eq.≡ c'
+      c≡c' = Eq.ap (λ { [] → c ; (x ∷ _) → x })
+        ( Eq.ap (_++ r) (Eq.sym litc)
+          Eq.∙ Eq.sym pf Eq.∙ pf'
+          Eq.∙ Eq.ap (_++ r') litc' )
 
---           v≡v' : v Eq.≡ v'
---           v≡v' = uniquely-supported-⌈⌉Eq v v' ⌈v⌉v'
+  -- starts with w but NOT with w ++ v  ⟹  the w-residual does not start with v
+  -- (recombine ⌈ w ⌉ ⊗ ⌈ v ⌉ into ⌈ w ++ v ⌉ to contradict ¬Start (w ++ v)).
+  Start&¬Start-cat : ∀ w v → Start w & ¬Start (w ++ v) ⊢ ⌈ w ⌉ ⊗ ¬Start v
+  Start&¬Start-cat w v u (sw , neg) =
+    sw .fst , (sw .snd .fst , negv)
+    where
+      lw rw : String
+      lw = sw .fst .fst .fst
+      rw = sw .fst .fst .snd
 
---           -- u = w' ++ rest = w' ++ (v' ++ rest2) = (w' ++ v') ++ rest2
---           u≡w'v'rest2 : u Eq.≡ (w' ++ v') ++ rest2
---           u≡w'v'rest2 =
---             pw .fst .snd
---             Eq.∙ Eq.ap (w' ++_) (pv .fst .snd)
---             Eq.∙ Eq.sym (++-assoc-Eq w' v' rest2)
+      negv : ¬Start v rw
+      negv ((( lv , rv ) , pfv) , (⌈v⌉lv , _)) = neg start[w++v]
+        where
+          ⌈wv⌉ : ⌈ w ++ v ⌉ (lw ++ lv)
+          ⌈wv⌉ = ⌈⌉-++ w v (lw ++ lv)
+            ((( lw , lv ) , Eq.refl) , (sw .snd .fst , ⌈v⌉lv))
 
---           ⌈wv⌉ : ⌈ w ++ v ⌉ (w' ++ v')
---           ⌈wv⌉ =
---             ⌈⌉-++ w v (w' ++ v')
---               (((w' , v') , Eq.refl) , (⌈w⌉w' , ⌈v⌉v'))
+          start[w++v] : Start (w ++ v) u
+          start[w++v] =
+            ((( lw ++ lv , rv )
+              , ( sw .fst .snd
+                  Eq.∙ Eq.ap (lw ++_) pfv
+                  Eq.∙ Eq.sym (++-assoc-Eq lw lv rv) ))
+            , (⌈wv⌉ , _))
 
---           da : (⌈ w ++ v ⌉ ⊗ A) u
---           da = d (((w' ++ v' , rest2) , u≡w'v'rest2) , (⌈wv⌉ , _))
+------------------------------------------------------------------------------
+-- The single genuine obligation of this encoding: DECIDABILITY of `Start w`.
+-- (Needs decidable equality on the alphabet to compare the leading character.)
+------------------------------------------------------------------------------
 
---           -- the peel lands its `⌈ w ++ v ⌉`-prefix on `w' ++ v'` ...
---           la≡w'v' : da .fst .fst .fst Eq.≡ w' ++ v'
---           la≡w'v' =
---             Eq.sym
---               (uniquely-supported-⌈⌉Eq (w ++ v) (da .fst .fst .fst)
---                 (da .snd .fst))
---             Eq.∙ Eq.ap (_++ v) w≡w'
---             Eq.∙ Eq.ap (w' ++_) v≡v'
+module _ (disc : Discrete ⟨ Alphabet ⟩) where
 
---           -- ... hence its `A`-output is on `rest2`.
---           ra≡rest2 : da .fst .fst .snd Eq.≡ rest2
---           ra≡rest2 =
---             ++-cancelˡEq (w' ++ v')
---               (Eq.ap (_++ da .fst .fst .snd) (Eq.sym la≡w'v')
---                Eq.∙ Eq.sym (da .fst .snd)
---                Eq.∙ u≡w'v'rest2)
+  -- Decide `＂ c ＂ ⊗ X` from a decision for `X`, by peeking the first character.
+  dec-cons : ∀ {c} → ⊤ ⊢ X ⊕ ¬G X → ⊤ ⊢ (＂ c ＂ ⊗ X) ⊕ ¬G (＂ c ＂ ⊗ X)
+  dec-cons {X = X} {c = c} decX =
+    ⊕-elim
+      (inr ∘g ¬first ∘g π₂)                 -- (⊤ & ε): empty, no leading c
+      (⊕ᴰ-elim branch)                      -- ⊕[c'] (⊤ & startsWith c')
+    ∘g firstChar≅ .fun
+    where
+      target : Grammar _
+      target = (＂ c ＂ ⊗ X) ⊕ ¬G (＂ c ＂ ⊗ X)
 
--- √l-ε : √l-string [] A ⊢ A
--- √l-ε = ⊗-unit-l ∘g ⇒-app ∘g &-intro id (⊗-unit-l⁻ ∘g ⊤-intro)
+      -- when the actual leading character equals c: recurse on the residual.
+      branchEq : (⊤ & startsWith c) ⊢ target
+      branchEq =
+        ⊕-elim inl (inr ∘g c⊗¬X→¬cX)
+        ∘g ⊗⊕-distL
+        ∘g (id ,⊗ (decX ∘g ⊤-intro))
+        ∘g π₂
 
--- √l-ε⁻ : A ⊢ √l-string [] A
--- √l-ε⁻ = ⇒-intro (⊗-unit-l⁻ ∘g π₁)
+      branch : ∀ c' → (⊤ & startsWith c') ⊢ target
+      branch c' with disc c c'
+      ... | yes c≡c' =
+        subst (λ z → (⊤ & startsWith z) ⊢ target) c≡c' branchEq
+      ... | no  c≢c' =
+        inr ∘g ⇒-intro
+          ( firstChar-disjoint c≢c'
+            ∘g &-intro ((id ,⊗ ⊤-intro) ∘g π₂)
+                       ((id ,⊗ ⊤-intro) ∘g π₂ ∘g π₁) )
 
--- -- Functor action of √l-string w (in its grammar argument).
--- √l-map : A ⊢ B → √l-string w A ⊢ √l-string w B
--- √l-map f = ⇒-intro ((id ,⊗ f) ∘g ⇒-app)
+  -- ⊤ ⊢ Start w ⊕ ¬Start w  — decide whether the string starts with w.
+  dec-Start : ∀ w → ⊤ ⊢ Start w ⊕ ¬Start w
+  dec-Start []      = inl ∘g ⊗-unit-l⁻
+  dec-Start (c ∷ w) =
+    (⊗-assoc ,⊕p ⇒-mapDom ⊗-assoc⁻) ∘g dec-cons {c = c} (dec-Start w)
 
--- √r-ε : √r-string [] A ⊢ A
--- √r-ε = ⊗-unit-r ∘g ⇒-app ∘g &-intro id (⊗-unit-r⁻ ∘g ⊤-intro)
+  ------------------------------------------------------------------------------
+  -- Comultiplication  √l-cat : √(w ++ v) A ⊢ √w (√v A)
+  --
+  -- Compare with the exponential `√l-cat`/`√l-cat-εr`/pentagon, which needed
+  -- nested `Eq.transport`s over `++`-paths.  Here it is sum-elimination:
+  --   • prefix branch  (⌈ w++v ⌉ ⊗ A): split the prefix, reassociate, `inl`.
+  --   • no-prefix branch (¬Start (w++v)): DECIDE `Start w`.
+  --       – starts with w but not w++v  ⟹  ¬Start v   (Start&¬Start-cat)
+  --       – does not start with w       ⟹  ¬Start w   directly.
+  ------------------------------------------------------------------------------
+  √l-cat : ∀ {w v} → √l-string (w ++ v) A ⊢ √l-string w (√l-string v A)
+  √l-cat {A = A} {w = w} {v = v} = ⊕-elim prefix-branch noprefix-branch
+    where
+      prefix-branch : ⌈ w ++ v ⌉ ⊗ A ⊢ √l-string w (√l-string v A)
+      prefix-branch =
+        inl ∘g (id ,⊗ inl) ∘g ⊗-assoc⁻ ∘g (⌈⌉-split w v ,⊗ id)
 
--- √r-ε⁻ : A ⊢ √r-string [] A
--- √r-ε⁻ = ⇒-intro (⊗-unit-r⁻ ∘g π₁)
+      noprefix-branch : ¬Start (w ++ v) ⊢ √l-string w (√l-string v A)
+      noprefix-branch =
+        ⊕-elim
+          (inl ∘g (id ,⊗ inr) ∘g Start&¬Start-cat w v)
+          (inr ∘g π₁)
+        ∘g &⊕-distR
+        ∘g &-intro (dec-Start w ∘g ⊤-intro) id
