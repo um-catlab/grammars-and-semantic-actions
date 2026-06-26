@@ -54,7 +54,7 @@ open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.HLevels
 open import Cubical.Foundations.Structure
 
-module Grammar.Categorical.Comonad (Alphabet : hSet ℓ-zero) where
+module Grammar.Later.Box (Alphabet : hSet ℓ-zero) where
 
 open import Cubical.Categories.Category.Base
 open import Cubical.Categories.Functor

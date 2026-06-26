@@ -18,7 +18,7 @@
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.HLevels
 
-module Grammar.Categorical.InductiveAlgebra (Alphabet : hSet ℓ-zero) where
+module Grammar.Inductive.InitialAlgebra (Alphabet : hSet ℓ-zero) where
 
 open import Cubical.Foundations.Structure
 open import Cubical.Data.Sigma

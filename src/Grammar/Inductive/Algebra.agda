@@ -32,7 +32,7 @@ open import Grammar.Inductive.HLevels Alphabet using (isSetGrammarμ)
 open import Grammar.Inductive.Semantic Alphabet
   using (⟦SPF⟧Pow ; SPFAlgebra ; isSetValued)
 open import Grammar.Equalizer.Base Alphabet
-open import Grammar.Categorical.InductiveAlgebra Alphabet as IA
+open import Grammar.Inductive.InitialAlgebra Alphabet as IA
 open import Term.Base Alphabet
 open import Term.Category Alphabet
 

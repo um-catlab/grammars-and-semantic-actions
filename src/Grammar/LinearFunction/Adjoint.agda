@@ -26,7 +26,7 @@ open import Cubical.Foundations.HLevels
 open import Cubical.Foundations.Isomorphism
 open import Cubical.Foundations.Equiv
 
-module Grammar.Categorical.Adjoints (Alphabet : hSet ℓ-zero) where
+module Grammar.LinearFunction.Adjoint (Alphabet : hSet ℓ-zero) where
 
 open import Cubical.Categories.Category.Base
 open import Cubical.Categories.Functor
