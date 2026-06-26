@@ -111,8 +111,8 @@ module SingleSorted {ℓ} (F : SPFunctor (Unit* {ℓ})) (isSetValF : isSetValued
       β : |GRAMMAR| ℓ [ Functor.F-ob ⟦_⟧F B , B ]
       β = Bβ .snd
 
-      -- `β` as a gsa `Algebra Fᴹ (λ _ → ⟨ B ⟩)`
-      αB : Algebra Fᴹ (λ _ → B .fst)
+      -- `β` as a gsa algebra `∀ _ → ⟦ Fᴹ _ ⟧ (λ _ → ⟨ B ⟩) ⊢ ⟨ B ⟩`
+      αB : ∀ x → ⟦ Fᴹ x ⟧ (λ _ → B .fst) ⊢ B .fst
       αB _ = β
 
     -- the canonical homomorphism, underlying map = rec.
@@ -140,11 +140,11 @@ module SingleSorted {ℓ} (F : SPFunctor (Unit* {ℓ})) (isSetValF : isSetValued
 
         -- `gh`'s coherence read back as a gsa homomorphism property:
         -- `g ∘g roll ≡ β ∘g map F (λ _ → g)`, i.e. `isHomo αB` at tt*.
-        gHomo : Homomorphism Fᴹ (initialAlgebra Fᴹ) αB
+        gHomo : RecHomo Fᴹ αB
         gHomo .fst _ = g
         gHomo .snd _ = gh .snd
 
-        recHomo' : Homomorphism Fᴹ (initialAlgebra Fᴹ) αB
+        recHomo' : RecHomo Fᴹ αB
         recHomo' = recHomo Fᴹ αB
 
         -- `ind` gives equality of the underlying maps of the two
@@ -289,8 +289,8 @@ module Indexed {ℓX} {X : Type ℓX}
       β : PowerCat [ Functor.F-ob ⟦F⟧Pow B , B ]
       β = Bβ .snd
 
-      -- `β` as a gsa `Algebra F (λ x → ⟨ B x ⟩)`.
-      αB : Algebra F (λ x → B x .fst)
+      -- `β` as a gsa algebra `∀ x → ⟦ F x ⟧ (λ x → ⟨ B x ⟩) ⊢ ⟨ B x ⟩`.
+      αB : ∀ x → ⟦ F x ⟧ (λ x → B x .fst) ⊢ B x .fst
       αB = β
 
     recArrow : PowerCat [ μF-ob , B ]
@@ -314,11 +314,11 @@ module Indexed {ℓX} {X : Type ℓX}
         -- `gh`'s coherence read back as a gsa homomorphism property:
         -- `g x ∘g roll ≡ β x ∘g map (F x) g`, i.e. `isHomo αB` at x.
         -- `gh .snd : β ⋆ g ≡ F-hom g ⋆ β'` is `funExt`-over-x of that.
-        gHomo : Homomorphism F (initialAlgebra F) αB
+        gHomo : RecHomo F αB
         gHomo .fst = g
         gHomo .snd x = funExt⁻ (gh .snd) x
 
-        recHomo' : Homomorphism F (initialAlgebra F) αB
+        recHomo' : RecHomo F αB
         recHomo' = recHomo F αB
 
         -- `ind` gives equality of the underlying families of the two

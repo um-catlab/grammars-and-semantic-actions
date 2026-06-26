@@ -52,7 +52,7 @@ module _ (A : Grammar ℓA) where
   KL* : Grammar ℓA
   KL* = μ *Ty _
 
-  fold*r' : Algebra *Ty (λ _ → B) → KL* ⊢ B
+  fold*r' : (∀ x → ⟦ *Ty x ⟧ (λ _ → B) ⊢ B) → KL* ⊢ B
   fold*r' alg = rec *Ty alg _
 
   fold*r : (ε ⊢ B) → A ⊗ B ⊢ B → KL* ⊢ B
@@ -71,7 +71,7 @@ module _ (A : Grammar ℓA) where
 
   repeat = ⊕[ n ∈ (Lift ℓA ℕ) ] repeat' n
 
-  gradeAlg : Algebra *Ty λ _ → repeat
+  gradeAlg : ∀ x → ⟦ *Ty x ⟧ (λ _ → repeat) ⊢ repeat
   gradeAlg _ = ⊕ᴰ-elim (λ {
       nil → σ (lift 0) ∘g roll
     ; cons →
@@ -82,7 +82,7 @@ module _ (A : Grammar ℓA) where
   grade : KL* ⊢ repeat
   grade = rec *Ty gradeAlg _
 
-  ungradeAlg : Algebra repeatTy λ n → KL*
+  ungradeAlg : ∀ n → ⟦ repeatTy n ⟧ (λ _ → KL*) ⊢ KL*
   ungradeAlg (lift zero) = roll ∘g σ nil
   ungradeAlg (lift (suc a)) = roll ∘g σ cons
 
@@ -104,7 +104,7 @@ module _ (A : Grammar ℓA) where
           (roll ∘g id ,⊗ (liftG ∘g eq-π _ _ ∘g lowerG))
           (λ i → ⊕ᴰ-elim (λ (lift m) → σ (lift (suc m)) ∘g roll ∘g liftG ,⊗ liftG) ∘g ⊕ᴰ-distR .fun ∘g
                  id ,⊗ eq-π-pf _ _ i ∘g lowerG ,⊗ lowerG )
-  secAlg : Algebra repeatTy (λ n → equalizer (grade ∘g ungrade' n) (σ n))
+  secAlg : ∀ n → ⟦ repeatTy n ⟧ (λ n → equalizer (grade ∘g ungrade' n) (σ n)) ⊢ equalizer (grade ∘g ungrade' n) (σ n)
   secAlg (lift zero) = eq-intro _ _ roll refl
   secAlg (lift (suc n)) = the-sec-alg-snd n
 
@@ -120,14 +120,9 @@ module _ (A : Grammar ℓA) where
         ⊕ᴰ≡ _ _ (λ n →
           equalizer-section (grade ∘g ungrade' n) (σ n)
             (rec repeatTy secAlg n)
-            (ind-id' repeatTy
-              (compHomo repeatTy
-                (initialAlgebra repeatTy)
-                secAlg
-                (initialAlgebra repeatTy)
-                ((λ m → eq-π _ _) ,
-                λ { (lift zero) → refl ; (lift (suc m)) → refl })
-                (recHomo repeatTy secAlg))
+            (rec-section repeatTy secAlg
+              (λ m → eq-π _ _)
+              (λ { (lift zero) → refl ; (lift (suc m)) → refl })
               n))
   *continuous .ret = the-ret
     where
@@ -135,13 +130,12 @@ module _ (A : Grammar ℓA) where
       unfolding ⊕ᴰ-distR eq-π ⊗-intro eq-intro
       the-ret : ungrade ∘g grade ≡ id
       the-ret =
-        ind-id' *Ty
-          (compHomo *Ty (initialAlgebra *Ty) gradeAlg (initialAlgebra *Ty)
-            ((λ _ → ungrade) ,
-            (λ _ → ⊕ᴰ≡ _ _
-              λ { nil → refl
-                ; cons → refl }))
-            (recHomo *Ty gradeAlg)) _
+        rec-section *Ty gradeAlg
+          (λ _ → ungrade)
+          (λ _ → ⊕ᴰ≡ _ _
+            λ { nil → refl
+              ; cons → refl })
+          _
 
   unrolled* = ⟦ *Ty _ ⟧ (μ *Ty)
 
@@ -154,7 +148,7 @@ module _ (A : Grammar ℓA) where
   *LTy : Unit* {ℓA} → SPFunctor Unit*
   *LTy _ = ⊕e *TagL (λ { nil → k ε* ; snoc → (Var _) ⊗e (k A)})
 
-  *LAlg→*Alg : Algebra *LTy (λ _ → B)  → Algebra *Ty (λ _ → B ⟜ B)
+  *LAlg→*Alg : (∀ x → ⟦ *LTy x ⟧ (λ _ → B) ⊢ B)  → (∀ x → ⟦ *Ty x ⟧ (λ _ → B ⟜ B) ⊢ B ⟜ B)
   *LAlg→*Alg l-alg _ = ⊕ᴰ-elim (λ {
       nil → ⟜-intro-ε id ∘g lowerG ∘g lowerG
     ; cons →
@@ -164,7 +158,7 @@ module _ (A : Grammar ℓA) where
         ∘g ⊗-assoc) ∘g lowerG ,⊗ lowerG
         })
 
-  fold*l' : Algebra *LTy (λ _ → B) → KL* ⊢ B
+  fold*l' : (∀ x → ⟦ *LTy x ⟧ (λ _ → B) ⊢ B) → KL* ⊢ B
   fold*l' alg = ⟜-app ∘g (alg _ ∘g σ nil ∘g liftG ∘g liftG) ,⊗ fold*r' (*LAlg→*Alg alg) ∘g ⊗-unit-l⁻
 
   fold*l : (ε ⊢ B) → B ⊗ A ⊢ B → KL* ⊢ B
@@ -242,7 +236,7 @@ module _ (A : Grammar ℓA) where
   *≅repeatL : KL* ≅ repeatL
   *≅repeatL = *continuous ≅∙ repeat≅repeatL
 
-  gradeLAlg : Algebra *LTy λ _ → repeatL
+  gradeLAlg : ∀ x → ⟦ *LTy x ⟧ (λ _ → repeatL) ⊢ repeatL
   gradeLAlg _ = ⊕ᴰ-elim (λ {
       nil → σ (lift 0) ∘g roll
     ; snoc →
@@ -254,7 +248,7 @@ module _ (A : Grammar ℓA) where
   gradeL : *L ⊢ repeatL
   gradeL = rec *LTy gradeLAlg _
 
-  ungradeAlgL : Algebra repeatTyL λ n → *L
+  ungradeAlgL : ∀ n → ⟦ repeatTyL n ⟧ (λ _ → *L) ⊢ *L
   ungradeAlgL (lift zero) = roll ∘g σ nil
   ungradeAlgL (lift (suc n)) = roll ∘g σ snoc
 
@@ -281,7 +275,7 @@ module _ (A : Grammar ℓA) where
             ∘g roll ∘g liftG ,⊗ liftG) ∘g ⊕ᴰ-distL .fun ∘g
                  eq-π-pf _ _ i ,⊗ id ∘g lowerG ,⊗ lowerG )
   secAlgL :
-    Algebra repeatTyL (λ n → equalizer (gradeL ∘g ungrade'L n) (σ n))
+    ∀ n → ⟦ repeatTyL n ⟧ (λ n → equalizer (gradeL ∘g ungrade'L n) (σ n)) ⊢ equalizer (gradeL ∘g ungrade'L n) (σ n)
   secAlgL (lift zero) = eq-intro _ _ roll refl
   secAlgL (lift (suc n)) = the-sec-alg-sndL n
 
@@ -297,14 +291,9 @@ module _ (A : Grammar ℓA) where
         ⊕ᴰ≡ _ _ (λ n →
           equalizer-section (gradeL ∘g ungrade'L n) (σ n)
             (rec repeatTyL secAlgL n)
-            (ind-id' repeatTyL
-              (compHomo repeatTyL
-                (initialAlgebra repeatTyL)
-                secAlgL
-                (initialAlgebra repeatTyL)
-                ((λ m → eq-π _ _) ,
-                λ { (lift zero) → refl ; (lift (suc m)) → refl })
-                (recHomo repeatTyL secAlgL))
+            (rec-section repeatTyL secAlgL
+              (λ m → eq-π _ _)
+              (λ { (lift zero) → refl ; (lift (suc m)) → refl })
               n))
   *continuousL .ret = the-ret
     where
@@ -312,13 +301,12 @@ module _ (A : Grammar ℓA) where
       unfolding ⊕ᴰ-distL eq-π ⊗-intro eq-intro
       the-ret : ungradeL ∘g gradeL ≡ id
       the-ret =
-        ind-id' *LTy
-          (compHomo *LTy (initialAlgebra *LTy) gradeLAlg (initialAlgebra *LTy)
-            ((λ _ → ungradeL) ,
-            (λ _ → ⊕ᴰ≡ _ _
-              λ { nil → refl
-                ; snoc → refl }))
-            (recHomo *LTy gradeLAlg)) _
+        rec-section *LTy gradeLAlg
+          (λ _ → ungradeL)
+          (λ _ → ⊕ᴰ≡ _ _
+            λ { nil → refl
+              ; snoc → refl })
+          _
 
   *≅*L : KL* ≅ *L
   *≅*L = *continuous ≅∙ repeat≅repeatL ≅∙ sym≅ *continuousL

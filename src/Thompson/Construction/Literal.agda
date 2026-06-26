@@ -89,7 +89,7 @@ module _ (c : ⟨ Alphabet ⟩) where
     ⟦ c-st ⟧st = ＂ c ＂
     ⟦ ε-st ⟧st = ε
 
-    litAlg : Algebra (TraceTy literalNFA) ⟦_⟧st
+    litAlg : ∀ q → ⟦ TraceTy literalNFA q ⟧ ⟦_⟧st ⊢ ⟦ q ⟧st
     litAlg c-st = ⊕ᴰ-elim (λ { (step t _) →
       ⊗-unit-r ∘g (lowerG ∘g lowerG) ,⊗ lowerG
       })

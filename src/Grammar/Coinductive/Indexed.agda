@@ -33,12 +33,23 @@ module _ where
     open ν public
 
   module _ {X : Type ℓX} (F : X → SPFunctor X) where
-    finalCoalgebra : Coalgebra F (ν F)
+    -- `finalCoalgebra`/`corec`/`corecHomo`/`coind` are the computational
+    -- corecursor. The old `Coalgebra`/`CoHomomorphism` aliases are inlined
+    -- here (removed from `Grammar.Inductive.Functor`); the categorical
+    -- packaging lives in `Grammar.Coinductive.Coalgebra`.
+    finalCoalgebra : ∀ x → ν F x ⊢ ⟦ F x ⟧ (ν F)
     finalCoalgebra x w t = t .unroll
 
-    module _ {A : X → Grammar ℓA} (α : Coalgebra F A) where
+    module _ {A : X → Grammar ℓA} (α : ∀ x → A x ⊢ ⟦ F x ⟧ A) where
+      -- The universal-property type of `corec`: a coalgebra homomorphism from
+      -- the coalgebra `(A , α)` into the final coalgebra `(ν F , unroll)`.
+      CoRecHomo : Type _
+      CoRecHomo =
+        Σ[ ϕ ∈ (∀ x → A x ⊢ ν F x) ]
+          (∀ x → map (F x) ϕ ∘g α x ≡ finalCoalgebra x ∘g ϕ x)
+
       {-# TERMINATING #-}
-      corecHomo : CoHomomorphism F α finalCoalgebra
+      corecHomo : CoRecHomo
       corecHomo .fst x w a .unroll =
         map (F x) (corecHomo .fst) w (α x w a)
       corecHomo .snd x = refl
@@ -46,7 +57,7 @@ module _ where
       corec : ∀ x → A x ⊢ ν F x
       corec = corecHomo .fst
 
-      module _ (ϕ : CoHomomorphism F α finalCoalgebra) where
+      module _ (ϕ : CoRecHomo) where
         private
           {-# TERMINATING #-}
           ν-η' : ∀ x w a → ϕ .fst x w a ≡ corec x w a
@@ -56,19 +67,20 @@ module _ where
         ν-η : ϕ .fst ≡ corec
         ν-η = funExt (λ x → funExt λ w → funExt λ a → ν-η' x w a)
 
-      coind : (ϕ ϕ' : CoHomomorphism F α finalCoalgebra) → ϕ .fst ≡ ϕ' .fst
+      coind : (ϕ ϕ' : CoRecHomo) → ϕ .fst ≡ ϕ' .fst
       coind ϕ ϕ' = ν-η ϕ ∙ sym (ν-η ϕ')
 
-      coind' : ∀ (ϕ ϕ' : CoHomomorphism F α finalCoalgebra) → ∀ x → ϕ .fst x ≡ ϕ' .fst x
+      coind' : ∀ (ϕ ϕ' : CoRecHomo) → ∀ x → ϕ .fst x ≡ ϕ' .fst x
       coind' ϕ ϕ' = funExt⁻ (coind ϕ ϕ')
 
-    coind-id : ∀ (ϕ : CoHomomorphism F finalCoalgebra finalCoalgebra) → ϕ .fst ≡ idCoHomo F finalCoalgebra .fst
-    coind-id ϕ = coind finalCoalgebra ϕ (idCoHomo F finalCoalgebra)
+    coind-id : ∀ (ϕ : CoRecHomo finalCoalgebra) → ϕ .fst ≡ (λ x → id)
+    coind-id ϕ = coind finalCoalgebra ϕ
+      ((λ x → id) , λ x → cong (_∘g finalCoalgebra x) (map-id (F x)))
 
-    coind-id' : ∀ (ϕ : CoHomomorphism F finalCoalgebra finalCoalgebra) x → ϕ .fst x ≡ id
+    coind-id' : ∀ (ϕ : CoRecHomo finalCoalgebra) x → ϕ .fst x ≡ id
     coind-id' ϕ x = funExt⁻ (coind-id ϕ) x
 
     rollν : ∀ x → ⟦ F x ⟧ (ν F) ⊢ ν F x
     rollν = corec {A = λ x → ⟦ F x ⟧ (ν F)} coalg where
-      coalg : Coalgebra F (λ x → ⟦ F x ⟧ (ν F))
+      coalg : ∀ x → ⟦ F x ⟧ (ν F) ⊢ ⟦ F x ⟧ (λ x → ⟦ F x ⟧ (ν F))
       coalg x = map (F x) finalCoalgebra

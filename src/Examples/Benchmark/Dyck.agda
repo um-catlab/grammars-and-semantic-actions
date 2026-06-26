@@ -57,7 +57,7 @@ open StrongEquivalence
 abstractify : Dyck ⊢ Δ DyckAST
 abstractify = semact-rec alg _
   where
-  alg : Algebra DyckTy (λ _ → Δ DyckAST)
+  alg : ∀ x → ⟦ DyckTy x ⟧ (λ _ → Δ DyckAST) ⊢ Δ DyckAST
   alg _ = ⊕ᴰ-elim λ where
     nil' → semact-pure mt
     balanced' →
@@ -84,7 +84,7 @@ abstractifyPreservesString = rec DyckTy alg _
     e'' : flatten tr'' ≡ w''
     e'' = cong₂ (λ u v → LP ∷ u ++ RP ∷ v) e e'
 
-  alg : Algebra DyckTy (λ _ → abstractifyPreservesString-motive)
+  alg : ∀ x → ⟦ DyckTy x ⟧ (λ _ → abstractifyPreservesString-motive) ⊢ abstractifyPreservesString-motive
   alg _ = ⊕ᴰ-elim (λ {
       nil' → σ ([] , mt , refl) ∘g lowerG
     ; balanced' →

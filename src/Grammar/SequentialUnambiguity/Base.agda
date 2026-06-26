@@ -397,7 +397,7 @@ module _
         (disjoint-ε-char+
          ∘g id ,&p ((char+⊗r→char+ ∘g id ,⊗ startsWith→char+) ∘g π₁))
 
-    the-alg : Algebra (*Ty A) (λ _ → (¬G FollowLastG (A *) c) & (A *))
+    the-alg : ∀ x → ⟦ *Ty A x ⟧ (λ _ → (¬G FollowLastG (A *) c) & (A *)) ⊢ (¬G FollowLastG (A *) c) & (A *)
     the-alg _ =
       ⊕ᴰ-elim λ {
           nil →

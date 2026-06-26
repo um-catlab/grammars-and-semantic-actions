@@ -178,7 +178,7 @@ module _
   )
   where
 
-  subgrammar-ind-alg : Algebra F (λ x → subgrammar (p x))
+  subgrammar-ind-alg : ∀ x → ⟦ F x ⟧ (λ x → subgrammar (p x)) ⊢ subgrammar (p x)
   subgrammar-ind-alg x =
     sub-intro
       (p x)
@@ -186,7 +186,8 @@ module _
       (pf x)
 
   sub-π-homo :
-    Homomorphism F subgrammar-ind-alg (initialAlgebra F)
+    Σ[ ϕ ∈ (∀ x → subgrammar (p x) ⊢ μ F x) ]
+      (∀ x → ϕ x ∘g subgrammar-ind-alg x ≡ roll ∘g map (F x) ϕ)
   sub-π-homo .fst x = sub-π (p x)
   sub-π-homo .snd x = is-homo
     where
@@ -207,15 +208,9 @@ module _
     subgrammar-section
       (p x)
       (subgrammar-ind' x)
-      (ind-id'
-        F
-        (compHomo F
-          (initialAlgebra F)
-          subgrammar-ind-alg
-          (initialAlgebra F)
-          sub-π-homo
-          (recHomo F subgrammar-ind-alg)
-        )
+      (rec-section F subgrammar-ind-alg
+        (sub-π-homo .fst)
+        (sub-π-homo .snd)
         x
       )
 

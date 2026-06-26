@@ -89,7 +89,7 @@ record NFA ℓN : Type (ℓ-suc ℓN) where
     Parse = Trace init
 
     TraceAlg : (⟨ Q ⟩ → Grammar ℓ) → Type (ℓ-max ℓN ℓ)
-    TraceAlg = Algebra TraceTy
+    TraceAlg A = ∀ q → ⟦ TraceTy q ⟧ A ⊢ A q
 
   module PotentiallyRejecting where
     data Tag : Type ℓN where
@@ -111,4 +111,4 @@ record NFA ℓN : Type (ℓ-suc ℓN) where
     Parse = Trace true init
 
     TraceAlg : Bool → (⟨ Q ⟩ → Grammar ℓ) → Type (ℓ-max ℓN ℓ)
-    TraceAlg b = Algebra (TraceTy b)
+    TraceAlg b A = ∀ q → ⟦ TraceTy b q ⟧ A ⊢ A q

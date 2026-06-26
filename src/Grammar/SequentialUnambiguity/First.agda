@@ -97,7 +97,7 @@ private
   ∘g &-swap
   ∘g id ,&p rec _ the-alg _
   where
-  the-alg : Algebra (*Ty A) λ _ → ¬G (startsWith c)
+  the-alg : ∀ x → ⟦ *Ty A x ⟧ (λ _ → ¬G (startsWith c)) ⊢ ¬G (startsWith c)
   the-alg _ = ⊕ᴰ-elim λ {
       nil → ⇒-intro ¬Nullable-startsWith ∘g lowerG ∘g lowerG
     ; cons →

@@ -354,11 +354,12 @@ module Determinization
       ∣ q , (q∈X , truth→witness (N.isAcc q) acc) ∣₁
 
   NFA→DFA-alg :
-    Algebra (NTrace.TraceTy true)
+    ∀ q → ⟦ NTrace.TraceTy true q ⟧
       (λ q →
         &[ X ∈ εClosedℙQ ]
         &[ q∈X ∈ q ∈ε X ] ℙN.Trace true X
       )
+      ⊢ (&[ X ∈ εClosedℙQ ] &[ q∈X ∈ q ∈ε X ] ℙN.Trace true X)
   NFA→DFA-alg q =
     ⊕ᴰ-elim (λ {
         NTrace.stop → ⊕ᴰ-elim (λ {
@@ -410,8 +411,9 @@ module Determinization
   NFA→DFA q = rec (NTrace.TraceTy true) NFA→DFA-alg q
 
   DFA→NFA-alg :
-    Algebra (ℙN.TraceTy true)
+    ∀ X → ⟦ ℙN.TraceTy true X ⟧
       (λ X → ⊕[ q ∈ ⟨ N.Q ⟩ ] ⊕[ q∈X ∈ q ∈ε X ] NTrace.Trace true q)
+      ⊢ (⊕[ q ∈ ⟨ N.Q ⟩ ] ⊕[ q∈X ∈ q ∈ε X ] NTrace.Trace true q)
   DFA→NFA-alg X =
     ⊕ᴰ-elim (λ {
       stop → ⊕ᴰ-elim (λ { (lift accX) →

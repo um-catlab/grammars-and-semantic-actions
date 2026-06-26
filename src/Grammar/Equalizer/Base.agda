@@ -83,7 +83,7 @@ module _ {X : Type ℓX} (F : X → SPFunctor X) (A : X → Grammar ℓA)
     e  x ∘g roll ∘g map (F x) (λ x' → eq-π (e x') (e' x')) ≡
     e' x ∘g roll ∘g map (F x) (λ x' → eq-π (e x') (e' x'))) where
 
-  equalizer-ind-alg : Algebra F λ x → equalizer (e x) (e' x)
+  equalizer-ind-alg : ∀ x → ⟦ F x ⟧ (λ x → equalizer (e x) (e' x)) ⊢ equalizer (e x) (e' x)
   equalizer-ind-alg x =
     eq-intro (e x) (e' x)
       (roll ∘g map (F x) (λ x' → eq-π (e x') (e' x')))
@@ -93,10 +93,10 @@ module _ {X : Type ℓX} (F : X → SPFunctor X) (A : X → Grammar ℓA)
   equalizer-ind = λ x →
     equalizer-section (e x) (e' x)
       (rec F equalizer-ind-alg x)
-      (ind-id' F (compHomo F (initialAlgebra F) equalizer-ind-alg (initialAlgebra F)
-        ((λ x' → eq-π (e x') (e' x')) ,
-         λ x' → eq-π-is-homo x')
-        (recHomo F equalizer-ind-alg)) x)
+      (rec-section F equalizer-ind-alg
+        (λ x' → eq-π (e x') (e' x'))
+        (λ x' → eq-π-is-homo x')
+        x)
     where
 
     opaque

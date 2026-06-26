@@ -84,7 +84,7 @@ NIL = roll ∘g σ nil' ∘g liftG
 BALANCED : literal [ ⊗ Dyck ⊗ literal ] ⊗ Dyck ⊢ Dyck
 BALANCED = roll ∘g σ balanced' ∘g liftG ,⊗ liftG ,⊗ liftG ,⊗ liftG
 
-appendAlg : Algebra DyckTy λ _ → Dyck ⊸ Dyck
+appendAlg : ∀ x → ⟦ DyckTy x ⟧ (λ _ → Dyck ⊸ Dyck) ⊢ (Dyck ⊸ Dyck)
 appendAlg tt = ⊕ᴰ-elim λ
   { nil' → ⊸-intro ⊗-unit-l ∘g lowerG
   ; balanced' → ⊸-intro (BALANCED
@@ -101,9 +101,9 @@ append = ⊸-intro⁻ append'
 
 append-nil-r' : ⊸-app ∘g id ,⊗ NIL ∘g ⊗-unit-r⁻ ∘g append' ≡ id
 append-nil-r' =
-  ind-id' DyckTy (compHomo DyckTy (initialAlgebra DyckTy) appendAlg (initialAlgebra DyckTy)
-    ((λ _ → ⊸-app ∘g id ,⊗ NIL ∘g ⊗-unit-r⁻) , λ _ → pf)
-    (recHomo DyckTy appendAlg))
+  rec-section DyckTy appendAlg
+    (λ _ → ⊸-app ∘g id ,⊗ NIL ∘g ⊗-unit-r⁻)
+    (λ _ → pf)
     _
   where
     opaque
@@ -212,7 +212,7 @@ failRejects = rec _ the-alg nothing
   ⟦ nothing ⟧n = ⊥
   ⟦ just n ⟧n = ⊤
 
-  the-alg : Algebra (TraceTy true) ⟦_⟧n
+  the-alg : ∀ q → ⟦ TraceTy true q ⟧ ⟦_⟧n ⊢ ⟦ q ⟧n
   the-alg nothing = ⊕ᴰ-elim λ where
     stop → ⊕ᴰ-elim λ ()
     step → ⊕ᴰ-elim λ _ → ⊗⊥ ∘g id ,⊗ lowerG
@@ -406,7 +406,7 @@ GenDyck' nothing = ⊥
 GenDyck' (just n) = GenDyck n
 
 {- First, we construct a GenDyck n from a Trace n -}
-genMkTreeAlg : Algebra (TraceTy true) GenDyck'
+genMkTreeAlg : ∀ q → ⟦ TraceTy true q ⟧ GenDyck' ⊢ GenDyck' q
 genMkTreeAlg nothing = ⊕ᴰ-elim λ where
   stop → ⊕ᴰ-elim (λ ())
   step → ⊕ᴰ-elim (λ (lift c) → ⊥-elim ∘g ⊗⊥ ∘g id ,⊗ lowerG)
@@ -452,7 +452,7 @@ opaque
 TraceBuilder : Unit → Grammar ℓ-zero
 TraceBuilder _ = &[ n ∈ ℕ ] (Trace true (just n) ⊸ Trace true (just n))
 
-buildTraceAlg : Algebra DyckTy TraceBuilder
+buildTraceAlg : ∀ x → ⟦ DyckTy x ⟧ TraceBuilder ⊢ TraceBuilder x
 buildTraceAlg _ = ⊕ᴰ-elim λ where
   nil' → &ᴰ-intro λ n → ⊸-intro-ε id ∘g lowerG
   balanced' → &ᴰ-intro λ n → ⊸-intro (

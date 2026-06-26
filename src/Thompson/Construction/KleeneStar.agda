@@ -87,26 +87,18 @@ module _ (N : NFA ℓN) where
     mkStrEq
       (from*NFA (Sum.inl _))
       (to*NFA (Sum.inl _))
-      (ind-id'
+      (rec-section
         (*Ty (Parse N))
-        (compHomo
-          (*Ty (Parse N))
-          _
-          N*Alg
-          (initialAlgebra (*Ty (Parse N)))
-          N*Homo
-          (recHomo _ N*Alg))
+        N*Alg
+        (N*Homo .fst)
+        (N*Homo .snd)
         _
       )
-      (ind-id'
+      (rec-section
         (TraceTy *NFA)
-        (compHomo
-          (TraceTy *NFA)
-          _
-          *NFAAlg
-          (initialAlgebra (TraceTy *NFA))
-          to*NFAHomo
-          (recHomo _ *NFAAlg))
+        *NFAAlg
+        (to*NFAHomo .fst)
+        (to*NFAHomo .snd)
         (Sum.inl _)
       )
     where
@@ -117,7 +109,7 @@ module _ (N : NFA ℓN) where
     ⟦_⟧N : ⟨ N .Q ⟩ → Grammar ℓN
     ⟦ q ⟧N = Trace *NFA (Sum.inl _) ⊸ Trace *NFA (Sum.inr q)
 
-    *NFAAlg : Algebra (TraceTy *NFA) ⟦_⟧*
+    *NFAAlg : ∀ q → ⟦ TraceTy *NFA q ⟧ ⟦_⟧* ⊢ ⟦ q ⟧*
     *NFAAlg (Sum.inl _) = ⊕ᴰ-elim (λ {
         (stop Eq.refl) →
           NIL
@@ -141,7 +133,7 @@ module _ (N : NFA ℓN) where
           ∘g lowerG
       })
 
-    NAlg : Algebra (TraceTy N) ⟦_⟧N
+    NAlg : ∀ q → ⟦ TraceTy N q ⟧ ⟦_⟧N ⊢ ⟦ q ⟧N
     NAlg q = ⊕ᴰ-elim (λ {
         (stop acc) →
           ⊸-intro
@@ -162,7 +154,7 @@ module _ (N : NFA ℓN) where
            )
       })
 
-    N*Alg : Algebra (*Ty (Parse N)) (λ _ → Parse *NFA)
+    N*Alg : ∀ x → ⟦ *Ty (Parse N) x ⟧ (λ _ → Parse *NFA) ⊢ Parse *NFA
     N*Alg _ = ⊕ᴰ-elim (λ {
         nil →
           STOP *NFA Eq.refl
@@ -368,7 +360,9 @@ module _ (N : NFA ℓN) where
               })
             q
 
-    N*Homo : Homomorphism (*Ty (Parse N)) N*Alg (initialAlgebra (*Ty (Parse N)))
+    N*Homo :
+      Σ[ ϕ ∈ (∀ x → Parse *NFA ⊢ Parse N *) ]
+        (∀ x → ϕ x ∘g N*Alg x ≡ roll ∘g map (*Ty (Parse N) x) ϕ)
     N*Homo .fst _ = from*NFA (Sum.inl _)
     N*Homo .snd _ = is-homo
       where
@@ -399,10 +393,8 @@ module _ (N : NFA ℓN) where
           }
 
     to*NFAHomo :
-      Homomorphism
-        (TraceTy *NFA)
-        *NFAAlg
-        (initialAlgebra (TraceTy *NFA))
+      Σ[ ϕ ∈ (∀ q → ⟦ q ⟧* ⊢ Trace *NFA q) ]
+        (∀ q → ϕ q ∘g *NFAAlg q ≡ roll ∘g map (TraceTy *NFA q) ϕ)
     to*NFAHomo .fst = to*NFA
     to*NFAHomo .snd = is-homo
       where

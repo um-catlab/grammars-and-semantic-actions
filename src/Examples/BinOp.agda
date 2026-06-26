@@ -117,11 +117,12 @@ module LL⟨1⟩ where
         (⟜-intro (DONE ∘g ⊗-unit-r))
         (⟜-intro (ADD ∘g id ,⊗ (id ,⊗ ⟜-app ∘g ⊗-assoc⁻))))
 
-  unrollEXPAlg :
-    Algebra BinOpTy (λ where
+  unrollEXPCarrier : Nonterminal → Grammar _
+  unrollEXPCarrier = λ where
       Exp → ATOM ⊕ (ATOM ⊗ (＂ + ＂ ⊗ ATOM) *)
       Atom → ATOM
-    )
+  unrollEXPAlg :
+    ∀ q → ⟦ BinOpTy q ⟧ unrollEXPCarrier ⊢ unrollEXPCarrier q
   unrollEXPAlg Exp =
     ⊕ᴰ-elim (λ where
       done → inl ∘g lowerG
@@ -304,7 +305,7 @@ module Automaton where
       )
 
   printAlg : (b : Bool) →
-    Algebra (AutomatonTy b) (λ _ → string)
+    ∀ q → ⟦ AutomatonTy b q ⟧ (λ _ → string) ⊢ string
   printAlg b (n , Opening) =
     ⊕ᴰ-elim λ where
       left → CONS ∘g literal→char [ ,⊗ id ∘g lowerG ,⊗ lowerG
@@ -607,7 +608,7 @@ module Soundness where
   ⟦ n , Closing ⟧State = Stk n
   ⟦ n , Adding ⟧State = (＂ + ＂ ⊗ ATOM) * ⊗ Stk n
 
-  buildExpAlg : Algebra (AutomatonTy true) ⟦_⟧State
+  buildExpAlg : ∀ q → ⟦ AutomatonTy true q ⟧ ⟦_⟧State ⊢ ⟦ q ⟧State
   buildExpAlg (n , Opening) =
     ⊕ᴰ-elim λ where
       left → ATOM*→EXP ,⊗ id ∘g ⊗-assoc ∘g ⊸3⊗ (⊸3-intro-ε PARENS) ∘g lowerG ,⊗ lowerG
@@ -652,7 +653,7 @@ module Completeness where
   ⟦ Exp ⟧Nonterminal = &[ n ∈ ℕ ] (DoneOpeningG true n ⊸ Trace true (n , Opening))
   ⟦ Atom ⟧Nonterminal = &[ n ∈ ℕ ] (DoneOpeningG true n ⊸ Trace true (n , Opening))
 
-  mkTraceAlg : Algebra BinOpTy ⟦_⟧Nonterminal
+  mkTraceAlg : ∀ q → ⟦ BinOpTy q ⟧ ⟦_⟧Nonterminal ⊢ ⟦ q ⟧Nonterminal
   mkTraceAlg Exp =
     ⊕ᴰ-elim λ where
       done → id ∘g lowerG

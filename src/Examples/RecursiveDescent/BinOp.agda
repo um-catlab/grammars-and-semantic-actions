@@ -189,7 +189,7 @@ data BinOpAST : Nonterminal → Type where
   ast-done   : BinOpAST Atom → BinOpAST Exp
   ast-add    : BinOpAST Atom → BinOpAST Exp → BinOpAST Exp
 
-abstractify-alg : Algebra BinOpTy (λ n → Δ (BinOpAST n))
+abstractify-alg : ∀ n → ⟦ BinOpTy n ⟧ (λ n → Δ (BinOpAST n)) ⊢ Δ (BinOpAST n)
 abstractify-alg Exp = ⊕ᴰ-elim λ where
   done →
     -- ⟦ Var Atom ⟧ = LiftG (Δ (BinOpAST Atom)).

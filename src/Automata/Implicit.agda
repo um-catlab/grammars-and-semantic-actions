@@ -144,7 +144,7 @@ record ImplicitDeterministicAutomaton ℓ : Type (ℓ-suc ℓ) where
   Trace b = μ (TraceTy b)
 
   TraceAlg : Bool → (FreelyAddFail+Initial Q → Grammar ℓA) → Type (ℓ-max ℓ ℓA)
-  TraceAlg b = Algebra (TraceTy b)
+  TraceAlg b A = ∀ q → ⟦ TraceTy b q ⟧ A ⊢ A q
 
   module _ (A : FreelyAddInitial Q → Grammar ℓA) where
     ParseAlgCarrier : FreelyAddFail+Initial Q → Grammar ℓA
@@ -155,7 +155,7 @@ record ImplicitDeterministicAutomaton ℓ : Type (ℓ-suc ℓ) where
         (↑q q) → A (↑i q)
 
     ParseAlg : Type (ℓ-max ℓ ℓA)
-    ParseAlg = Algebra (TraceTy true) ParseAlgCarrier
+    ParseAlg = ∀ q → ⟦ TraceTy true q ⟧ ParseAlgCarrier ⊢ ParseAlgCarrier q
 
     ParseAlgFail' : ⟦ TraceTy true fail ⟧ ParseAlgCarrier ⊢ ⊥
     ParseAlgFail' =
@@ -207,7 +207,7 @@ record ImplicitDeterministicAutomaton ℓ : Type (ℓ-suc ℓ) where
   Parse : Grammar _
   Parse = Trace true initial
 
-  readAlg : Algebra (*Ty char) λ _ → &[ q ∈ FreelyAddFail+Initial Q ] ⊕[ b ∈ Bool ] Trace b q
+  readAlg : ∀ x → ⟦ *Ty char x ⟧ (λ _ → &[ q ∈ FreelyAddFail+Initial Q ] ⊕[ b ∈ Bool ] Trace b q) ⊢ &[ q ∈ FreelyAddFail+Initial Q ] ⊕[ b ∈ Bool ] Trace b q
   readAlg _ =
     ⊕ᴰ-elim λ where
       nil →
@@ -244,7 +244,7 @@ record ImplicitDeterministicAutomaton ℓ : Type (ℓ-suc ℓ) where
   readTrace : string ⊢ &[ q ∈ FreelyAddFail+Initial Q ] ⊕[ b ∈ Bool ] Trace b q
   readTrace = rec _ readAlg _
 
-  printAlg : ∀ b → Algebra (TraceTy b) λ _ → string
+  printAlg : ∀ b q → ⟦ TraceTy b q ⟧ (λ _ → string) ⊢ string
   printAlg b fail =
     ⊕ᴰ-elim λ where
       (stopFail x) → NIL ∘g lowerG ∘g lowerG
@@ -261,7 +261,7 @@ record ImplicitDeterministicAutomaton ℓ : Type (ℓ-suc ℓ) where
   print : ∀ b q → Trace b q ⊢ string
   print b = rec _ (printAlg b)
 
-  ⊕ᴰAlg : ∀ b → Algebra (TraceTy b) (λ q → ⊕[ b ∈ Bool ] Trace b q)
+  ⊕ᴰAlg : ∀ b q → ⟦ TraceTy b q ⟧ (λ q → ⊕[ b ∈ Bool ] Trace b q) ⊢ ⊕[ b ∈ Bool ] Trace b q
   ⊕ᴰAlg b q =
     ⊕ᴰ-elim λ where
       (stop q Eq.refl) →
@@ -331,12 +331,12 @@ record ImplicitDeterministicAutomaton ℓ : Type (ℓ-suc ℓ) where
   fail→false' : ∀ {b : Bool} → Trace b fail ⊢ ⊕[ x ∈ b Eq.≡ false ] Trace b fail
   fail→false' {b = b} = rec _ fail→falseAlg fail
     where
-    fail→falseAlg : Algebra (TraceTy _)
-      (λ where
+    failC : FreelyAddFail+Initial Q → Grammar _
+    failC = λ where
         fail → ⊕[ x ∈ b Eq.≡ false ] Trace b fail
         initial → ⊤*
         (↑q q) → ⊤*
-      )
+    fail→falseAlg : ∀ q → ⟦ TraceTy _ q ⟧ failC ⊢ failC q
     fail→falseAlg fail =
       ⊕ᴰ-elim λ where
         (stopFail Eq.refl) → σ Eq.refl ∘g STOPFAIL ∘g lowerG ∘g lowerG

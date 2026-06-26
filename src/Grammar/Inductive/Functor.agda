@@ -72,48 +72,13 @@ module _ where
       map-∘ (F ⊗e F') f f' i = map-∘ F f f' i ,⊗ map-∘ F' f f' i
       map-∘ (F &e2 F') f f' i = map-∘ F f f' i ,&p map-∘ F' f f' i
 
-  module _ {X : Type ℓX} (F : X → SPFunctor X) where
-    Algebra : (X → Grammar ℓA) → Type (ℓ-max ℓX ℓA)
-    Algebra A = ∀ x → ⟦ F x ⟧ A ⊢ A x
-
-    module _ {A : X → Grammar ℓA}{B : X → Grammar ℓB} (α : Algebra A) (β : Algebra B) where
-      isHomo : (∀ x → A x ⊢ B x) → Type _
-      isHomo ϕ = (∀ x → ϕ x ∘g α x ≡ β x ∘g map (F x) ϕ)
-
-      Homomorphism : Type _
-      Homomorphism = Σ _ isHomo
-
-    idHomo : ∀ {A : X → Grammar ℓA} → (α : Algebra A) → Homomorphism α α
-    idHomo α = (λ x → id) , λ x → cong (α x ∘g_) (sym (map-id (F x)))
-
-    compHomo : ∀ {A : X → Grammar ℓA}{B : X → Grammar ℓB}{C : X → Grammar ℓC}
-      (α : Algebra A)(β : Algebra B)(η : Algebra C)
-      → Homomorphism β η → Homomorphism α β → Homomorphism α η
-    compHomo α β η ϕ ψ .fst x = ϕ .fst x ∘g ψ .fst x
-    compHomo α β η ϕ ψ .snd x =
-      cong (ϕ .fst x ∘g_) (ψ .snd x)
-      ∙ cong (_∘g map (F x) (ψ .fst)) (ϕ .snd x)
-      ∙ cong (η x ∘g_) (sym (map-∘ (F x) (ϕ .fst) (ψ .fst)))
-
-  module _ {X : Type ℓX} (F : X → SPFunctor X) where
-    Coalgebra : (X → Grammar ℓA) → Type (ℓ-max ℓX ℓA)
-    Coalgebra A = ∀ x → A x ⊢ ⟦ F x ⟧ A
-
-    module _ {A : X → Grammar ℓA}{B : X → Grammar ℓB} (α : Coalgebra A) (β : Coalgebra B) where
-      isCoHomo : (∀ x → A x ⊢ B x) → Type _
-      isCoHomo ϕ = (∀ x → map (F x) ϕ ∘g α x ≡ β x ∘g ϕ x)
-
-      CoHomomorphism : Type _
-      CoHomomorphism = Σ _ isCoHomo
-
-    idCoHomo : ∀ {A : X → Grammar ℓA} → (α : Coalgebra A) → CoHomomorphism α α
-    idCoHomo α = (λ x → id) , λ x → cong (_∘g α x) (map-id (F x))
-
-    compCoHomo : ∀ {A : X → Grammar ℓA}{B : X → Grammar ℓB}{C : X → Grammar ℓC}
-      (α : Coalgebra A)(β : Coalgebra B)(η : Coalgebra C)
-      → CoHomomorphism β η → CoHomomorphism α β → CoHomomorphism α η
-    compCoHomo α β η ϕ ψ .fst x = ϕ .fst x ∘g ψ .fst x
-    compCoHomo α β η ϕ ψ .snd x =
-      cong (_∘g α x) (map-∘ (F x) (ϕ .fst) (ψ .fst))
-      ∙ cong (map (F x) (ϕ .fst) ∘g_) (ψ .snd x)
-      ∙ cong (_∘g ψ .fst x) (ϕ .snd x)
+-- NOTE: the hand-rolled `Algebra`/`isHomo`/`Homomorphism`/`idHomo`/`compHomo`
+-- (and their `Coalgebra` duals) used to live here.  They have been removed:
+--   * algebra/coalgebra *structure maps* are now written inline as
+--     `∀ x → ⟦ F x ⟧ A ⊢ A x` (resp. `∀ x → A x ⊢ ⟦ F x ⟧ A`);
+--   * the universal property of `rec`/`corec` is packaged as `RecHomo` /
+--     `rec-section` in `Grammar.Inductive.Indexed` (resp. `CoRecHomo` in
+--     `Grammar.Coinductive.Indexed`);
+--   * the categorical algebra/coalgebra categories are provided semantically
+--     by `Grammar.Inductive.Semantic` / `.Algebra` and
+--     `Grammar.Coinductive.Coalgebra` (c-c-l `AlgebrasCategory ⟦SPF⟧Pow`).

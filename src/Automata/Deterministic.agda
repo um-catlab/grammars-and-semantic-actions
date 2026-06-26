@@ -53,7 +53,7 @@ record DeterministicAutomaton (Q : Type ℓ) : Type (ℓ-suc ℓ) where
   STEP' c₀ b q = ⊸-intro⁻ (rec (TraceTy b) (extendAlg c₀) q)
     where
     extendAlg : (c : ⟨ Alphabet ⟩) →
-      Algebra (TraceTy b) (λ q' → ＂ c ＂ ⊸ ⊕[ b' ∈ Bool ] Trace b' q')
+      ∀ q' → ⟦ TraceTy b q' ⟧ (λ q' → ＂ c ＂ ⊸ ⊕[ b' ∈ Bool ] Trace b' q') ⊢ (＂ c ＂ ⊸ ⊕[ b' ∈ Bool ] Trace b' q')
     extendAlg c q' = ⊕ᴰ-elim λ where
       stop → ⊕ᴰ-elim λ where
         (lift Eq.refl) →
@@ -89,7 +89,7 @@ record DeterministicAutomaton (Q : Type ℓ) : Type (ℓ-suc ℓ) where
   parseInit : string ⊢ ⊕[ b ∈ Bool ] Trace b init
   parseInit = π init ∘g parse
 
-  printAlg : ∀ b → Algebra (TraceTy b) (λ _ → string)
+  printAlg : ∀ b q → ⟦ TraceTy b q ⟧ (λ _ → string) ⊢ string
   printAlg b q = ⊕ᴰ-elim λ {
       stop → ⊕ᴰ-elim (λ { (lift Eq.refl) → NIL ∘g lowerG ∘g lowerG })
     ; step → CONS ∘g ⊕ᴰ-elim (λ { (lift c) → σ c ,⊗ id ∘g (lowerG ∘g lowerG) ,⊗ lowerG }) }

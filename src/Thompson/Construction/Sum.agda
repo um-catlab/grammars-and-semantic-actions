@@ -124,7 +124,7 @@ module _ (N : NFA ℓN) (N' : NFA ℓN') where
     ⟦ inl' q ⟧⊕ = LiftG ℓN' (Trace N q)
     ⟦ inr' q' ⟧⊕ = LiftG ℓN (Trace N' q')
 
-    ⊕Alg : Algebra (TraceTy ⊕NFA) ⟦_⟧⊕
+    ⊕Alg : ∀ q → ⟦ TraceTy ⊕NFA q ⟧ ⟦_⟧⊕ ⊢ ⟦ q ⟧⊕
     ⊕Alg start =
       ⊕ᴰ-elim (λ {
         (step (Sum.inl t) ())
@@ -149,7 +149,7 @@ module _ (N : NFA ℓN) (N' : NFA ℓN') where
     ⟦_⟧N' : ⟨ N' .Q ⟩ → Grammar (ℓ-max ℓN ℓN')
     ⟦ q' ⟧N' = Trace ⊕NFA (inr' q')
 
-    NAlg : Algebra (TraceTy N) ⟦_⟧N
+    NAlg : ∀ q → ⟦ TraceTy N q ⟧ ⟦_⟧N ⊢ ⟦ q ⟧N
     NAlg q =
       ⊕ᴰ-elim (λ {
         (stop acc) → STOP ⊕NFA acc ∘g lowerG ∘g lowerG
@@ -158,7 +158,7 @@ module _ (N : NFA ℓN) (N' : NFA ℓN') where
 
     N→⊕NFA = rec (TraceTy N) NAlg
 
-    N'Alg : Algebra (TraceTy N') ⟦_⟧N'
+    N'Alg : ∀ q → ⟦ TraceTy N' q ⟧ ⟦_⟧N' ⊢ ⟦ q ⟧N'
     N'Alg q' =
       ⊕ᴰ-elim (λ {
         (stop acc) → STOP ⊕NFA acc ∘g lowerG ∘g lowerG

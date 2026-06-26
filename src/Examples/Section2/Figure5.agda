@@ -158,7 +158,7 @@ module Equivalence where
   ULTrace = UL.Trace
 
   -- Build an algebra structure that interprets HTrace inside of ULTrace
-  H→ULAlg : Algebra Handwritten.TraceTy ULTrace
+  H→ULAlg : ∀ q → ⟦ Handwritten.TraceTy q ⟧ ULTrace ⊢ ULTrace q
   H→ULAlg s0 = ⊕ᴰ-elim λ where
     Handwritten.0to2 → UL.STEP UsingLibrary.0to2 ∘g lowerG ,⊗ lowerG
     Handwritten.0to1 → UL.STEPε UsingLibrary.0to1 ∘g lowerG
@@ -174,7 +174,7 @@ module Equivalence where
   H→UL = rec _ H→ULAlg
 
   -- Build an algebra structure that interprets ULTrace inside of HTrace
-  UL→HAlg : Algebra UL.TraceTy HTrace
+  UL→HAlg : ∀ q → ⟦ UL.TraceTy q ⟧ HTrace ⊢ HTrace q
   UL→HAlg s0 = ⊕ᴰ-elim λ where
     (UL.step UsingLibrary.0to2 Eq.refl) → Handwritten.0TO2 ∘g (lowerG ∘g lowerG) ,⊗ lowerG
     (UL.step UsingLibrary.1to1 ()) -- absurd because src(1to1) ≢ 0
