@@ -14,6 +14,7 @@ module Grammar.Equalizer.Base (Alphabet : hSet ℓ-zero) where
 open import Cubical.Data.Nat
 
 open import Grammar.Base Alphabet
+open import Grammar.HLevels.Base Alphabet
 open import Grammar.LinearProduct.Base Alphabet
 open import Grammar.Epsilon.Base Alphabet
 open import Grammar.Inductive.Indexed Alphabet hiding (k)
@@ -40,6 +41,10 @@ module _ {A : Grammar ℓA}{B : Grammar ℓB} (f f' : A ⊢ B) where
 
     eq-π-pf : f ∘g eq-π ≡ f' ∘g eq-π
     eq-π-pf i w x = x .snd i
+
+    isSetGrammarEqualizer : isSetGrammar A → isSetGrammar B → isSetGrammar equalizer
+    isSetGrammarEqualizer isSetA isSetB w =
+      isSetΣ (isSetA w) (λ x → isProp→isSet (isSetB w (f w x) (f' w x)))
 
   module _ (f'' : C ⊢ A) (p : f ∘g f'' ≡ f' ∘g f'') where
     opaque
