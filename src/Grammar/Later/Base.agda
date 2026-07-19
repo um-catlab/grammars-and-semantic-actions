@@ -11,9 +11,11 @@ open import Grammar.Top Alphabet
 open import Term.Base Alphabet
 
 open import Cubical.Data.List using (rev)
-open import Cubical.Categories.Direct.Base using (WFOrder ; wfPullback)
+open import Cubical.Data.Sum using (inl)
+open import Cubical.Categories.Direct.Base using (WFOrder ; wfPullback ; DirectStr)
 open import Grammar.Later.SuffixOrder Alphabet
-open import Cubical.Categories.Direct.Instances.Poset using (löbWF)
+open import Cubical.Categories.Direct.Instances.Poset using (PosetCat ; PosetDirect)
+import Cubical.Categories.Direct.StrictDownset as SD
 
 private
   variable
@@ -32,9 +34,24 @@ private
 ▷-elim-at p α = α _ p
 
 -- Löb induction, recovered from the abstract direct-category construct
--- `löbWF` instantiated at the suffix well-order.
+-- `löbFam` (Löb over presheaves on a direct category) instantiated at the
+-- suffix well-order viewed as a thin direct category (`PosetDirect`).  The
+-- presheaf-level later `▷Fam` is collapsed back to gsa's first-order
+-- `▷ A x = ∀ y → y <ˢ x → A y` via `▷FamApp` at the strict hom `inl y<ˢx`.
+private
+  lobWF : (Wo : WFOrder ℓ-zero ℓ-zero) {A : WFOrder.D Wo → Type ℓA}
+    → (isSetA : ∀ d → isSet (A d))
+    → (∀ d → (∀ e → WFOrder._<_ Wo e d → A e) → A d)
+    → ∀ d → A d
+  lobWF Wo {A = A} isSetA f =
+    SD.löbFam dir (λ v → A v , isSetA v)
+      (λ x β → f x (λ y y<x → SD.▷FamApp dir (λ v → A v , isSetA v) β (inl y<x) y<x))
+    where
+      dir : DirectStr {C = PosetCat Wo} Wo
+      dir = PosetDirect Wo
+
 lob : isSetGrammar A → (▷ A ⊢ A) → ⊤ ⊢ A
-lob {A = A} isSetA f w _ = löbWF SuffixWFOrder (λ v → A v , isSetA v) f w
+lob {A = A} isSetA f w _ = lobWF SuffixWFOrder isSetA f w
 
 -- The strict-prefix well-order, obtained as the pullback of the suffix order
 -- along `rev`: w is a strict prefix of w' iff rev w is a strict suffix of
@@ -57,4 +74,4 @@ PrefixWFOrder = record
 ▷r-elim-at p α = α _ p
 
 lob-r : isSetGrammar A → (▷r A ⊢ A) → ⊤ ⊢ A
-lob-r {A = A} isSetA f w _ = löbWF PrefixWFOrder (λ v → A v , isSetA v) f w
+lob-r {A = A} isSetA f w _ = lobWF PrefixWFOrder isSetA f w

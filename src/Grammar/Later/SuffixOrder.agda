@@ -15,9 +15,7 @@ open import Cubical.Induction.WellFounded
 
 open import Cubical.Categories.Direct.Base using (WFOrder)
 open import String.Base Alphabet using (String ; isSetEqString)
-open import Cubical.Data.List.More using (++-assoc-Eq)
-open import Cubical.Categories.Direct.Instances.Suffix (Alphabet .fst) (Alphabet .snd)
-  using (++-cancelʳ)
+open import Cubical.Data.List.MoreMore using (++-assoc-Eq ; ++-cancelʳEq)
 
 private
   Str : Type ℓ-zero
@@ -75,13 +73,15 @@ trans<ˢ {w} {w'} {w''} (u₁ , ne₁ , e₁) (u₂ , ne₂ , e₂) =
     eq : (u₂ ++ u₁) ++ w Eq.≡ w''
     eq = ++-assoc-Eq u₂ u₁ w Eq.∙ Eq.ap (u₂ ++_) e₁ Eq.∙ e₂
 
--- Only needs to typecheck; never forced during reduction, so we may route the
--- cancellation through the path world.
+-- Only needs to typecheck; never forced during reduction.  The right
+-- cancellation is done in Eq-world with gsa's own `++-cancelʳEq` (from
+-- `Cubical.Data.List.MoreMore`) and only then converted to a path, so this file no
+-- longer depends on c-c-l's (deleted) `Direct.Instances.Suffix`.
 isProp<ˢ : ∀ w w' → isProp (w <ˢ w')
 isProp<ˢ w w' (u₁ , ne₁ , e₁) (u₂ , ne₂ , e₂) =
   Σ≡Prop
     (λ u → isProp× (isPropΠ (λ _ → Empty.isProp⊥)) (isSetEqString _ _))
-    (++-cancelʳ w (Eq.eqToPath e₁ ∙ sym (Eq.eqToPath e₂)))
+    (Eq.eqToPath (++-cancelʳEq w (e₁ Eq.∙ Eq.sym e₂)))
 
 SuffixWFOrder : WFOrder ℓ-zero ℓ-zero
 SuffixWFOrder = record

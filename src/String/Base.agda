@@ -10,7 +10,7 @@ open import Cubical.Relation.Nullary.Base
 
 open import Cubical.Data.List
 open import Cubical.Data.Nat
-open import Cubical.Data.List.More public
+open import Cubical.Data.List.MoreMore public
 open import Cubical.Data.FinSet
 open import Cubical.Data.Sum as Sum
 open import Cubical.Data.Sum.More

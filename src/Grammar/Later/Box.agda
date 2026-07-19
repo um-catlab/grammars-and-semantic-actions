@@ -16,9 +16,11 @@
 
    THE CONSTRUCTION (all upstream, instantiated at the gsa alphabet):
 
-     • The suffix category `SuffixCat` (Cubical.Categories.Direct.Instances.Suffix)
-       has objects `List ⟨Alphabet⟩ = String` and Hom y x = `y ≤ˢ x` (the
-       reflexive suffix order).
+     • The suffix category `SuffixCat` has objects `List ⟨Alphabet⟩ = String`
+       and Hom y x = `y ≤ x` (the reflexive suffix order).  It is obtained as
+       `PosetCat SuffixWFOrder` (Cubical.Categories.Direct.Instances.Poset):
+       the thin category of gsa's own suffix well-order
+       (Grammar.Later.SuffixOrder).
 
      • Cubical.Categories.Presheaf.Family.Base provides, for any base category C:
          - `Psh→Fam : Functor Psh Fam`   where `Fam = PowerCategory C.ob (SET _)`
@@ -69,16 +71,22 @@ open import Cubical.Categories.Monad.ExtensionSystem
   using (Monad→ExtensionSystem)
 import Cubical.Categories.Comonad.ExtensionSystem as CoES
 
-open import Cubical.Categories.Direct.Instances.Suffix
-  (⟨ Alphabet ⟩) (str Alphabet)
-  using (SuffixCat)
+open import Cubical.Categories.Direct.Instances.Poset using (PosetCat)
+open import Cubical.Categories.Displayed.Instances.CoEilenbergMoore
+  using (coEM)
 import Cubical.Categories.Presheaf.Family.Base as Family
 
 open import Grammar.Base Alphabet using (String)
+open import Grammar.Later.SuffixOrder Alphabet using (SuffixWFOrder)
 
 private
   variable
     ℓ : Level
+
+-- The suffix category: the reflexive suffix order on strings as a thin
+-- category.  (Replaces the deleted upstream Direct.Instances.Suffix.)
+SuffixCat : Category ℓ-zero ℓ-zero
+SuffixCat = PosetCat SuffixWFOrder
 
 --------------------------------------------------------------------------------
 -- The categories Fam and Psh over the suffix category.
@@ -107,7 +115,7 @@ module _ (ℓ : Level) where
 
 module _ {ℓ : Level} where
   Psh→Fam : Functor (Psh ℓ) (Fam ℓ)
-  Psh→Fam = Family.Psh→Fam {ℓ = ℓ} SuffixCat
+  Psh→Fam = Family.PSH→Fam {ℓ = ℓ} SuffixCat
 
   -- Cofree A x = ∀ (y suffix-of x). A y      -- this IS □ on families.
   Cofree : Functor (Fam ℓ) (Psh ℓ)
@@ -162,18 +170,20 @@ module _ {ℓ : Level} where
 --------------------------------------------------------------------------------
 
 module _ {ℓ : Level} where
-  -- COALG = co-Eilenberg–Moore category of the □ comonad on Fam.
+  -- COALG = co-Eilenberg–Moore category of the □ comonad on Fam.  Upstream a
+  -- comonad IS a monad on the opposite category, so `monadᶜ` is literally the
+  -- comonad and its co-EM category is `coEM monadᶜ`.
   COALG : Category _ _
-  COALG = Family.COALG {ℓ = ℓ} SuffixCat
+  COALG = coEM (monadᶜ {ℓ = ℓ})
 
   -- The comparison functor: presheaves over the suffix order → □-coalgebras.
   Psh→COALG : Functor (Psh ℓ) COALG
-  Psh→COALG = Family.Psh→COALG {ℓ = ℓ} SuffixCat
+  Psh→COALG = Family.PSH→coEM {ℓ = ℓ} SuffixCat
 
   -- Comonadicity: Psh ≃ □-coalgebras.
   open import Cubical.Categories.Equivalence using (_≃ᶜ_)
   Psh≃COALG : (Psh ℓ) ≃ᶜ COALG
-  Psh≃COALG = Family.Psh≃COALG {ℓ = ℓ} SuffixCat
+  Psh≃COALG = Family.PSH≃coEM {ℓ = ℓ} SuffixCat
 
 --------------------------------------------------------------------------------
 -- Remark on the later modality ▷.

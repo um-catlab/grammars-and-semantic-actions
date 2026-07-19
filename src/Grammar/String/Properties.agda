@@ -5,7 +5,7 @@ open import Cubical.Foundations.Structure
 module Grammar.String.Properties (Alphabet : hSet ℓ-zero) where
 
 open import Cubical.Data.List as List hiding (rec)
-open import Cubical.Data.List.More
+open import Cubical.Data.List.MoreMore
 open import Cubical.Data.Sigma
 import Cubical.Data.Sum as Sum
 open import Cubical.Data.Nat
