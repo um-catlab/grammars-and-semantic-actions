@@ -61,7 +61,7 @@ module _ {X : Type ℓX}
   G = ⟦F⟧Pow ^opF
 
   private
-    AlgCat = AlgebrasCategory G
+    AlgCat = ALG G
 
   -- carrier: ν F, pointwise a SetGrammar
   νF-ob : X → SetGrammar ℓX
@@ -116,7 +116,7 @@ module _ {X : Type ℓX}
   νF-isInitial Bβ .snd = corecCoalgHom-unique Bβ
 
   -- `isTerminal (AlgCat ^op) = isInitial AlgCat`, and
-  -- `AlgCat ^op = CoalgebrasCategory ⟦F⟧Pow`.
+  -- `AlgCat ^op = COALG ⟦F⟧Pow`.
   νF-Terminal-op : Terminal (AlgCat ^op)
   νF-Terminal-op = νF-coalg , νF-isInitial
 

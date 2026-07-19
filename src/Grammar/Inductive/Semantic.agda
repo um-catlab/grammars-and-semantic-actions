@@ -5,7 +5,7 @@
 
    This module sits BELOW `Grammar.Inductive.Indexed`: it does NOT import
    `Indexed` (no `μ`/`rec`). `Indexed` imports THIS module and retypes
-   `rec`/`recHomo`/`ind` to consume the c-c-l `AlgebrasCategory ⟦SPF⟧Pow`.
+   `rec`/`recHomo`/`ind` to consume the c-c-l `ALG ⟦SPF⟧Pow`.
 
    KEY definitional fact (used pervasively downstream):
 
@@ -70,6 +70,6 @@ module _ {X : Type ℓX} (F : X → SPFunctor X) (isSetValF : ∀ x → isSetVal
   -- Definitionally `∀ x → ⟨ A x ⟩ ⊢ ⟦ F x ⟧ ⟨ A ⟩`, i.e. exactly the old
   -- hand-rolled `Coalgebra F (λ x → ⟨ A x ⟩)`.  This is the structure-map
   -- direction of an `⟦SPF⟧Pow`-coalgebra (an object of
-  -- `CoalgebrasCategory ⟦SPF⟧Pow`).
+  -- `COALG ⟦SPF⟧Pow`).
   SPFCoalgebra : (X → SetGrammar ℓX) → Type ℓX
   SPFCoalgebra A = PowerCat [ A , Functor.F-ob ⟦SPF⟧Pow A ]

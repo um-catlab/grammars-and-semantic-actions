@@ -3,11 +3,11 @@
    This module ADDS, alongside the computational `rec`/`ind`/`recHomo`
    from `Grammar.Inductive.Indexed`, the cubical-categorical-logic-flavoured
    versions typed over the semantic endofunctor `⟦SPF⟧Pow` and its
-   `AlgebrasCategory`.
+   `ALG`.
 
    Carriers are `SetGrammar`s; an algebra structure map is an
    `SPFAlgebra A` (defeq to the old `Algebra F (λ x → ⟨ A x ⟩)`), and
-   an algebra homomorphism is a morphism of `AlgebrasCategory ⟦SPF⟧Pow`.
+   an algebra homomorphism is a morphism of `ALG ⟦SPF⟧Pow`.
 
    Everything here delegates to the computational `rec`/`ind` (whose
    underlying maps are definitionally equal), so `rec`/`roll` reductions
@@ -48,7 +48,7 @@ module _ {X : Type ℓX}
 
   -- The semantic algebra category for the codes `F`.
   AlgCat : Category (ℓ-max (ℓ-suc ℓX) ℓX) ℓX
-  AlgCat = AlgebrasCategory (⟦SPF⟧Pow F isSetValF)
+  AlgCat = ALG (⟦SPF⟧Pow F isSetValF)
 
   -- An object of `AlgCat`: a `SetGrammar` carrier + structure map.
   AlgOb : Type (ℓ-max (ℓ-suc ℓX) ℓX)

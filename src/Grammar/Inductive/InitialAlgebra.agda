@@ -75,7 +75,7 @@ module Indexed {ℓX} {X : Type ℓX}
 ------------------------------------------------------------------------
 
   private
-    AlgCat = AlgebrasCategory ⟦F⟧Pow
+    AlgCat = ALG ⟦F⟧Pow
 
   -- carrier object of the initial algebra in PowerCat
   μF-ob : X → SetGrammar ℓX

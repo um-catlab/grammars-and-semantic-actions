@@ -81,4 +81,4 @@ module _ where
 --     `Grammar.Coinductive.Indexed`);
 --   * the categorical algebra/coalgebra categories are provided semantically
 --     by `Grammar.Inductive.Semantic` / `.Algebra` and
---     `Grammar.Coinductive.Coalgebra` (c-c-l `AlgebrasCategory ⟦SPF⟧Pow`).
+--     `Grammar.Coinductive.Coalgebra` (c-c-l `ALG ⟦SPF⟧Pow`).
