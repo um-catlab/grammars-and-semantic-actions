@@ -32,6 +32,37 @@ Instead: `_∘g_`, `idg`, `⊕-I₁`, `⊕-I₂`, `⊕-E`, `⊕ᴰ-in`, `⊕ᴰ-
 `TheoryGrammar.RulesSub` (`RulesS`), which every instance should
 re-export from its `Base`.
 
+### No semantic löb
+
+`löb` must never be applied to an Agda function.  Its argument is an
+internal term:
+
+```agda
+löb : (▷ A ⊢ A) → (⊤ ⊢ A)          -- the step is a ⊢-term
+```
+
+The reference idiom is `Grammar/Parser/RecursiveDescent.agda`:
+
+```agda
+fixP  : isSetGrammar A → ▷ (MaybeLeft A) ⊢ MaybeLeft A → Parser A
+parseEXP = fixP isSetGrammarEXP step     -- `step` is point-free
+```
+
+Writing `löb λ { (x , m) rec → … }` is a *semantic* löb and is phase-1
+code smuggled into phase 2.  Either use the internal hylomorphism
+(`hyloC`, which takes a coalgebra and an algebra and hides löb entirely)
+or write the step point-free.
+
+Writing the step point-free needs a rule that consumes a `▷` *inside* a
+tensor — `Grammar/Later/Properties.agda`'s
+
+```agda
+▷-app-NE : ⟨ ¬Nullable B ⟩ → (B ⊗ ⊤) & ▷ A ⊢ B ⊗ A
+```
+
+If no such rule exists for your substrate yet, that is the thing to
+build; do not work around it with a pointful step.
+
 **If a phase-2 program needs something pointful, that is a signal you
 are missing a primitive.** Name it, give it a `⊢` type, prove it once in
 phase 1 with a comment saying it is a primitive, and then use it. Do not

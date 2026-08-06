@@ -167,6 +167,19 @@ module Parser (V : Type₀)
       tryRules []       = inr tt*
       tryRules (r ∷ rs) = orElse (Deriv P) w (tryRule r) (tryRules rs)
 
+    -- FIXME (phase violation).  This is a SEMANTIC löb: the step is an
+    -- Agda function, not a `▷ Mot ⊢ᴵ Mot` term, so `tryRules` /
+    -- `tryCut` / `orElse` below eliminate sums by matching instead of
+    -- by `⊕-E`.  The reference idiom is `fixP` in
+    -- Grammar/Parser/RecursiveDescent.agda, whose step IS a term.
+    --
+    -- What is missing is the generic analogue of
+    --   ▷-app-NE : ⟨¬Nullable B⟩ → (B ⊗ ⊤) & ▷ A ⊢ B ⊗ A
+    -- (Grammar/Later/Properties.agda), which is what lets a `▷` be
+    -- consumed INSIDE a tensor.  `TheoryGrammar.Graded` exposes `löb`
+    -- but not that rule, so no point-free step can be written yet.
+    -- Adding it is the fix; `hyloC` is the alternative, and needs `⅋e`
+    -- because parsing must consider ALL splittings, not choose one.
     parseIx : (i : G.Ix) → Mot i
     parseIx = G.löb λ { (P , w) rec → tryRules P w rec (allRules P) }
 
