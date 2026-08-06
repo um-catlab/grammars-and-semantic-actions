@@ -24,10 +24,6 @@ open import TheoryGrammar.Graded
 
 open import TheoryGrammar.Instances.Strings.Enumeration Char public
 
--- the grammar of non-empty words; a factor carrying this is a proper part
-NonEmpty : Gr
-NonEmpty m = 0 < length m
-
 module CYK (V : Type₀)
            (unitR : V → Char → Type₀)          -- P → c
            (binR  : V → V → V → Type₀) where   -- P → Q T
@@ -43,7 +39,7 @@ module CYK (V : Type₀)
   -- ε-productions is exactly what supplies it.
   NEslot : V → Bool → G.Functor tt
   NEslot Q true  = G.Var Q
-  NEslot Q false = G.⌜ NonEmpty ⌝
+  NEslot Q false = G.⌜ NonTrivial ⌝
 
   NEvar : V → G.Functor tt
   NEvar Q = G.&e Bool (NEslot Q)
@@ -70,7 +66,7 @@ module CYK (V : Type₀)
 
   ≤NEslot : (Q : V) (b : Bool) → G.Guarded≤ (NEslot Q b)
   ≤NEslot Q true  = G.≤Var Q
-  ≤NEslot Q false = G.≤⌜⌝ NonEmpty
+  ≤NEslot Q false = G.≤⌜⌝ NonTrivial
 
   ≤binSlot : (Q T : V) (b : Bool) → G.Guarded≤ (binSlot Q T b)
   ≤binSlot Q T true  = G.≤&e Bool (NEslot Q) (≤NEslot Q)
@@ -90,29 +86,20 @@ module CYK (V : Type₀)
       alt (inr (Q , T , _)) =
         G.<⊗e appop (binSlot Q T) (≤binSlot Q T) (pr Q T)
 
--- PRIMITIVE (phase 1): a word with a first character is non-empty.
--- The one place below that opens a splitting.
-charNE : (c : Char) → (⌈ c ∷ [] ⌉ ⊗' ⊤G) ⊢ NonEmpty
-charNE c w ((u , v , s) , h) = go (h true) s
-  where go : u Eq.≡ c ∷ [] → Split3 u v w → NonEmpty w
-        go Eq.refl s' = split3LenL s'
-
--- DERIVED (phase 2): every word is empty or not.  Point-free, out of
--- the decomposition axiom and the ⊕ rules.
-decNE : ⊤G ⊢ (NonEmpty ⊕ ⌈ [] ⌉)
-decNE = ⊕-E isEmpty hasChar ∘g charCase
+-- Every word is trivial or not.  This IS the decomposition axiom with
+-- its branches swapped -- no argument left to make, because the
+-- resource predicate is defined as the non-trivial branch.
+decNT : ⊤G ⊢ (NonTrivial ⊕ ⌈ [] ⌉)
+decNT = ⊕-E isEmpty isNT ∘g charCase
   where
     Out : Gr
-    Out = NonEmpty ⊕ ⌈ [] ⌉
+    Out = NonTrivial ⊕ ⌈ [] ⌉
 
     isEmpty : ⌈ [] ⌉ ⊢ Out
     isEmpty = ⊕-I₂
 
-    isNE : NonEmpty ⊢ Out
-    isNE = ⊕-I₁
-
-    hasChar : ⊕ᴰ Char (λ c → ⌈ c ∷ [] ⌉ ⊗' ⊤G) ⊢ Out
-    hasChar = ⊕ᴰ-E (λ c → isNE ∘g charNE c)
+    isNT : NonTrivial ⊢ Out
+    isNT = ⊕-I₁
 
 module Parser (V : Type₀)
               (unitR : V → Char → Type₀)
@@ -126,7 +113,7 @@ module Parser (V : Type₀)
   leaf c pf q = G.sup (inl (c , pf) , lift q) λ ()
 
   node : {P Q T : V} {w u v : String} → binR P Q T → Split3 u v w
-       → 0 < length u → 0 < length v → Deriv Q u → Deriv T v → Deriv P w
+       → NonTrivial u → NonTrivial v → Deriv Q u → Deriv T v → Deriv P w
   node {Q = Q} {T} {u = u} {v} pf s neu nev tq tT =
     G.sup ( inr (Q , T , pf)
           , ((u , v , s) , λ { true  → λ { true → tt* ; false → lift neu }
@@ -153,12 +140,12 @@ module Parser (V : Type₀)
     module _ (P : V) (w : String) (rec : G.▷ Mot (P , w)) where
 
       tryCut : (Q T : V) → binR P Q T → MonSplit appop w → Mot (P , w)
-      tryCut Q T pf (u , v , s) = go (decNE u tt) (decNE v tt)
+      tryCut Q T pf (u , v , s) = go (decNT u tt) (decNT v tt)
         where
-          go : (NonEmpty ⊕ ⌈ [] ⌉) u → (NonEmpty ⊕ ⌈ [] ⌉) v → Mot (P , w)
+          go : (NonTrivial ⊕ ⌈ [] ⌉) u → (NonTrivial ⊕ ⌈ [] ⌉) v → Mot (P , w)
           go (inl neu) (inl nev) =
-            join (rec (Q , u) (split3LenL< s nev))
-                 (rec (T , v) (split3LenR< s neu))
+            join (rec (Q , u) (split3LenL< s (ntLen nev)))
+                 (rec (T , v) (split3LenR< s (ntLen neu)))
             where join : Mot (Q , u) → Mot (T , v) → Mot (P , w)
                   join (inl tq) (inl tT) = inl (node pf s neu nev tq tT)
                   join _        _        = inr tt*

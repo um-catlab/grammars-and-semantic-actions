@@ -21,7 +21,7 @@ open import TheoryGrammar.Graded
 
 open import TheoryGrammar.Instances.Strings.Graded Char public
 
-charCase : ⊤G ⊢ (⌈ [] ⌉ ⊕ ⊕ᴰ Char (λ c → ⌈ c ∷ [] ⌉ ⊗' ⊤G))
+charCase : ⊤G ⊢ (⌈ [] ⌉ ⊕ NonTrivial)
 charCase []      _ = inl Eq.refl
 charCase (c ∷ w) _ = inr (c , ⊗-mk (cons nil) Eq.refl tt)
 
@@ -46,8 +46,8 @@ decompGuarded tt = <⊕e Bool decompAlt alt
     go c m sp sh true ()
     go c m (u , v , s) sh false p =
       slotProper appop m (u , v , s) false (≤Var tt) (one (lower (sh true))) (sh false) p
-      where one : u Eq.≡ c ∷ [] → 0 < length u
-            one Eq.refl = ≤-refl
+      where one : u Eq.≡ c ∷ [] → NonTrivial u
+            one Eq.refl = c , ⊗-mk (cons nil) Eq.refl tt
 
     alt : (b : Bool) → Guarded (decompAlt b)
     alt true  = <⌜⌝ ⌈ [] ⌉

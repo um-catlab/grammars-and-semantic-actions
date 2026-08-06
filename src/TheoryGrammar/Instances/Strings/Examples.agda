@@ -58,8 +58,8 @@ parseAB : Deriv ntS (true ∷ false ∷ [])
 parseAB = G.sup
   ( inr (ntA , ntB , tt)
   , (((true ∷ []) , (false ∷ []) , cons nil)
-    , λ { true  → λ { true → tt* ; false → lift ≤-refl }
-        ; false → λ { true → tt* ; false → lift ≤-refl } }) )
+    , λ { true  → λ { true → tt* ; false → lift (literalNN true  _ Eq.refl) }
+        ; false → λ { true → tt* ; false → lift (literalNN false _ Eq.refl) } }) )
   λ { (true  , (true  , _)) → leafA
     ; (false , (true  , _)) → leafB
     ; (true  , (false , ()))

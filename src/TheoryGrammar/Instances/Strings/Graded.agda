@@ -37,9 +37,23 @@ split3LenR< : ∀ {u v w} → Split3 u v w → 0 < length u → length v < lengt
 split3LenR< nil      pr = E.rec (¬-<-zero pr)
 split3LenR< (cons s) pr = suc-≤-suc (split3LenR s)
 
+-- THE RESOURCE PREDICATE, internally: `w` is non-trivial when it
+-- decomposes with an ATOM on the left.  Nothing about length appears;
+-- this is `⌈_⌉`, `⊗`, `⊕ᴰ` and `⊤` only, so it makes sense at any
+-- substrate that has atoms.
+NonTrivial : Gr
+NonTrivial = ⊕ᴰ Char (λ c → ⌈ c ∷ [] ⌉ ⊗' ⊤G)
+
+-- PRIMITIVE (phase 1).  The ONE bridge from the internal predicate to
+-- the grading, confined to the substrate where the grading is defined.
+ntLen : {v : String} → NonTrivial v → 0 < length v
+ntLen {v} (c , (u' , v' , s) , h) = go (h true) s
+  where go : u' Eq.≡ c ∷ [] → Split3 u' v' v → 0 < length v
+        go Eq.refl s' = split3LenL s'
+
 StrProper : (o : MonOp) (m : String) → MonSplit o m → MonAr o → Type₀
 StrProper nilop m sp ()
-StrProper appop w (u , v , _) b = 0 < length (if b then v else u)
+StrProper appop w (u , v , _) b = NonTrivial (if b then v else u)
 
 strGraded : GradedSubstrate monSig ℓ-zero ℓ-zero
 strGraded .sub    = strSub
@@ -49,7 +63,7 @@ strGraded .deg≤ nilop m sp ()
 strGraded .deg≤ appop m (u , v , s) true  = split3LenL s
 strGraded .deg≤ appop m (u , v , s) false = split3LenR s
 strGraded .deg< nilop m sp ()
-strGraded .deg< appop m (u , v , s) true  pr = split3LenL< s pr
-strGraded .deg< appop m (u , v , s) false pr = split3LenR< s pr
+strGraded .deg< appop m (u , v , s) true  pr = split3LenL< s (ntLen pr)
+strGraded .deg< appop m (u , v , s) false pr = split3LenR< s (ntLen pr)
 
 open Guard strGraded ℓ-zero Unit (λ _ → tt) public

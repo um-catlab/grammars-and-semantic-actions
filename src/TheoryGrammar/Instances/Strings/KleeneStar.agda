@@ -41,8 +41,10 @@ starF A _ = ⊕e Bool (starAlt A)
 -- operation and dangerous only through the fixpoint, and this is the
 -- hypothesis that fences it off.
 
+-- non-nullability, internally: a non-nullable grammar entails the
+-- resource predicate
 NonNullable : Gr → Type₀
-NonNullable A = (u : String) → A u → 0 < length u
+NonNullable A = A ⊢ NonTrivial
 
 starGuarded : (A : Gr) → NonNullable A → (x : Unit) → Guarded (starF A x)
 starGuarded A nn tt = <⊕e Bool (starAlt A) alt
@@ -62,7 +64,7 @@ starGuarded A nn tt = <⊕e Bool (starAlt A) alt
 
 -- literals are non-nullable, so `literal c *` is guarded
 literalNN : (c : Char) → NonNullable (literal c)
-literalNN c .(c ∷ []) Eq.refl = ≤-refl
+literalNN c = ⌈⌉-E (c , ⊗-mk (cons nil) Eq.refl tt)
 
 KL* : Gr → Gr
 KL* A w = μ (starF A) (tt , w)
