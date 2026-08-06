@@ -17,7 +17,7 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
 
@@ -38,11 +38,12 @@ QAlt false = ⊕e A (λ piv → ⊗e appop (QG piv))
 QF : Unit → Functor tt
 QF _ = ⊕e Bool QAlt
 
--- the pivot witnesses that the right factor is nonempty
+-- the pivot witnesses that the right factor is non-trivial -- and the
+-- witness IS the resource predicate, not a fact about length
 restNonEmpty : (piv : A) (rest : Bag)
-             → Sh (⊗e appop (QG' piv)) rest → 0 < length rest
+             → Sh (⊗e appop (QG' piv)) rest → NonTrivial rest
 restNonEmpty piv rest ((p1 , hi , ilv) , sh') with lower (sh' true)
-... | Eq.refl = ilvLenL ilv
+... | Eq.refl = piv , ⊗-mk ilv Eq.refl tt
 
 innerGuarded : (piv : A) → Guarded (⊗e appop (QG' piv))
 innerGuarded piv = ⊗-guard appop (QG' piv) go
@@ -54,7 +55,8 @@ innerGuarded piv = ⊗-guard appop (QG' piv) go
     go v sp' sh' true ()
     go v (p1 , hi , ilv) sh' false p with lower (sh' true)
     ... | Eq.refl =
-      slotProper appop v (p1 , hi , ilv) false (≤Var tt) ≤-refl (sh' false) p
+      slotProper appop v (p1 , hi , ilv) false (≤Var tt)
+                 (piv , ⊗-mk (left nil) Eq.refl tt) (sh' false) p
 
 qfGuarded : (x : Unit) → Guarded (QF x)
 qfGuarded tt = <⊕e Bool _ alt

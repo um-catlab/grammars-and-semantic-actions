@@ -14,6 +14,8 @@ open import Cubical.Data.Unit
 open import Cubical.Data.Nat
 open import Cubical.Data.Nat.Order
 open import Cubical.Data.List
+import Cubical.Data.Equality as Eq
+open import Cubical.Data.Sum using (_⊎_; inl; inr)
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
@@ -22,17 +24,20 @@ open import TheoryGrammar.Graded
 
 open import TheoryGrammar.Instances.Bags.Quicksort A public
 
-NonEmpty : Gr
-NonEmpty m = 0 < length m
-
+-- `NonTrivial` comes from Graded.  `Small` is its internal complement:
+-- empty, or a single atom -- no length anywhere.
 Small : Gr
-Small m = length m ≤ 1
+Small = ⌈ [] ⌉ ⊕ ⊕ᴰ A (λ x → ⌈ x ∷ [] ⌉)
+
+-- a non-trivial bag, from its first element
+ntCons : (x : A) (u : Bag) → NonTrivial (x ∷ u)
+ntCons x u = x , ⊗-mk (left (ilvApp [] u)) Eq.refl tt
 
 -- each half is a recursive occurrence TOGETHER WITH a proof it is
 -- nonempty; the proof is what makes the splitting proper
 MSlot : Bool → Functor tt
 MSlot true  = Var tt
-MSlot false = ⌜ NonEmpty ⌝
+MSlot false = ⌜ NonTrivial ⌝
 
 MHalf : Functor tt
 MHalf = &e Bool MSlot
@@ -46,7 +51,7 @@ MF _ = ⊕e Bool MAlt
 
 ≤MSlot : (b : Bool) → Guarded≤ (MSlot b)
 ≤MSlot true  = ≤Var tt
-≤MSlot false = ≤⌜⌝ NonEmpty
+≤MSlot false = ≤⌜⌝ NonTrivial
 
 mfGuarded : (x : Unit) → Guarded (MF x)
 mfGuarded tt = <⊕e Bool MAlt alt
@@ -67,20 +72,17 @@ dealt : (m : Bag) → Σ[ u ∈ Bag ] Σ[ v ∈ Bag ] Ilv u v m
 dealt []      = [] , [] , nil
 dealt (x ∷ m) = let (u , v , s) = dealt m in (x ∷ v) , u , left (ilvSwap s)
 
-0<suc : {n : ℕ} → 0 < suc n
-0<suc = suc-≤-suc zero-≤
-
 mcoalg : CoalgC MF (λ _ → Unit)
-mcoalg tt []          _ = true , lift zero-≤
-mcoalg tt (x ∷ [])    _ = true , lift ≤-refl
+mcoalg tt []          _ = true , lift (inl Eq.refl)
+mcoalg tt (x ∷ [])    _ = true , lift (inr (x , Eq.refl))
 mcoalg tt (x ∷ y ∷ r) _ = false , mkSplit
   where
     d = dealt r
     mkSplit : ⟦ MAlt false ⟧c (λ _ → Unit) (x ∷ y ∷ r)
     mkSplit = ⊗I {P = λ _ → ⟦ MHalf ⟧c (λ _ → Unit)}
                (left (right (d .snd .snd)))
-               (λ { true → tt ; false → lift 0<suc })
-               (λ { true → tt ; false → lift 0<suc })
+               (λ { true → tt ; false → lift (ntCons x (d .fst)) })
+               (λ { true → tt ; false → lift (ntCons y (d .snd .fst)) })
 
 module MSort (le : A → A → Bool) where
 
@@ -92,7 +94,7 @@ module MSort (le : A → A → Bool) where
 
   malg : AlgC MF (λ _ → Bag)
   malg tt =
-    ⊕ᴰ-elim λ { true  → λ w _ → w
+    ⊕ᴰ-E λ { true  → λ w _ → w
               ; false → λ w t →
                   ⊗E {P = λ _ → ⟦ MHalf ⟧c (λ _ → Bag)} {w = w}
                      (λ _ _ _ l r → merge (l true) (r true)) t }

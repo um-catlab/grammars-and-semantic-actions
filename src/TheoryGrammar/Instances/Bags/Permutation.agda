@@ -1,5 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- Permutation, built from the substrate's own insertion relation. -}
+{- Permutation, built from the promodel's own insertion relation. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Bags.Permutation (A : Type₀) where
@@ -15,7 +15,7 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
 
@@ -42,7 +42,7 @@ ilvAssoc (right s) (right t)  =
 
 -- Permutations merge along an interleaving.  The only lemma the
 -- intrinsic proof needs, and it is discharged by `ilvAssoc` + `ilvSwap`
--- -- i.e. entirely by the substrate's own structure.
+-- -- i.e. entirely by the promodel's own structure.
 permMerge : ∀ {a u b v w} → Perm a u → Perm b v → Ilv u v w → Perm (a ++ b) w
 permMerge nil q s with ilvNilL s
 ... | Eq.refl = q

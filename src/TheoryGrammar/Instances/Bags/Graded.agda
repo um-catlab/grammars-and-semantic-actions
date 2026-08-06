@@ -15,7 +15,7 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
 
@@ -42,23 +42,37 @@ ilvLenR< nil       pr = E.rec (¬-<-zero pr)
 ilvLenR< (left s)  pr = suc-≤-suc (ilvLenR s)
 ilvLenR< (right s) pr = suc-≤-suc (ilvLenR< s pr)
 
--- The substrate.
+-- The promodel.
 
+
+-- THE RESOURCE PREDICATE, internally: `m` is non-trivial when it
+-- decomposes with an ATOM on the left.  Built from `⌈_⌉`, `⊗`, `⊕ᴰ` and
+-- `⊤` only -- no length -- so it makes sense at any promodel with atoms.
+-- This is exactly what `bagCase` produces.
+NonTrivial : Gr
+NonTrivial = ⊕ᴰ A (λ x → ⌈ x ∷ [] ⌉ ⊗' ⊤G)
+
+-- PRIMITIVE (phase 1).  The one bridge from the internal predicate to
+-- the grading, confined to where the grading is defined.
+ntLen : {v : Bag} → NonTrivial v → 0 < length v
+ntLen {v} (x , (u , v' , ilv) , h) = go (h true) ilv
+  where go : u Eq.≡ x ∷ [] → Ilv u v' v → 0 < length v
+        go Eq.refl s = ilvLenL s
 
 Proper' : (o : MonOp) (m : Bag) → MonSplit o m → MonAr o → Type₀
 Proper' nilop m sp ()
-Proper' appop m (u , v , _) b = 0 < length (if b then v else u)
+Proper' appop m (u , v , _) b = NonTrivial (if b then v else u)
 
-bagGraded : GradedSubstrate cmSig ℓ-zero ℓ-zero
-bagGraded .sub    = bagSub
+bagGraded : GradedFib cmSig ℓ-zero ℓ-zero
+bagGraded .fib    = bagFib
 bagGraded .deg _  = length
 bagGraded .Proper = Proper'
 bagGraded .deg≤ nilop m sp ()
 bagGraded .deg≤ appop m (u , v , s) true  = ilvLenL s
 bagGraded .deg≤ appop m (u , v , s) false = ilvLenR s
 bagGraded .deg< nilop m sp ()
-bagGraded .deg< appop m (u , v , s) true  pr = ilvLenL< s pr
-bagGraded .deg< appop m (u , v , s) false pr = ilvLenR< s pr
+bagGraded .deg< appop m (u , v , s) true  pr = ilvLenL< s (ntLen pr)
+bagGraded .deg< appop m (u , v , s) false pr = ilvLenR< s (ntLen pr)
 
 -- QUICKSORT'S FUNCTOR, and why its recursion is guarded.
 --

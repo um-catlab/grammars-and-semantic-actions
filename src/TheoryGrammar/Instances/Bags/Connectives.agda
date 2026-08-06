@@ -15,7 +15,7 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
 
@@ -53,37 +53,11 @@ P ⊗' Q = ⊗ˢ appop (λ b → if b then P else Q)
 -- so permutation is built from the SUBSTRATE'S OWN relation rather
 -- than from a quotient.
 
--- COMBINATORS.  These are the rules of the calculus; they are the
--- only pointful things in this file apart from the two primitives
--- below.  Everything after composes them.
-
-⊤' : Gr
-⊤' _ = Unit
-
-idg : {P : Gr} → P ⊢ P
-idg _ p = p
-
-_∘g_ : {P Q R : Gr} → Q ⊢ R → P ⊢ Q → P ⊢ R
-(g ∘g f) w p = g w (f w p)
-
-infixr 9 _∘g_
-
-⊕-elim : {P Q R : Gr} → P ⊢ R → Q ⊢ R → (P ⊕ Q) ⊢ R
-⊕-elim f g w (inl p) = f w p
-⊕-elim f g w (inr q) = g w q
-
-⊕ᴰ-in : {Y : Type₀} {P : Y → Gr} (y : Y) → P y ⊢ ⊕ᴰ Y P
-⊕ᴰ-in y w p = y , p
-
-⊕ᴰ-elim : {Y : Type₀} {P : Y → Gr} {R : Gr}
-        → ((y : Y) → P y ⊢ R) → ⊕ᴰ Y P ⊢ R
-⊕ᴰ-elim f w (y , p) = f y w p
+-- The combinators come from `RulesF` (opened in Base); only `liftg`
+-- and the binary ⊗ intro/elim are local.
 
 liftg : {P : Gr} → P ⊢ (λ m → Lift ℓ-zero (P m))
 liftg _ p = lift p
-
-⊗-map : {P P' Q Q' : Gr} → P ⊢ P' → Q ⊢ Q' → (P ⊗' Q) ⊢ (P' ⊗' Q')
-⊗-map f g w ((u , v , s) , h) = ⊗-mk s (f u (h true)) (g v (h false))
 
 -- ASSOCIATIVITY OF INTERLEAVING.  w = p ⊎ (q ⊎ r) regrouped as
 -- w = q ⊎ (p ⊎ r).  Used once, by the partition primitive.

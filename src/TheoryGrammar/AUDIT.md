@@ -131,14 +131,35 @@ should meet.
 
 ## Ranked
 
-| | work | payoff |
+| | work | state |
 |---|---|---|
-| 1 | `Bags/Base` opens `RulesFib`; delete ~46 lines of copies | removes the largest duplication |
-| 2 | retype the three bag algorithms as `⊤ ⊢ …` | the examples become eDSL |
-| 3 | Bags' `NonTrivial`, mirroring Strings | removes external length-talk |
-| 4 | shared `Theories/Monoid.agda` | de-duplicates the signature |
-| 5 | `parseAB` via intro rules | example stops using `sup` |
-| 6 | `le` as a decision rather than a `Bool` | closes 2b |
+| 1 | `Bags/Base` opens `RulesF`; delete the private copies | **done** |
+| 2 | retype the bag algorithms as `⊤ ⊢ …` | **partly done** — see below |
+| 3 | Bags' internal `NonTrivial`, mirroring Strings | **done** |
+| 4 | shared `Theories/Monoid.agda` | open |
+| 5 | `parseAB` via intro rules | open |
+| 6 | `le` as a decision rather than a `Bool` | open |
 
-1–3 are independent of each other and none touches files another agent is
-editing.
+### What changed
+
+**1 and 3 are done.** `Bags/Base` now opens `RulesF bagFib public`, and
+the private `⊤' idg ∘g ⊕-elim ⊕ᴰ-in ⊕ᴰ-elim ⊗-map` are gone, uses
+renamed to the generic `⊤G ⊕-E ⊕ᴰ-I ⊕ᴰ-E`. `NonTrivial` is now
+`⊕ᴰ A (λ x → ⌈ x ∷ [] ⌉ ⊗ ⊤)` in `Bags/Graded`, `Proper'` is stated in
+terms of it, and `Small` is `⌈ [] ⌉ ⊕ ⊕ᴰ A (λ x → ⌈ x ∷ [] ⌉)`.
+
+The check that this worked: **all length-talk in Bags is now confined to
+`Graded.agda`**, where the grading lives, and the single bridge `ntLen`
+is marked a phase-1 primitive. `restNonEmpty` now returns the resource
+predicate rather than an inequality, and mergesort's coalgebra supplies
+`ntCons` witnesses rather than `0<suc`. Exactly the shape Strings has.
+
+**2 was partly fixed underneath this audit.** `quicksortC : Cover SpecG`
+already exists — and `Cover P = ⊤G ⊢ P`, so quicksort *is* a term of the
+calculus. Only `mergesort : Bag → Bag` remains.
+
+And it should stay that way for now: retyping it to `Cover (λ _ → Bag)`
+would be cosmetic, since a constant grammar carries no index constraint.
+The meaningful target is `Cover Bagged`, which needs `mergeG : Bagged ⊗
+Bagged ⊢ Bagged` — blocked on `permTrans` / `permInsert` / `mergePerm`.
+Until those exist, `mergesort`'s honest type is the one it has.

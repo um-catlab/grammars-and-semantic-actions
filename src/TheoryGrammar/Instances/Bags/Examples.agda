@@ -7,6 +7,7 @@ open import Cubical.Data.Sigma
 open import Cubical.Data.Bool
 open import Cubical.Data.Nat
 open import Cubical.Data.List
+open import Cubical.Data.Maybe using (Maybe; just; nothing)
 
 open import TheoryGrammar.Instances.Bags.Mergesort ℕ
 
@@ -34,16 +35,46 @@ _ = refl
 -- _ = refl
 
 
--- the verified version computes to the same answer, and its second
--- component is the permutation proof, produced by construction
-_ : quicksortV (5 ∷ 3 ∷ 4 ∷ 1 ∷ 2 ∷ []) .fst ≡ (1 ∷ 2 ∷ 3 ∷ 4 ∷ 5 ∷ [])
+-- The verified version computes to the same answer, and its second
+-- component is the permutation proof, produced by construction.  It is
+-- a MAP OUT OF TOP, so it is read out by the generic interface --
+-- `qsortV = observe quicksortC (tagA Bag)` -- rather than by projecting
+-- `.fst` at the use site.
+_ : qsortV (5 ∷ 3 ∷ 4 ∷ 1 ∷ 2 ∷ []) ≡ (1 ∷ 2 ∷ 3 ∷ 4 ∷ 5 ∷ [])
 _ = refl
 
-_ : quicksortV (2 ∷ 2 ∷ 1 ∷ []) .fst ≡ (1 ∷ 2 ∷ 2 ∷ [])
+_ : qsortV (2 ∷ 2 ∷ 1 ∷ []) ≡ (1 ∷ 2 ∷ 2 ∷ [])
 _ = refl
 
 _ : mergesort (5 ∷ 3 ∷ 4 ∷ 1 ∷ 2 ∷ []) ≡ (1 ∷ 2 ∷ 3 ∷ 4 ∷ 5 ∷ [])
 _ = refl
 
 _ : mergesort (2 ∷ 2 ∷ 1 ∷ []) ≡ (1 ∷ 2 ∷ 2 ∷ [])
+_ = refl
+
+-- ==================================================================
+-- `bagCase`, the view the sorters are built on, is itself a map out of
+-- `⊤` -- a `Cover (⌈ [] ⌉ ⊕ ⊕ᴰ A …)`, i.e. a `Result` -- so it is read
+-- by the same interface.  Its right branch is a `⊕ᴰ` over the element
+-- pulled off, so `tagA` recovers that element.
+-- ==================================================================
+
+empty? : List ℕ → Bool
+empty? = accepts? ⌈ [] ⌉ (⊕ᴰ ℕ (λ x → ⌈ x ∷ [] ⌉ ⊗' ⊤G)) bagCase
+
+-- the element `bagCase` chose, read out by the generic `tagA`
+someElem : List ℕ → Maybe ℕ
+someElem = observe bagCase
+             (caseA (pureA (Maybe ℕ) nothing) (mapA just (tagA ℕ)))
+
+_ : empty? []            ≡ true
+_ = refl
+
+_ : empty? (3 ∷ [])      ≡ false
+_ = refl
+
+_ : someElem []          ≡ nothing
+_ = refl
+
+_ : someElem (3 ∷ 1 ∷ []) ≡ just 3
 _ = refl

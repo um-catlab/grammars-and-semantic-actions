@@ -1,5 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- The commutative-monoid signature, interleaving, and the substrate. -}
+{- The commutative-monoid signature, interleaving, and the promodel. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Bags.Base (A : Type₀) where
@@ -15,7 +15,8 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
+open import TheoryGrammar.RulesFib
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
 
@@ -63,18 +64,18 @@ MonParts : (o : MonOp) (w : Bag) → MonSplit o w → MonAr o → Bag
 MonParts nilop w sp ()
 MonParts appop w (u , v , _) b = if b then u else v
 
-bagSub : Substrate cmSig ℓ-zero ℓ-zero
-bagSub .carrier _   = Bag
-bagSub .op nilop _  = []
-bagSub .op appop f  = f true ++ f false
-bagSub .Split       = MonSplit
-bagSub .parts       = MonParts
-bagSub .split nilop f = tt
-bagSub .split appop f = f true , f false , ilvApp (f true) (f false)
-bagSub .parts-split nilop f = funExt λ ()
-bagSub .parts-split appop f = funExt λ { false → refl ; true → refl }
+bagFib : Fibered cmSig ℓ-zero ℓ-zero
+bagFib .carrier _   = Bag
+bagFib .op nilop _  = []
+bagFib .op appop f  = f true ++ f false
+bagFib .Split       = MonSplit
+bagFib .parts       = MonParts
+bagFib .split nilop f = tt
+bagFib .split appop f = f true , f false , ilvApp (f true) (f false)
+bagFib .parts-split nilop f = funExt λ ()
+bagFib .parts-split appop f = funExt λ { false → refl ; true → refl }
 
-open SubNotation bagSub public
+open RulesF bagFib public
 
 Gr : Type₁
 Gr = TheoryTy ℓ-zero tt
