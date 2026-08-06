@@ -4,6 +4,11 @@ module TheoryGrammar.Instances.Strings.Examples where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool
+open import Cubical.Data.Sum using (_⊎_; inl; inr)
+open import Cubical.Data.Unit
+open import Cubical.Data.Nat.Order
+open import Cubical.Data.Empty using (⊥)
+open import Cubical.Data.Sigma
 open import Cubical.Data.List
 import Cubical.Data.Equality as Eq
 
@@ -23,32 +28,39 @@ aa = cons* _ (⊗-mk (cons nil) Eq.refl
        (cons* _ (⊗-mk (cons nil) Eq.refl
          (nil* _ ε-mk))))
 
--- ================================================================
 -- CYK at a two-letter alphabet:  S → A B,  A → 'a',  B → 'b'
--- (true = 'a', false = 'b').
--- ================================================================
+-- (true = 'a', false = 'b').  Rules are TYPES, so a rule may carry
+-- evidence rather than just a Bool.
 
 data NT : Type₀ where ntS ntA ntB : NT
 
-unitR : NT → Bool → Bool
-unitR ntS c = false
-unitR ntA c = c
-unitR ntB c = not c
+unitR : NT → Bool → Type₀
+unitR ntS c = ⊥
+unitR ntA c = c Eq.≡ true
+unitR ntB c = c Eq.≡ false
 
-binR : NT → NT → NT → Bool
-binR ntS ntA ntB = true
-binR _   _   _   = false
+binR : NT → NT → NT → Type₀
+binR ntS ntA ntB = Unit
+binR _   _   _   = ⊥
 
-open CYK NT (ntS ∷ ntA ∷ ntB ∷ []) unitR binR
+open CYK NT unitR binR
 
--- "ab" is derivable from S
-_ : cyk (true ∷ false ∷ []) ≡ (ntS ∷ [])
-_ = refl
+-- the two leaves ...
+leafA : Deriv ntA (true ∷ [])
+leafA = G.sup (inl (true , Eq.refl) , lift Eq.refl) λ ()
 
--- "ba" is not
-_ : cyk (false ∷ true ∷ []) ≡ []
-_ = refl
+leafB : Deriv ntB (false ∷ [])
+leafB = G.sup (inl (false , Eq.refl) , lift Eq.refl) λ ()
 
--- single letters get their unit rules
-_ : cyk (true ∷ []) ≡ (ntA ∷ [])
-_ = refl
+-- ... and a parse tree for "ab" from S.  The type is a GRAMMAR, so the
+-- word it parses is in the index and cannot drift from the tree.
+parseAB : Deriv ntS (true ∷ false ∷ [])
+parseAB = G.sup
+  ( inr (ntA , ntB , tt)
+  , (((true ∷ []) , (false ∷ []) , cons nil)
+    , λ { true  → λ { true → tt* ; false → lift ≤-refl }
+        ; false → λ { true → tt* ; false → lift ≤-refl } }) )
+  λ { (true  , (true  , _)) → leafA
+    ; (false , (true  , _)) → leafB
+    ; (true  , (false , ()))
+    ; (false , (false , ())) }
