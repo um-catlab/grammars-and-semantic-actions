@@ -25,12 +25,8 @@ open import TheoryGrammar.Graded
 open import TheoryGrammar.Enumerable
 open import TheoryGrammar.Instances.Strings.Enumeration Char public
 
--- internal negation and decision, out of the connectives
-¬G_ : Gr → Gr
-¬G A = A ⇒ ⊥G
-
-DecG : Gr → Gr
-DecG A = A ⊕ (¬G A)
+-- `¬G_` and `Dec⟨_⟩` are the generic ones (`Decidable.Additive`, via
+-- `DecSub` in `Strings.Base`); this instance defines neither.
 
 module CYK (V : Type₀)
            (unitR : V → Char → Type₀)          -- P → c
@@ -97,17 +93,12 @@ module CYK (V : Type₀)
 -- Every word is trivial or not.  This IS the decomposition axiom with
 -- its branches swapped -- no argument left to make, because the
 -- resource predicate is defined as the non-trivial branch.
-decNT : ⊤G ⊢ (NonTrivial ⊕ ⌈ [] ⌉)
-decNT = ⊕-E isEmpty isNT ∘g charCase
-  where
-    Out : Gr
-    Out = NonTrivial ⊕ ⌈ [] ⌉
-
-    isEmpty : ⌈ [] ⌉ ⊢ Out
-    isEmpty = ⊕-I₂
-
-    isNT : NonTrivial ⊢ Out
-    isNT = ⊕-I₁
+--
+-- `caseOf` is `withView` at `B = ⊤G`, where the payload is vacuous and
+-- the `with` degenerates to `_∘g_`.  Every view used at `⊤` has this
+-- shape; see `TheoryGrammar.View`.
+decNT : Cover (NonTrivial ⊕ ⌈ [] ⌉)
+decNT = caseOf charCase ⊕-I₂ ⊕-I₁
 
 module Parser (V : Type₀)
               (unitR : V → Char → Type₀)
@@ -139,15 +130,20 @@ module Parser (V : Type₀)
     Mot : G.Ix → Type₀
     Mot i = MaybeG (Deriv (i .fst)) (i .snd)
 
-    -- Alternation, point-free.  `⊕-E` into an internal hom, so the
-    -- first alternative is eliminated by the rule rather than matched.
-    orElse : (A : Gr) → MaybeG A ⊢ (MaybeG A ⇒ MaybeG A)
-    orElse A = ⊕-E (⇒-I (just-I ∘g &-E₁)) (⇒-I &-E₂)
-
-    alt2 : {X A : Gr} → X ⊢ MaybeG A → X ⊢ MaybeG A → X ⊢ MaybeG A
-    alt2 {A = A} f g = ⇒-E (orElse A ∘g f) g
+    -- Alternation and the search over a finite list of alternatives are
+    -- `TheoryGrammar.Result`'s `altM` / `altListM`, at the error grammar
+    -- `⊤G`.  They used to be spelled out here as `orElse` / `alt2` /
+    -- two `List` folds; nothing about them was specific to CYK.
 
     module _ (P : V) (w : String) (rec : G.▷ Mot (P , w)) where
+
+      -- the constant grammar at this world, which is what a step of the
+      -- SEMANTIC löb below is forced to work at -- see the FIXME
+      Here : Gr
+      Here _ = Deriv P w
+
+      search : {Y : Type₀} → List Y → (Y → Mot (P , w)) → Mot (P , w)
+      search {Y = Y} ys f = altListM Here Y ys (λ y _ _ → f y) w tt
 
       tryCut : (Q T : V) → binR P Q T → MonSplit appop w → Mot (P , w)
       tryCut Q T pf (u , v , s) = go (decNT u tt) (decNT v tt)
@@ -158,26 +154,21 @@ module Parser (V : Type₀)
                  (rec (T , v) (split3LenR< s (ntLen neu)))
             where join : Mot (Q , u) → Mot (T , v) → Mot (P , w)
                   join (inl tq) (inl tT) = inl (node pf s neu nev tq tT)
-                  join _        _        = inr tt*
-          go _ _ = inr tt*
+                  join _        _        = inr tt
+          go _ _ = inr tt
 
       tryCuts : (Q T : V) → binR P Q T → List (MonSplit appop w) → Mot (P , w)
-      tryCuts Q T pf []       = inr tt*
-      tryCuts Q T pf (c ∷ cs) =
-        alt2 {X = ⊤G} (λ _ _ → tryCut Q T pf c)
-                      (λ _ _ → tryCuts Q T pf cs) w tt
+      tryCuts Q T pf cs = search cs (tryCut Q T pf)
 
       tryRule : Rule P → Mot (P , w)
       tryRule (inl (c , pf))     = fromLit (matchLit c w tt)
         where fromLit : MaybeG ⌈ c ∷ [] ⌉ w → Mot (P , w)
               fromLit (inl q) = inl (leaf c pf q)
-              fromLit (inr _) = inr tt*
+              fromLit (inr _) = inr tt
       tryRule (inr (Q , T , pf)) = tryCuts Q T pf (cuts w)
 
       tryRules : List (Rule P) → Mot (P , w)
-      tryRules []       = inr tt*
-      tryRules (r ∷ rs) =
-        alt2 {X = ⊤G} (λ _ _ → tryRule r) (λ _ _ → tryRules rs) w tt
+      tryRules rs = search rs tryRule
 
     -- FIXME (phase violation).  This is a SEMANTIC löb: the step is an
     -- Agda function, not a `▷ Mot ⊢ᴵ Mot` term, so `tryRules` /
@@ -200,7 +191,7 @@ module Parser (V : Type₀)
     parse P w _ = parseIx (P , w)
 
   -- ================================================================
-  -- THE DECISION.  `DecG (Deriv P) = Deriv P ⊕ ¬G Deriv P`, decided by
+  -- THE DECISION.  `Dec⟨ Deriv P ⟩ = Deriv P ⊕ ¬G Deriv P`, decided by
   -- `löb` whose step is a named `▷ … ⊢ᴵ …` term.  Both searches -- over
   -- rules and over splittings -- are the SAME combinator, `decΣ`.
   -- ================================================================
@@ -213,7 +204,7 @@ module Parser (V : Type₀)
     Der = G.μ CYKF
 
     DecMot : G.Ix → Type₀
-    DecMot i = DecG (Deriv (i .fst)) (i .snd)
+    DecMot i = Dec⟨ Deriv (i .fst) ⟩ (i .snd)
 
     -- PRIMITIVE (phase 1): the empty word is trivial
     ¬NT[] : No (NonTrivial [])
@@ -273,6 +264,12 @@ module Parser (V : Type₀)
     decIx : (i : G.Ix) → DecMot i
     decIx = G.löb step
 
-    -- THE DECISION PROCEDURE, as a term of the calculus
-    decide : (P : V) → ⊤G ⊢ DecG (Deriv P)
-    decide P w _ = decIx (P , w)
+    -- THE DECISION PROCEDURE, as a term of the calculus.  `Dec⟨ A ⟩` is
+    -- `Result (¬G A) A` (TheoryGrammar.Result), so this has the same
+    -- shape as `Search.parse` and is observed by the same `accepts?`.
+    derives? : (P : V) → ⊤G ⊢ Dec⟨ Deriv P ⟩
+    derives? P w _ = decIx (P , w)
+
+    -- ... and the exclusion is free, so it packages as a `Decision`
+    derivesDec : (P : V) → Decision (Deriv P) (¬G (Deriv P))
+    derivesDec P = decDefault (Deriv P) (derives? P)

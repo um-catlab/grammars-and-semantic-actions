@@ -75,25 +75,50 @@ allRules ntS = inr (ntA , ntB , tt) ∷ []
 allRules ntA = inl (true  , Eq.refl) ∷ []
 allRules ntB = inl (false , Eq.refl) ∷ []
 
-matchLit : (c : Bool) → ⊤G ⊢ MaybeG ⌈ c ∷ [] ⌉
-matchLit true  (true  ∷ []) _ = inl Eq.refl
-matchLit false (false ∷ []) _ = inl Eq.refl
-matchLit _     _            _ = inr tt*
+-- PRIMITIVE.  External decidability of the carrier -- the one entry
+-- point `Decidable.Representable` sanctions, and the only place below
+-- where a string is matched or an `inl`/`inr` is written by hand.
+decEqB : (a b : Bool) → (a Eq.≡ b) ⊎ No (a Eq.≡ b)
+decEqB true  true  = inl Eq.refl
+decEqB false false = inl Eq.refl
+decEqB true  false = inr λ ()
+decEqB false true  = inr λ ()
+
+decEqS : (u v : String) → (u Eq.≡ v) ⊎ No (u Eq.≡ v)
+decEqS []      []      = inl Eq.refl
+decEqS []      (_ ∷ _) = inr λ ()
+decEqS (_ ∷ _) []      = inr λ ()
+decEqS (a ∷ u) (b ∷ v) = both (decEqB a b) (decEqS u v)
+  where both : (a Eq.≡ b) ⊎ No (a Eq.≡ b) → (u Eq.≡ v) ⊎ No (u Eq.≡ v)
+             → ((a ∷ u) Eq.≡ (b ∷ v)) ⊎ No ((a ∷ u) Eq.≡ (b ∷ v))
+        both (inl Eq.refl) (inl Eq.refl) = inl Eq.refl
+        both (inr k)       _             = inr λ { Eq.refl → k Eq.refl }
+        both _             (inr k)       = inr λ { Eq.refl → k Eq.refl }
+
+-- ... and that primitive, re-read as a PROBE: a partial view of the
+-- world at a literal.  Everything after this is a combinator.
+litProbe : (c : Bool) → Probe ⌈ c ∷ [] ⌉
+litProbe c w _ = decEqS w (c ∷ [])
+
+matchLit : (c : Bool) → Cover (MaybeG ⌈ c ∷ [] ⌉)
+matchLit c = probe→maybe ⌈ c ∷ [] ⌉ (litProbe c)
 
 open Search allRules matchLit
 
-succeeded : (A : Gr) (w : String) → MaybeG A w → Bool
-succeeded A w (inl _) = true
-succeeded A w (inr _) = false
+-- Observing the parser: `MaybeG-E` into a constant grammar, via
+-- `TheoryGrammar.View.maybe→Bool`.  Matching `inl`/`inr` here was a
+-- phase violation -- the eliminator exists.
+succeeded : (A : Gr) → Cover (MaybeG A) → Cover (λ _ → Bool)
+succeeded = maybe→Bool
 
 -- "ab" parses from S, "ba" does not, and "a" parses from A
-_ : succeeded (Deriv ntS) _ (parse ntS (true ∷ false ∷ []) tt) ≡ true
+_ : succeeded (Deriv ntS) (parse ntS) (true ∷ false ∷ []) tt ≡ true
 _ = refl
 
-_ : succeeded (Deriv ntS) _ (parse ntS (false ∷ true ∷ []) tt) ≡ false
+_ : succeeded (Deriv ntS) (parse ntS) (false ∷ true ∷ []) tt ≡ false
 _ = refl
 
-_ : succeeded (Deriv ntA) _ (parse ntA (true ∷ []) tt) ≡ true
+_ : succeeded (Deriv ntA) (parse ntA) (true ∷ []) tt ≡ true
 _ = refl
 
 -- ==================================================================
@@ -115,35 +140,20 @@ allComplete ntB (inl (false , Eq.refl)) = here
 allComplete ntB (inl (true  , ()))
 allComplete ntB (inr (_ , _ , ()))
 
-decEqB : (a b : Bool) → (a Eq.≡ b) ⊎ No (a Eq.≡ b)
-decEqB true  true  = inl Eq.refl
-decEqB false false = inl Eq.refl
-decEqB true  false = inr λ ()
-decEqB false true  = inr λ ()
-
-decEqS : (u v : String) → (u Eq.≡ v) ⊎ No (u Eq.≡ v)
-decEqS []      []      = inl Eq.refl
-decEqS []      (_ ∷ _) = inr λ ()
-decEqS (_ ∷ _) []      = inr λ ()
-decEqS (a ∷ u) (b ∷ v) = both (decEqB a b) (decEqS u v)
-  where both : (a Eq.≡ b) ⊎ No (a Eq.≡ b) → (u Eq.≡ v) ⊎ No (u Eq.≡ v)
-             → ((a ∷ u) Eq.≡ (b ∷ v)) ⊎ No ((a ∷ u) Eq.≡ (b ∷ v))
-        both (inl Eq.refl) (inl Eq.refl) = inl Eq.refl
-        both (inr k)       _             = inr λ { Eq.refl → k Eq.refl }
-        both _             (inr k)       = inr λ { Eq.refl → k Eq.refl }
-
 open Decide allRules allComplete decEqS
 
-isYes : (A : Gr) (w : String) → DecG A w → Bool
-isYes A w (inl _) = true
-isYes A w (inr _) = false
+-- ... and observing the DECISION: `⊕-E` into a constant grammar, via
+-- `TheoryGrammar.View.probe→Bool`.  `DecG A` is `Dec⟨ A ⟩`, so
+-- `decide P` is a `Probe`.
+isYes : (A : Gr) → Probe A → Cover (λ _ → Bool)
+isYes = probe→Bool
 
 -- "ab" is derivable from S; "ba" is REFUTED, not merely unfound
-_ : isYes (Deriv ntS) _ (decide ntS (true ∷ false ∷ []) tt) ≡ true
+_ : isYes (Deriv ntS) (decide ntS) (true ∷ false ∷ []) tt ≡ true
 _ = refl
 
-_ : isYes (Deriv ntS) _ (decide ntS (false ∷ true ∷ []) tt) ≡ false
+_ : isYes (Deriv ntS) (decide ntS) (false ∷ true ∷ []) tt ≡ false
 _ = refl
 
-_ : isYes (Deriv ntA) _ (decide ntA (true ∷ []) tt) ≡ true
+_ : isYes (Deriv ntA) (decide ntA) (true ∷ []) tt ≡ true
 _ = refl

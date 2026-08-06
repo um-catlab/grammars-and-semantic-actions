@@ -38,6 +38,7 @@ import Cubical.Data.Equality as Eq
 open import TheoryGrammar.Base
 open import TheoryGrammar.Substrate
 open import TheoryGrammar.Rules
+open import TheoryGrammar.Result
 
 private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓB ℓC ℓY : Level
 
@@ -91,21 +92,15 @@ module RulesS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ �
   -- Derived connectives, so instances never reach for Agda's.
   -- ================================================================
 
-  -- the option type, as a grammar
-  MaybeG : TheoryTy ℓA s → TheoryTy ℓA s
-  MaybeG {ℓA = ℓA} A m = A m ⊎ Unit* {ℓA}
-
-  just-I : {A : TheoryTy ℓA s} → A ⊢ MaybeG A
-  just-I _ = inl
-
-  nothing-I : {A : TheoryTy ℓA s} {B : TheoryTy ℓB s} → B ⊢ MaybeG A
-  nothing-I _ _ = inr tt*
-
-  MaybeG-E : {A : TheoryTy ℓA s} {B : TheoryTy ℓB s} {C : TheoryTy ℓC s}
-           → A ⊢ C → B ⊢ C → B ⊢ MaybeG A → B ⊢ C
-  MaybeG-E f g h m x with h m x
-  ... | inl a = f m a
-  ... | inr _ = g m x
+  -- The option type is `Result` at the error grammar `⊤G`, and every
+  -- other parser shape is `Result` at a different one -- so it is
+  -- DEFINED in `TheoryGrammar.Result` (additively; it never mentioned
+  -- the operations) and only re-exported here, where instances look.
+  open Res ⌊ Sub ⌋ public
+    using (Result; ok; err; caseR; bindR; mapR; mapE; joinR; catchR;
+           orElseR; altR; altList; bothR;
+           MaybeG; just-I; nothing-I; MaybeG-E;
+           orElseM; altM; altListM; runCover; toMaybe)
 
   -- the empty and singleton branches of a decomposition, as a grammar:
   -- `⊕ᴰ` over the carrier is how you say "for some element".

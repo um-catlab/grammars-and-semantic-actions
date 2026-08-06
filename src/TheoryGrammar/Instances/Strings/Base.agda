@@ -17,6 +17,8 @@ import Cubical.Data.Equality as Eq
 open import TheoryGrammar.Base
 open import TheoryGrammar.Substrate
 open import TheoryGrammar.RulesSub
+open import TheoryGrammar.SemanticAction
+open import TheoryGrammar.Decidable.Tensor
 
 String : Type₀
 String = List Char
@@ -70,7 +72,11 @@ strSub .split appop f = f true , f false , splitAll (f true) (f false)
 strSub .parts-split nilop f = funExt λ ()
 strSub .parts-split appop f = funExt λ { false → refl ; true → refl }
 
-open RulesS strSub public
+-- The connectives, the decision layer and the semantic actions in one
+-- open: `DecSub` is the aggregation point (`RulesS` + `ActSub` +
+-- `DecAdd`), so this instance gets `Dec⟨_⟩` and `run` without
+-- redefining either.
+open DecSub strSub public
 
 Gr : Type₁
 Gr = TheoryTy ℓ-zero tt

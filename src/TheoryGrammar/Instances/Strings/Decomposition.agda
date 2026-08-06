@@ -18,10 +18,16 @@ open import TheoryGrammar.Base
 open import TheoryGrammar.Substrate
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
+open import TheoryGrammar.View
 
 open import TheoryGrammar.Instances.Strings.Graded Char public
 
-charCase : ⊤G ⊢ (⌈ [] ⌉ ⊕ NonTrivial)
+open Views strSub public
+
+-- THE decomposition view: every string is empty or has a first
+-- character.  `Cover` is `⊤G ⊢ _`, so this is the same term it always
+-- was -- naming it records that it is a view and not an ad hoc lemma.
+charCase : Cover (⌈ [] ⌉ ⊕ NonTrivial)
 charCase []      _ = inl Eq.refl
 charCase (c ∷ w) _ = inr (c , ⊗-mk (cons nil) Eq.refl tt)
 

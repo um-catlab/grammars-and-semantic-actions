@@ -1,0 +1,104 @@
+{-
+  Well-scoped terms, as the generic `μ`.
+
+  No bespoke datatype: `Scoped` is `Ind.μ` at a description in the
+  generic functor language, with the SCOPE as the nonterminal index, so
+  the binder's action on the scope lives entirely in the index of the
+  recursive occurrence.
+
+  `⟦Sc⟧`/`⟦Sc⟧⁻` is the one primitive: the container encoding respelled
+  in the connectives.  It never matches a term and never opens a
+  splitting -- `sp` passes through abstractly -- so it is a change of
+  notation, not a proof.  Everything after it is composition.
+-}
+{-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
+module TheoryGrammar.Instances.Lambda.Scoped where
+
+open import Cubical.Foundations.Prelude
+open import Cubical.Data.Bool hiding (_⊕_)
+open import Cubical.Data.Sigma
+open import Cubical.Data.Sum using (inl; inr)
+open import Cubical.Data.Unit
+open import Cubical.Data.List using (List; []; _∷_)
+
+open import TheoryGrammar.Base
+open import TheoryGrammar.Inductive
+open import TheoryGrammar.Instances.Lambda.Signature
+open import TheoryGrammar.Instances.Lambda.Base
+
+module Wellscoped (Name : Type₀) where
+
+  open LamBase Name
+
+  Scope : Type₀
+  Scope = List Name
+
+  -- A scope IS a grammar over names, built from the internal
+  -- connectives: `⊥G` at the empty scope, `⊕` with a representable at
+  -- an extension.  So it is eliminated by `⊕-E`/`⊥-E` like anything else.
+  In : Scope → NmG
+  In []      = ⊥G
+  In (m ∷ Γ) = ⌈ m ⌉ ⊕ In Γ
+
+  -- nonterminals: one per scope, all at sort `tm`
+  open Ind λSub ℓ-zero Scope (λ _ → tm) public
+
+  data ScTag : Type₀ where
+    tVar tApp tLam : ScTag
+
+  -- Three alternatives, one per operation.  The binder: `⊕e Name`
+  -- guesses the bound name, `⌜ ⌈ n ⌉ ⌝` pins the name slot to it, and
+  -- the body's nonterminal is `n ∷ Γ`.  The guess is determined by the
+  -- representable, so the alternative stays unambiguous.
+  ScopedF : Scope → Functor tm
+  ScopedF Γ = ⊕e ScTag λ
+    { tVar → ⊗e varOp (λ _ → ⌜ In Γ ⌝)
+    ; tApp → ⊗e appOp (λ _ → Var Γ)
+    ; tLam → ⊕e Name λ n → ⊗e lamOp (λ { true  → ⌜ ⌈ n ⌉ ⌝
+                                       ; false → Var (n ∷ Γ) })
+    }
+
+  Scoped : Scope → TmG
+  Scoped Γ t = μ ScopedF (Γ , t)
+
+  Step : (Scope → TmG) → Scope → TmG
+  Step M Γ =   VarG (In Γ)
+             ⊕ (AppG (M Γ) (M Γ)
+             ⊕ ⊕ᴰ Name (λ n → LamG ⌈ n ⌉ (M (n ∷ Γ))))
+
+  -- PRIMITIVE: the container encoding, respelled in the connectives
+  ⟦Sc⟧ : {M : Ix → Type₀} (Γ : Scope)
+       → ⟦ ScopedF Γ ⟧ M ⊢ Step (λ Δ x → M (Δ , x)) Γ
+  ⟦Sc⟧ Γ _ ((tVar , sp , sh) , _) = inl (sp , λ a → lower (sh a))
+  ⟦Sc⟧ Γ _ ((tApp , sp , _) , rc) =
+    inr (inl (sp , λ { true → rc (true , tt*) ; false → rc (false , tt*) }))
+  ⟦Sc⟧ Γ _ ((tLam , n , sp , sh) , rc) =
+    inr (inr (n , sp , λ { true → lower (sh true) ; false → rc (false , tt*) }))
+
+  ⟦Sc⟧⁻ : {M : Ix → Type₀} (Γ : Scope)
+        → Step (λ Δ x → M (Δ , x)) Γ ⊢ ⟦ ScopedF Γ ⟧ M
+  ⟦Sc⟧⁻ Γ _ (inl (sp , h)) =
+    (tVar , sp , λ a → lift (h a)) , λ { (_ , ()) }
+  ⟦Sc⟧⁻ Γ _ (inr (inl (sp , h))) =
+    (tApp , sp , λ _ → tt*)
+      , λ { (true , _) → h true ; (false , _) → h false }
+  ⟦Sc⟧⁻ Γ _ (inr (inr (n , sp , h))) =
+    (tLam , n , sp , λ { true → lift (h true) ; false → tt* })
+      , λ { (true , ()) ; (false , _) → h false }
+
+  -- from here down, nothing matches
+  sc-unroll : (Γ : Scope) → Scoped Γ ⊢ Step Scoped Γ
+  sc-unroll Γ = ⟦Sc⟧ Γ ∘g μ-coalg ScopedF Γ
+
+  sc-roll : (Γ : Scope) → Step Scoped Γ ⊢ Scoped Γ
+  sc-roll Γ = μ-alg ScopedF Γ ∘g ⟦Sc⟧⁻ Γ
+
+  -- the three rules: `roll` after a coproduct injection
+  sc-var : (Γ : Scope) → VarG (In Γ) ⊢ Scoped Γ
+  sc-var Γ = sc-roll Γ ∘g ⊕-I₁
+
+  sc-app : (Γ : Scope) → AppG (Scoped Γ) (Scoped Γ) ⊢ Scoped Γ
+  sc-app Γ = sc-roll Γ ∘g (⊕-I₂ ∘g ⊕-I₁)
+
+  sc-lam : (Γ : Scope) (n : Name) → LamG ⌈ n ⌉ (Scoped (n ∷ Γ)) ⊢ Scoped Γ
+  sc-lam Γ n = sc-roll Γ ∘g (⊕-I₂ ∘g (⊕-I₂ ∘g ⊕ᴰ-I Name n))

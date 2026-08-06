@@ -19,8 +19,11 @@ open import TheoryGrammar.Base
 open import TheoryGrammar.Substrate
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
+open import TheoryGrammar.View
 
 open import TheoryGrammar.Instances.Bags.QuicksortFunctor A public
+
+open Views bagSub
 
 partition : (p : A → Bool) (xs : Bag)
           → Σ[ lo ∈ Bag ] Σ[ hi ∈ Bag ] Ilv lo hi xs
@@ -31,15 +34,18 @@ partition p (y ∷ xs) with p y
 
 -- element and a rest.  This is the bag instance of "⊤ is the initial
 -- algebra of the shape functor" -- no comparison appears in it.
-bagCase : ⊤' ⊢ (⌈ [] ⌉ ⊕ ⊕ᴰ A (λ x → ⌈ x ∷ [] ⌉ ⊗' ⊤'))
+bagCase : Cover (⌈ [] ⌉ ⊕ ⊕ᴰ A (λ x → ⌈ x ∷ [] ⌉ ⊗' ⊤'))
 bagCase []       _ = inl Eq.refl
 bagCase (x ∷ xs) _ = inr (x , ⊗-mk (left (ilvApp [] xs)) Eq.refl tt)
 
 -- (2) PARTITION.  Given the pivot and the rest, split the rest by
 -- comparison and regroup so the pivot sits in the middle.  This is
 -- the ONLY place the ordering `le` is used.
+--
+-- Typed as `⇛`: a VIEW MORPHISM, re-analysing one pattern as another.
+-- `_⇛_` is `_⊢_`; the name records the role, not a new notion.
 splitAround : (le : A → A → Bool) (x : A)
-            → (⌈ x ∷ [] ⌉ ⊗' ⊤') ⊢ (⊤' ⊗' (⌈ x ∷ [] ⌉ ⊗' ⊤'))
+            → (⌈ x ∷ [] ⌉ ⊗' ⊤') ⇛ (⊤' ⊗' (⌈ x ∷ [] ⌉ ⊗' ⊤'))
 splitAround le x w ((u , v , s) , h) = go (h true) s
   where
     go : u Eq.≡ x ∷ [] → Ilv u v w → (⊤' ⊗' (⌈ x ∷ [] ⌉ ⊗' ⊤')) w
@@ -81,12 +87,19 @@ module Sort (le : A → A → Bool) where
 
   -- THE COALGEBRA, point-free: decompose, then for each pivot
   -- partition around it and inject.  No list pattern is matched here.
+  --
+  -- Read as a VIEW (TheoryGrammar.View): `bagCase` is the view, the two
+  -- branches are the right-hand sides, and `splitAround` is a view
+  -- MORPHISM `⇛` -- the only place the ordering `le` appears.  Since the
+  -- source is `⊤'` there is no payload to carry past the analysis, so
+  -- `withView` degenerates to `caseOf`.  A coalgebra out of ⊤ and a view
+  -- are the same thing; this term did not have to change to become one.
   qcoalg : CoalgC QF (λ _ → Unit)
   qcoalg tt =
-    ⊕-elim (⊕ᴰ-in true ∘g liftg)
-           (⊕ᴰ-elim (λ x → ⊕ᴰ-in false ∘g ⊕ᴰ-in x
-                           ∘g intoQ x ∘g splitAround le x))
-    ∘g bagCase
+    caseOf bagCase
+      (⊕ᴰ-in true ∘g liftg)
+      (⊕ᴰ-elim (λ x → ⊕ᴰ-in false ∘g ⊕ᴰ-in x
+                      ∘g intoQ x ∘g splitAround le x))
 
   -- THE ALGEBRA, point-free: the empty branch returns ε, the pivot
   -- branch concatenates around the pivot.

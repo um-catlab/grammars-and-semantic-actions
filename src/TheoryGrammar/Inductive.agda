@@ -231,6 +231,16 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   CoalgC : (F : (x : X) → Functor (xs x)) → (Ix → Type ℓSh) → Type _
   CoalgC F A = (x : X) (m : Sub .carrier (xs x)) → A (x , m) → ⟦ F x ⟧c A m
 
+  -- THE RECURSOR, against a connective-form algebra.  `fold` is stated
+  -- with `Sh`/`Pos`, which is not what an algebra should ever be written
+  -- against, so every consumer was re-deriving this one line by hand --
+  -- `Dirichlet.Factorization.foldC`, `Lambda.Passes.Framework.runPass`,
+  -- `Lambda.DeBruijn.toDB`, `SimplyTyped.Unique`.  It is `fold` composed
+  -- with `toC`, and nothing else.
+  foldC : {F : (x : X) → Functor (xs x)} (B : Ix → Type ℓSh)
+        → AlgC F B → (i : Ix) → μ F i → B i
+  foldC {F = F} B α = fold B λ x m sh f → α x m (toC (F x) m (sh , f))
+
   -- The shape underlying a connective-form element (the payload erased).
   -- This is what lets guardedness -- which is stated with Pos/nx -- be
   -- applied to a term written against the connectives, WITHOUT the
