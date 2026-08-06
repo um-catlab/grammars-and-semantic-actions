@@ -30,6 +30,7 @@ module Sortedness (le : A → A → Bool)
                            → le x z Eq.≡ true)
                   where
 
+  open Sort   le leTotal leTrans
   open MSort  le
   open MSortV le
 
@@ -37,32 +38,20 @@ module Sortedness (le : A → A → Bool)
   -- Sortedness.
   -- ================================================================
 
-  data Below (x : A) : Bag → Type₀ where
-    []ᵃ  : Below x []
-    _∷ᵃ_ : ∀ {y m} → le x y Eq.≡ true → Below x m → Below x (y ∷ m)
-
-  data Sorted : Bag → Type₀ where
-    []ˢ   : Sorted []
-    consˢ : ∀ {x m} → Below x m → Sorted m → Sorted (x ∷ m)
-
-  belowTrans : ∀ {x y m} → le x y Eq.≡ true → Below y m → Below x m
-  belowTrans p []ᵃ        = []ᵃ
-  belowTrans p (q ∷ᵃ bs)  = leTrans _ _ _ p q ∷ᵃ belowTrans p bs
-
   -- `merge` keeps a common lower bound.  As with `mergePerm`, the two
   -- recursive results are ARGUMENTS so the descent stays visible.
   belowMerge : ∀ {z} (a b : Bag) → Below z a → Below z b → Below z (merge a b)
   belowMerge []      b  pa       pb = pb
   belowMerge (x ∷ a) [] pa       pb = pa
-  belowMerge {z} (x ∷ a) (y ∷ b) (px ∷ᵃ pa) (py ∷ᵃ pb) =
-    go (le x y) (belowMerge a (y ∷ b) pa (py ∷ᵃ pb))
-                (belowMerge (x ∷ a) b (px ∷ᵃ pa) pb)
+  belowMerge {z} (x ∷ a) (y ∷ b) (px ∷ᵇ pa) (py ∷ᵇ pb) =
+    go (le x y) (belowMerge a (y ∷ b) pa (py ∷ᵇ pb))
+                (belowMerge (x ∷ a) b (px ∷ᵇ pa) pb)
     where
       go : (bl : Bool)
          → Below z (merge a (y ∷ b)) → Below z (merge (x ∷ a) b)
          → Below z (if bl then x ∷ merge a (y ∷ b) else y ∷ merge (x ∷ a) b)
-      go true  p q = px ∷ᵃ p
-      go false p q = py ∷ᵃ q
+      go true  p q = px ∷ᵇ p
+      go false p q = py ∷ᵇ q
 
   mergeSorted : (a b : Bag) → Sorted a → Sorted b → Sorted (merge a b)
   mergeSorted []      b  sa sb = sb
@@ -76,10 +65,10 @@ module Sortedness (le : A → A → Bool)
          → Sorted (merge a (y ∷ b)) → Sorted (merge (x ∷ a) b)
          → Sorted (if bl then x ∷ merge a (y ∷ b) else y ∷ merge (x ∷ a) b)
       go true  e p q =
-        consˢ (belowMerge a (y ∷ b) bx (e ∷ᵃ belowTrans e by)) p
+        consˢ (belowMerge a (y ∷ b) bx (e ∷ᵇ belowTrans e by)) p
       go false e p q =
         consˢ (belowMerge (x ∷ a) b
-                (leTotal x y e ∷ᵃ belowTrans (leTotal x y e) bx) by) q
+                (leTotal x y e ∷ᵇ belowTrans (leTotal x y e) bx) by) q
 
   -- ================================================================
   -- ... and the sorter, as a term.
@@ -104,7 +93,7 @@ module Sortedness (le : A → A → Bool)
   smallSorted : (w : Bag) → Small w → SortedOf w
   smallSorted .([])      (inl Eq.refl)       = [] , []ˢ , nil
   smallSorted .(x ∷ [])  (inr (x , Eq.refl)) =
-    (x ∷ []) , consˢ []ᵃ []ˢ , cons nil (left nil)
+    (x ∷ []) , consˢ []ᵇ []ˢ , cons nil (left nil)
 
   malgS : AlgC MF SortedIx
   malgS tt =
@@ -116,3 +105,46 @@ module Sortedness (le : A → A → Bool)
   -- MERGESORT: a sorted permutation of the input, by type
   mergesortS : ⊤G ⊢ SortedOf
   mergesortS m _ = hyloC mfGuarded mcoalg malgS (tt , m) tt
+
+  -- ================================================================
+  -- QUICKSORT, sorted.
+  --
+  -- Nothing here re-derives an ordering fact: `partitionOrd` already
+  -- put `Above piv lo` and `Below piv hi` into the description's slots,
+  -- and the only step is to move them off the INPUT parts onto the
+  -- SORTED OUTPUTS, which differ from them by a permutation.  That move
+  -- is `abovePerm` / `belowPerm`, and it is the reason those two lemmas
+  -- exist.  The coalgebra is untouched -- it was already supplying the
+  -- witnesses, for the plain sort to ignore.
+  -- ================================================================
+
+  sortedNil : {w : Bag} → w Eq.≡ [] → SortedOf w
+  sortedNil Eq.refl = [] , []ˢ , nil
+
+  joinS : (piv : A) {lo rest w p1 hi : Bag}
+        → Ilv lo rest w → Ilv p1 hi rest → p1 Eq.≡ piv ∷ []
+        → SortedOf lo → Above piv lo
+        → SortedOf hi → Below piv hi
+        → SortedOf w
+  joinS piv e1 e2 Eq.refl (loOut , sl , pl) aa (hiOut , sh , ph) bb =
+      (loOut ++ (piv ∷ hiOut))
+    , sortedApp sl (abovePerm pl aa) (belowPerm ph bb) sh
+    , permMerge pl (cons ph e2) e1
+
+  qalgS : AlgC QF SortedIx
+  qalgS tt =
+    ⊕ᴰ-E λ { true  → λ w e → sortedNil (lower e)
+           ; false → ⊕ᴰ-E λ piv → λ w t →
+               ⊗E {P = λ a → ⟦ QG piv a ⟧c SortedIx} {w = w}
+                  (λ lo rest e1 sLo inner →
+                     ⊗E {P = λ a → ⟦ QG' piv a ⟧c SortedIx}
+                        (λ p1 hi e2 pf sHi →
+                           joinS piv e1 e2 (lower pf)
+                                 (sLo true) (lower (sLo false))
+                                 (sHi true) (lower (sHi false)))
+                        inner) t }
+
+  -- INTRINSICALLY VERIFIED QUICKSORT: a sorted permutation of the
+  -- input, by type, from the SAME coalgebra as the plain one.
+  quicksortS : ⊤G ⊢ SortedOf
+  quicksortS m _ = hyloC qfGuarded qcoalg qalgS (tt , m) tt

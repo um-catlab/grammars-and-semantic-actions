@@ -13,6 +13,7 @@ module TheoryGrammar.Instances.Lambda.Fibered where
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
 open import Cubical.Data.Unit
+import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
@@ -74,3 +75,15 @@ module Terms (Name : Type₀) where
   λPoint .parts-split varOp f = refl
   λPoint .parts-split appOp f = funExt λ { true → refl ; false → refl }
   λPoint .parts-split lamOp f = funExt λ { true → refl ; false → refl }
+
+  -- SUBSTRATE SOUNDNESS.  `parts-split` says a tuple splits its own
+  -- composite; this is the CONVERSE -- a splitting's parts reassemble to
+  -- the thing they came from.  It is `Representable.Repr`'s `unsplit`
+  -- hypothesis, and it is what makes the tensor ELIMINATORS derivable
+  -- rather than primitive (`Initial.VarA-E`/`AppA-E`/`LamA-E`).  It is
+  -- `Eq.refl` in every clause -- and it must be `Eq.≡`, not a path, or
+  -- the transports it licenses stop reducing.
+  λ-unsplit : (o : LOp) (m : Raw) (sp : LSplit o m) → Op o (LParts o m sp) Eq.≡ m
+  λ-unsplit varOp _ (mkVar n)   = Eq.refl
+  λ-unsplit appOp _ (mkApp u v) = Eq.refl
+  λ-unsplit lamOp _ (mkLam n t) = Eq.refl

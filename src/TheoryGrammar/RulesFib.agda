@@ -1,9 +1,9 @@
 {-
-  THE COMBINATOR LAYER over a substrate: intro and elim for EVERY
+  THE COMBINATOR LAYER over a promodel: intro and elim for EVERY
   connective, in one place, so instances compose rather than re-derive.
 
   This is the piece that was missing.  `Rules.agda` gives the additives
-  over a `Model`; `Substrate.agda` gives `⊗ˢ`/`⊸ᶠ` currying.  Neither was
+  over a `Model`; `Fibered.agda` gives `⊗ˢ`/`⊸ᶠ` currying.  Neither was
   usable from an instance, so the bag algorithms grew their own partial
   copies and then leaked into Agda-level functions (`merge : Bag → Bag →
   Bag`, motives like `λ _ → Bag`).  Everything an instance needs is here.
@@ -25,7 +25,7 @@
   (`permMerge`) is exactly the half that working internally gives away.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-module TheoryGrammar.RulesSub where
+module TheoryGrammar.RulesFib where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.Isomorphism
@@ -36,18 +36,18 @@ open import Cubical.Data.Empty using (⊥*)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Rules
 open import TheoryGrammar.Result
 
 private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓB ℓC ℓY : Level
 
-module RulesS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ ℓX ℓP) where
+module RulesF {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP) where
 
   -- the connectives, and the additive rules, inherited
-  open SubNotation Sub public
-  open Rules ⌊ Sub ⌋ public
-    hiding (⊗-I; ⊗-E; ⊗-UP)      -- the Model-level ⊗; superseded below
+  open FibNotation Fib public
+  open RulesCarrier (Fib .carrier) public
+    -- (the Model-level ⊗ rules are simply absent now: RulesCarrier has none)
 
   private variable s : S
 
@@ -72,8 +72,8 @@ module RulesS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ �
            {A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a)} where
 
     -- intro: a splitting, plus a payload at every slot
-    ⊗ˢ-I : (m : Sub .carrier (σ .resultSort o)) (sp : Sub .Split o m)
-         → ((a : σ .arities o) → A a (Sub .parts o m sp a))
+    ⊗ˢ-I : (m : Fib .carrier (σ .resultSort o)) (sp : Fib .Split o m)
+         → ((a : σ .arities o) → A a (Fib .parts o m sp a))
          → ⊗ˢ o A m
     ⊗ˢ-I m sp h = sp , h
 
@@ -81,7 +81,7 @@ module RulesS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ �
          → MultiHomˢ o A B → ⊗ˢ o A ⊢ B
     ⊗ˢ-E {B = B} = uncurryˢ o {A = A} {B = B}
 
-    -- (⊗ˢ-UP, the β/η package, comes from SubNotation already)
+    -- (⊗ˢ-UP, the β/η package, comes from FibNotation already)
 
     -- functorial action, slotwise
     ⊗ˢ-map : {B : (a : σ .arities o) → TheoryTy ℓB (σ .sortOf o a)}
@@ -96,7 +96,7 @@ module RulesS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ �
   -- other parser shape is `Result` at a different one -- so it is
   -- DEFINED in `TheoryGrammar.Result` (additively; it never mentioned
   -- the operations) and only re-exported here, where instances look.
-  open Res ⌊ Sub ⌋ public
+  open Res (Fib .carrier) public
     using (Result; ok; err; caseR; bindR; mapR; mapE; joinR; catchR;
            orElseR; altR; altList; bothR;
            MaybeG; just-I; nothing-I; MaybeG-E;

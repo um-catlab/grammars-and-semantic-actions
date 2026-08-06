@@ -8,12 +8,10 @@
   LARGEST complement (`largest`), so normalising to the default
   `Dec⟨ A ⟩ = A ⊕ ¬G A` loses nothing -- `toDec` does it.
 
-  Every proof below is a composite of `Rules`' intro/elim, with ONE
-  exception: `⊕-E-at`, the POINTWISE elimination of a sum, and the
-  `dec-elim` it specialises to.  Those are elimination rules, so like
-  `Rules.⊕-E` they are defined by matching `inl`/`inr` -- and that is
-  the only place in the development a sum may be matched at all.  No
-  `Dec`, no `yes`/`no` anywhere.
+  Every proof below is a composite of `Rules`' intro/elim except the
+  POINTWISE elimination `⊕-E-at` and its specialisation `dec-elim`.
+  Those ARE elimination rules, so like `Rules.⊕-E` they match the sum;
+  instances never may.  No `Dec`, no `yes`/`no` anywhere.
 -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Decidable.Additive where
@@ -31,10 +29,10 @@ open import TheoryGrammar.Rules
 private variable ℓS ℓ ℓ' ℓX ℓA ℓB ℓC ℓY ℓZ : Level
 
 
-module DecAdd {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
+module DecAdd {S : Type ℓS} (Car : S → Type ℓX) where
 
-  open Notation M public
-  open Rules M public
+  open CarrierNotation Car public
+  open RulesCarrier Car public
 
   private variable
     s : S
@@ -61,6 +59,63 @@ module DecAdd {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) wh
 
   dec-no : (A : TheoryTy ℓA s) → ¬G A ⊢ Dec⟨ A ⟩
   dec-no A = ⊕-I₂ {B = ¬G A} {A = A}
+
+  -- ================================================================
+  -- THE ELIMINATION RULE, AT A POINT.
+  --
+  -- `Rules.⊕-E` eliminates a sum UNIFORMLY in the index: its branches
+  -- are maps of the calculus, given at every `m` at once.  Many uses of
+  -- a decision cannot be uniform, because the data the branches need
+  -- exists only at ONE index -- deciders supplied for the splittings of
+  -- THIS `m`, a refutation transported along unique readability at THIS
+  -- `m`, a recursive call at THIS subterm.  Not even the CONSTANT
+  -- motive helps: `⊕-E`'s branches still quantify over the index.
+  --
+  -- So the elimination has to be available at a point, and that is
+  -- `⊕-E-at`.  It is a genuine ELIMINATION RULE, and like `Rules.⊕-E`
+  -- it is therefore defined by matching `inl`/`inr`; `⊕-E` factors
+  -- through it (`⊕-E f g m = ⊕-E-at _ _ m (f m) (g m)`), so nothing new
+  -- is assumed -- only the quantifier is moved.
+  --
+  -- THE DISCIPLINE, stated here because this is where it is enforced:
+  -- the FRAMEWORK may match a sum, at its own elimination rules, which
+  -- are exactly `Rules.⊕-E`, `⊕-E-at` and `⊕-E-atᴰ`.  INSTANCES may
+  -- not: they call `dec-elim`.  Every `with`-on-a-decision that used to
+  -- appear in an instance is one application of it.
+  -- ================================================================
+
+  ⊕-E-at : (A : TheoryTy ℓA s) (B : TheoryTy ℓB s) (m : Car s)
+           {Z : Type ℓZ}
+         → (A m → Z) → (B m → Z) → (A ⊕ B) m → Z
+  ⊕-E-at A B m f g (inl x) = f x
+  ⊕-E-at A B m f g (inr y) = g y
+
+  -- the dependent form, whose motive may mention the sum itself.  Used
+  -- when the branch has to prove something ABOUT the decision it read.
+  ⊕-E-atᴰ : (A : TheoryTy ℓA s) (B : TheoryTy ℓB s) (m : Car s)
+            {Z : (A ⊕ B) m → Type ℓZ}
+          → ((x : A m) → Z (inl x)) → ((y : B m) → Z (inr y))
+          → (d : (A ⊕ B) m) → Z d
+  ⊕-E-atᴰ A B m f g (inl x) = f x
+  ⊕-E-atᴰ A B m f g (inr y) = g y
+
+  -- `⊕-E` factors through the pointwise rule: the two are the same fact
+  ⊕-E-at-factors : {C : TheoryTy ℓC s} (A : TheoryTy ℓA s) (B : TheoryTy ℓB s)
+                   (f : A ⊢ C) (g : B ⊢ C) (m : Car s) (d : (A ⊕ B) m)
+                 → ⊕-E f g m d ≡ ⊕-E-at A B m (f m) (g m) d
+  ⊕-E-at-factors A B f g m = ⊕-E-atᴰ A B m (λ _ → refl) (λ _ → refl)
+
+  -- and its specialisation to a decision, which is what instances use
+  dec-elim : (A : TheoryTy ℓA s) (m : Car s) {Z : Type ℓZ}
+           → (A m → Z) → ((¬G A) m → Z) → Dec⟨ A ⟩ m → Z
+  dec-elim A m = ⊕-E-at A (¬G A) m
+
+  dec-elimᴰ : (A : TheoryTy ℓA s) (m : Car s)
+              {Z : Dec⟨ A ⟩ m → Type ℓZ}
+            → ((x : A m) → Z (dec-yes A m x))
+            → ((k : (¬G A) m) → Z (dec-no A m k))
+            → (d : Dec⟨ A ⟩ m) → Z d
+  dec-elimᴰ A m = ⊕-E-atᴰ A (¬G A) m
 
   -- ================================================================
   -- The additive lemmas the decision combinators are built from.
@@ -159,6 +214,14 @@ module DecAdd {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) wh
     ∘⊢ dist&
 
   -- the units decide themselves
+  -- double negation introduction
+  dni : (A : TheoryTy ℓA s) → A ⊢ ¬G ¬G A
+  dni A = ⇒-I (contra {A = A})
+
+  -- and so the negation of a decided grammar is decided
+  dec-¬ : (A : TheoryTy ℓA s) → Dec⟨ A ⟩ ⊢ Dec⟨ ¬G A ⟩
+  dec-¬ A = ⊕-E (dec-no (¬G A) ∘⊢ dni A) (dec-yes (¬G A))
+
   dec-⊤ : ⊤G {s} ⊢ Dec⟨ ⊤G {s} ⟩
   dec-⊤ = dec-yes ⊤G
 

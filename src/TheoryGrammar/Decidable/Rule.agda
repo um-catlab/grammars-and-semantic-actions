@@ -16,9 +16,9 @@ open import Cubical.Data.Sum using (_⊎_; inl; inr)
 open import Cubical.Data.Unit
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Rules
-open import TheoryGrammar.RulesSub
+open import TheoryGrammar.RulesFib
 open import TheoryGrammar.Par
 open import TheoryGrammar.Decidable.Additive
 open import TheoryGrammar.Decidable.Tensor
@@ -26,10 +26,10 @@ open import TheoryGrammar.Decidable.Enumerated
 
 private variable ℓS ℓ ℓ' ℓX ℓP ℓA : Level
 
-module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ ℓX ℓP) where
+module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP) where
 
-  open DecSub Sub
-  open ParS Sub using (⊗-EM)
+  open DecFib Fib
+  open ParS Fib using (⊗-EM)
 
   -- THE INTERFACE.  Slotwise decisions yield a decision of the tensor,
   -- whose refuting side is (by `¬⊗-curry`) a product of refutations,
@@ -37,8 +37,8 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ ℓX �
   DecTensorRule : Type (ℓ-max ℓ (ℓ-max ℓ' (ℓ-max ℓX (ℓ-max ℓP (ℓ-suc ℓA)))))
   DecTensorRule {ℓA = ℓA} =
     (o : σ .ops) (A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
-    → ((m : Sub .carrier (σ .resultSort o)) (sp : Sub .Split o m)
-       (a : σ .arities o) → Dec⟨ A a ⟩ (Sub .parts o m sp a))
+    → ((m : Fib .carrier (σ .resultSort o)) (sp : Fib .Split o m)
+       (a : σ .arities o) → Dec⟨ A a ⟩ (Fib .parts o m sp a))
     → ⊗-EM o A
 
 -- ==================================================================
@@ -46,9 +46,9 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ ℓX �
 -- there is nothing to search.  Holds for a free signature.
 -- ==================================================================
 
-fromUnique : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {Sub : Substrate σ ℓX ℓP}
-           → DecReadable Sub ℓA → DecTensorRule Sub {ℓA = ℓA}
-fromUnique {Sub = Sub} DR o A d m _ = DecTensor.dec-⊗ DR o A m (d m)
+fromUnique : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {Fib : Fibered σ ℓX ℓP}
+           → DecReadable Fib ℓA → DecTensorRule Fib {ℓA = ℓA}
+fromUnique {Fib = Fib} DR o A d m _ = DecTensor.dec-⊗ DR o A m (d m)
 
 -- ==================================================================
 -- Constructor 2: enumerable decompositions.  Finitely many, so the
@@ -56,8 +56,8 @@ fromUnique {Sub = Sub} DR o A d m _ = DecTensor.dec-⊗ DR o A m (d m)
 -- Holds for the monoid (length+1 cuts) and for bags (2^n).
 -- ==================================================================
 
-fromEnumerable : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {Sub : Substrate σ ℓX ℓP}
-               → DecEnumerable Sub ℓA → DecTensorRule Sub {ℓA = ℓA}
+fromEnumerable : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {Fib : Fibered σ ℓX ℓP}
+               → DecEnumerable Fib ℓA → DecTensorRule Fib {ℓA = ℓA}
 fromEnumerable DE o A d = enum→⊗EM DE o A d
 
 -- ==================================================================

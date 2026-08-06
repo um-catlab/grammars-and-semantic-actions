@@ -47,12 +47,12 @@ open import TheoryGrammar.Distributive
 private variable ℓS ℓ ℓ' ℓX ℓA ℓB ℓC ℓD ℓE ℓE' ℓY : Level
 
 
-module Res {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
+module Res {S : Type ℓS} (Car : S → Type ℓX) where
 
-  open Notation M
-  open Rules M
-  open DecAdd M using (¬G_; Dec⟨_⟩; &-swap; contra; Complement; Decision)
-  open Dist M using (dist&r)
+  open CarrierNotation Car
+  open RulesCarrier Car
+  open DecAdd Car using (¬G_; Dec⟨_⟩; &-swap; contra; Complement; Decision)
+  open Dist Car using (dist&r)
 
   private variable
     s : S
@@ -145,8 +145,8 @@ module Res {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
   -- ================================================================
   -- SEQUENCING, additively.  Two parsers at the same world, and both
   -- must succeed.  (The MULTIPLICATIVE sequencing -- one parser per
-  -- slot of an operation -- is `Result.Sub` below, since it needs a
-  -- substrate.)
+  -- slot of an operation -- is `Result.Fib` below, since it needs a
+  -- promodel.)
   -- ================================================================
 
   bothR : (E : TheoryTy ℓE s) (A : TheoryTy ℓA s) (B : TheoryTy ℓB s)

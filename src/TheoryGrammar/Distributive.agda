@@ -21,11 +21,11 @@ open import TheoryGrammar.Decidable.Additive
 
 private variable ℓS ℓ ℓ' ℓX ℓA ℓB ℓC ℓD ℓY : Level
 
-module Dist {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
+module Dist {S : Type ℓS} (Car : S → Type ℓX) where
 
-  open Notation M
-  open Rules M
-  open DecAdd M using (&-swap; dist&)
+  open CarrierNotation Car
+  open RulesCarrier Car
+  open DecAdd Car using (&-swap; dist&)
 
   private variable s : S
 

@@ -19,7 +19,7 @@ open import TheoryGrammar.Fibered
 open import TheoryGrammar.Enumerable
 open import TheoryGrammar.Decidable.Additive
 open import TheoryGrammar.Decidable.Tensor
-open import TheoryGrammar.Decidable.Enumerated
+open import TheoryGrammar.Decidable.Enumerated hiding (enumSplit; enumComplete)
 open import TheoryGrammar.Decidable.Rule
 
 open import TheoryGrammar.Instances.Strings.Enumeration Char public
@@ -27,9 +27,14 @@ open import TheoryGrammar.Instances.Strings.Enumeration Char public
 open DecEnum strFib using (⊗at; Refutes)
 open DecFib  strFib using (Dec⟨_⟩)
 
+-- `DecEnumerable` has FIELDS named `enumSplit` / `enumComplete`, and
+-- `Enumeration` (opened above) has DEFINITIONS of the same names, both
+-- unqualified.  The copatterns on the left are projections and resolve
+-- on their own; it is the right-hand sides that would be ambiguous, so
+-- the field names are qualified there instead.
 strDecEnum : DecEnumerable strFib ℓ-zero
-strDecEnum .enumSplit    = enumSplit
-strDecEnum .enumComplete = enumComplete
+strDecEnum .DecEnumerable.enumSplit    = enumSplit
+strDecEnum .DecEnumerable.enumComplete = enumComplete
 -- nullary: the empty product of slots is inhabited outright
 strDecEnum .decAt nilop A m sp d = inl λ ()
 -- binary: two slots, so `decΠBool`

@@ -20,7 +20,7 @@
 
       ⌈ a ⌉ ⊢ B   ≅   B a
 
-  is the Yoneda lemma for this substrate, and is what `ε` and `literal`
+  is the Yoneda lemma for this promodel, and is what `ε` and `literal`
   were special cases of in the string setting.
 -}
 {-# OPTIONS --lossy-unification #-}
@@ -39,9 +39,12 @@ open import TheoryGrammar.Multiplicative
 
 private variable ℓS ℓ ℓ' ℓX ℓA ℓB ℓC ℓY : Level
 
-module Rules {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
+-- The additive rules and the representables need only a CARRIER -- see
+-- the note in `Base.agda`.  Keeping them here, off `Model`, is what lets
+-- `RulesFib` serve a promodel with no total operation.
+module RulesCarrier {S : Type ℓS} (X : S → Type ℓX) where
 
-  open Notation M
+  open CarrierNotation X
 
   private variable
     s : S
@@ -166,31 +169,41 @@ module Rules {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) whe
   &ᴰ-UP .Iso.ret _ = refl
 
   -- ================================================================
-  -- ⌈ a ⌉  --  representables.  THE YONEDA LEMMA for this substrate,
+  -- ⌈ a ⌉  --  representables.  THE YONEDA LEMMA for this promodel,
   -- and the generic replacement for `ε` and `literal`.
   -- ================================================================
 
-  ⌈⌉-I : (a : M .carrier s) → ⌈ a ⌉ ⊢ ⌈ a ⌉
+  ⌈⌉-I : (a : X s) → ⌈ a ⌉ ⊢ ⌈ a ⌉
   ⌈⌉-I a = id⊢
 
-  ⌈⌉-pt : (a : M .carrier s) → ⌈ a ⌉ a
+  ⌈⌉-pt : (a : X s) → ⌈ a ⌉ a
   ⌈⌉-pt a = Eq.refl
 
   -- elim: a map out of a representable is determined by one element
-  ⌈⌉-E : {a : M .carrier s} {B : TheoryTy ℓB s} → B a → ⌈ a ⌉ ⊢ B
+  ⌈⌉-E : {a : X s} {B : TheoryTy ℓB s} → B a → ⌈ a ⌉ ⊢ B
   ⌈⌉-E b .(_) Eq.refl = b
 
-  ⌈⌉-UP : {a : M .carrier s} {B : TheoryTy ℓB s} → Iso (⌈ a ⌉ ⊢ B) (B a)
+  ⌈⌉-UP : {a : X s} {B : TheoryTy ℓB s} → Iso (⌈ a ⌉ ⊢ B) (B a)
   ⌈⌉-UP {a = a} .Iso.fun f = f a Eq.refl
   ⌈⌉-UP .Iso.inv = ⌈⌉-E
   ⌈⌉-UP .Iso.sec _ = refl
   ⌈⌉-UP .Iso.ret f = funExt λ m → funExt λ { Eq.refl → refl }
 
-  -- ================================================================
-  -- ⊗[ o ]  --  the multiplicatives.  Intro is n-ary: supply an element
-  -- for every slot.  Elim is the currying iso of TheoryGrammar.
-  -- Multiplicative, repackaged as a rule.
-  -- ================================================================
+-- ==================================================================
+-- ⊗[ o ]  --  the multiplicatives.  Intro is n-ary: supply an element
+-- for every slot.  Elim is the currying iso of TheoryGrammar.
+-- Multiplicative, repackaged as a rule.
+--
+-- THESE are what need a `Model`: `⊗-I`'s very statement mentions
+-- `M .op o m⃗`.  Everything above is `RulesCarrier`.  Note `RulesFib`
+-- already hid exactly these three -- the split was latent in that
+-- `hiding` clause long before the record was pulled apart.
+-- ==================================================================
+
+module Rules {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
+
+  open Notation M
+  open RulesCarrier (M .carrier) public
 
   module _ (o : σ .ops) {A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a)} where
 

@@ -60,10 +60,24 @@ open Model public
 -- Types of the calculus: families indexed by the model's carrier.
 -- ==================================================================
 
-module Notation {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
+-- ==================================================================
+-- THE ADDITIVE LAYER NEEDS ONLY A CARRIER.
+--
+-- `TheoryTy`, `_⊢_`, every additive, and the representables mention the
+-- carrier and NOTHING else -- no operation, no splittings.  Stating that
+-- as its own module is not tidiness: it is what lets a PARTIAL algebra
+-- use the calculus.  A promodel with no total operation still has a
+-- carrier, so it still has the whole additive fragment; only `⊗[ o ]`
+-- below needs `op`, and `⊗ˢ` (over a `Fibered`) needs merely `Split`.
+--
+-- `Notation` is then this module plus the two op-dependent definitions,
+-- so every existing `Notation M` user is unaffected.
+-- ==================================================================
+
+module CarrierNotation {S : Type ℓS} (X : S → Type ℓX) where
 
   TheoryTy : (ℓA : Level) → S → Type (ℓ-max ℓX (ℓ-suc ℓA))
-  TheoryTy ℓA s = M .carrier s → Type ℓA
+  TheoryTy ℓA s = X s → Type ℓA
 
   -- morphisms: carrier-preserving, exactly as A ⊢ B for grammars
   _⊢_ : ∀ {s} → TheoryTy ℓA s → TheoryTy ℓB s → Type (ℓ-max ℓX (ℓ-max ℓA ℓB))
@@ -107,12 +121,19 @@ module Notation {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) 
   -- representables: the analogue of `literal` and `ε` at once.  Every
   -- element of the carrier gives one; the constants of the signature
   -- give the distinguished ones.
-  ⌈_⌉ : ∀ {s} → M .carrier s → TheoryTy ℓX s
+  ⌈_⌉ : ∀ {s} → X s → TheoryTy ℓX s
   ⌈ a ⌉ m = m Eq.≡ a
 
-  -- ================================================================
-  -- MULTIPLICATIVES.  One per operation, by convolution along it.
-  -- ================================================================
+-- ==================================================================
+-- MULTIPLICATIVES.  One per operation, by convolution along it.  THIS
+-- is the fragment that needs a total operation -- and the reason
+-- `Fibered`/`⊗ˢ` exists is to get the same connective from `Split`
+-- alone, which a partial algebra can supply.
+-- ==================================================================
+
+module Notation {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
+
+  open CarrierNotation (M .carrier) public
 
   ⊗[_] : (o : σ .ops)
        → ((a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))

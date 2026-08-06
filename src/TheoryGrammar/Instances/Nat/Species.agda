@@ -59,9 +59,15 @@
   both compose.
 
   `rollg` / `unrollg` are generic in the description and in the
-  nonterminal, so they BELONG UPSTREAM in `TheoryGrammar.Inductive`
-  alongside `roll` / `unroll`; they are defined here only because this
-  file may not edit the core.
+  nonterminal, and they LOOK like they belong upstream in
+  `TheoryGrammar.Inductive` alongside `roll` / `unroll`.  They cannot go
+  there, and the reason is recorded in that file: `μ F : Ix → Type ℓμ`
+  with `ℓμ = ℓSh ⊔ ℓV ⊔ ℓX`, while `⟦_⟧c` takes motives at exactly `ℓSh`,
+  so `⟦ F x ⟧c (μ F)` is ill-typed unless `ℓV` and `ℓX` sit below `ℓSh`.
+  Making `⟦_⟧c` motive-polymorphic would fix it and would cost a `Lift`
+  at every recursive position -- worse than the disease.  So they are
+  defined per instance, where the levels are concrete; here `X = Unit`
+  and the carrier is `ℕ`, so `ℓμ = ℓSh` and each is one line.
 
   ------------------------------------------------------------------
   AND ITS IMAGE AT STRINGS

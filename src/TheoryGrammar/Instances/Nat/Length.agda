@@ -109,6 +109,11 @@ open import TheoryGrammar.ChangeOfTheory
 -- ℕ side is reached through `module ℕM` below.
 open import TheoryGrammar.Instances.Strings.Connectives Char public
 
+-- Qualified: `Nat/Base` exports `MonSplit`, `MonParts`, `Gr` under the
+-- same names as the string instance, so only the ℕ promodel and its
+-- point are wanted here.
+import TheoryGrammar.Instances.Nat.Connectives as N
+
 -- ==================================================================
 -- THE TWO MODELS, at one and the same signature.
 -- ==================================================================
@@ -122,13 +127,14 @@ strModel = ⌊ strPoint ⌋
 -- bridges below relate the two, so they need the model-level one by name.
 open Notation strModel using (⊗[_])
 
--- The ℕ-model of the monoid signature.  This is `Nat/Base.agda`'s
--- `⌊ natFib ⌋`, retyped at the strings' copy of `monoidSig`; see the defect
--- note in the header.
+-- The ℕ-model of the monoid signature.  This USED to be rebuilt by hand,
+-- because `Strings/Base` and `Nat/Base` each declared their own `MonOp`
+-- and the two `monoidSig`s were definitionally distinct -- so
+-- `ModelHom strModel natModel` could not be stated across them.  With
+-- the signature shared in `TheoryGrammar.Theories.Monoid` the duplication
+-- is gone: this is literally `Nat/Base`'s promodel with its point.
 natModel : Model monoidSig ℓ-zero
-natModel .carrier _  = ℕ
-natModel .op nilop _ = 0
-natModel .op appop f = f true + f false
+natModel = ⌊ N.natPoint ⌋
 
 module ℕM = Notation natModel
 
@@ -282,6 +288,28 @@ split3app (cons s) = Eq.ap (_ ∷_) (split3app s)
   , λ { true → h true ; false → h false }
 
 -- ==================================================================
+-- The SAME translation on the ℕ side.
+--
+-- `transportGF` below is stated at `ℕM.⊗[ appop ]`, because that is the
+-- connective `ChangeOfTheory` speaks.  Every ℕ-side PROGRAM -- e.g. the
+-- Dyck grammar in `Species.agda` -- is written at `⊗ˢ`.  Without this
+-- pair the transport cannot be applied to anything actually written in
+-- the calculus, which is why it belongs here and not in a downstream
+-- file.  Mirrors `⊗ˢ→⊗` / `⊗→⊗ˢ` above with `Add3` for `Split3`.
+-- ==================================================================
+
+-- PRIMITIVE (phase 1)
+⊗ˢᴺ→⊗ᴺ : {A : Bool → NatGr} → N.⊗ˢ appop A ℕM.⊢ ℕM.⊗[ appop ] A
+⊗ˢᴺ→⊗ᴺ n ((i , j , a) , h) = (λ b → if b then i else j) , N.add3→+ a , h
+
+-- PRIMITIVE (phase 1).  The `λ { true → … ; false → … }` is the arity-η
+-- tax: `if a then m⃗ true else m⃗ false` is not definitionally `m⃗ a`.
+⊗ᴺ→⊗ˢᴺ : {A : Bool → NatGr} → ℕM.⊗[ appop ] A ℕM.⊢ N.⊗ˢ appop A
+⊗ᴺ→⊗ˢᴺ n (m⃗ , Eq.refl , h) =
+  (m⃗ true , m⃗ false , N.addAll (m⃗ true) (m⃗ false))
+  , λ { true → h true ; false → h false }
+
+-- ==================================================================
 -- THE PAYOFF.
 -- ==================================================================
 
@@ -342,3 +370,25 @@ transportGF : (A B C : NatGr)
             → (pull A ⊢ (pull B ⊗' pull C)) × ((pull B ⊗' pull C) ⊢ pull A)
 transportGF A B C f g =
   pull⊗' B C ∘g pullTerm f , pullTerm g ∘g pull⊗'⁻ B C
+
+-- ==================================================================
+-- (4) ... AND IN THE FORM PROGRAMS ARE WRITTEN IN.
+--
+-- `transportGF` speaks `_ℕ⊗_`, the model-level convolution.  A ℕ-side
+-- program -- `Species.agda`'s Dyck grammar, say -- is written with
+-- `Nat/Connectives`' `_⊗'_`, which is `⊗ˢ`.  Composing with the bridge
+-- above gives the version that actually applies to such a program, and
+-- with it the Catalan recurrence transports to strings.
+-- ==================================================================
+
+module _ (A B : NatGr) where
+
+  private
+    famᴺ : Bool → NatGr
+    famᴺ b = if b then A else B
+
+  pull⊗ˢ' : pull (A N.⊗' B) ⊢ (pull A ⊗' pull B)
+  pull⊗ˢ' = pull⊗' A B ∘g pullTerm (⊗ˢᴺ→⊗ᴺ {A = famᴺ})
+
+  pull⊗ˢ'⁻ : (pull A ⊗' pull B) ⊢ pull (A N.⊗' B)
+  pull⊗ˢ'⁻ = pullTerm (⊗ᴺ→⊗ˢᴺ {A = famᴺ}) ∘g pull⊗'⁻ A B

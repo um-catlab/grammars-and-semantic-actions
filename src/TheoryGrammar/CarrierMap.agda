@@ -1,5 +1,5 @@
 {-
-  CARRIER MAPS: change of theory, at a fixed substrate.
+  CARRIER MAPS: change of theory, at a fixed promodel.
 
   `ChangeOfTheory` reinterprets along a homomorphism of MODELS.  A
   compiler pass is the same move with the laws dropped: it rewrites the
@@ -13,7 +13,7 @@
   It is what `push⊗` needs, and it is a PER-OPERATION condition -- which
   is the point, since a pass fails it at exactly the operation it
   rewrites.  `ReflectsSplitAt` is `ChangeOfTheory.ReflectsSplit` for a
-  substrate, and inverts `push⊗`.
+  promodel, and inverts `push⊗`.
 
   `Transport` is the free-transport theorem: a carrier map preserving
   ALL splittings transports every inductive grammar, given only a
@@ -28,7 +28,7 @@ open import Cubical.Data.Unit
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 import TheoryGrammar.ChangeOfTheory as CT
 
@@ -39,31 +39,31 @@ private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓB ℓD ℓM ℓV : Level
 -- ==================================================================
 
 record CarrierMap {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
-                  (Sub : Substrate σ ℓX ℓP) : Type (ℓ-max ℓS ℓX) where
+                  (Fib : Fibered σ ℓX ℓP) : Type (ℓ-max ℓS ℓX) where
   field
-    hom : (s : S) → Sub .carrier s → Sub .carrier s
+    hom : (s : S) → Fib .carrier s → Fib .carrier s
 
 open CarrierMap public
 
--- `homOp` of a `ModelHom`, respelled for a substrate and localised at
+-- `homOp` of a `ModelHom`, respelled for a promodel and localised at
 -- ONE operation.  A pass satisfies it at every operation it leaves
 -- alone and fails it at the one it rewrites.
 record SplitPresAt {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
-                   {Sub : Substrate σ ℓX ℓP}
-                   (h : CarrierMap Sub) (o : σ .ops)
+                   {Fib : Fibered σ ℓX ℓP}
+                   (h : CarrierMap Fib) (o : σ .ops)
   : Type (ℓ-max ℓ' (ℓ-max ℓX ℓP)) where
   field
-    homSplit : (m : Sub .carrier (σ .resultSort o))
-             → Sub .Split o m → Sub .Split o (h .hom _ m)
-    homParts : (m : Sub .carrier (σ .resultSort o)) (sp : Sub .Split o m)
+    homSplit : (m : Fib .carrier (σ .resultSort o))
+             → Fib .Split o m → Fib .Split o (h .hom _ m)
+    homParts : (m : Fib .carrier (σ .resultSort o)) (sp : Fib .Split o m)
                (a : σ .arities o)
-             → Sub .parts o (h .hom _ m) (homSplit m sp) a
-               Eq.≡ h .hom _ (Sub .parts o m sp a)
+             → Fib .parts o (h .hom _ m) (homSplit m sp) a
+               Eq.≡ h .hom _ (Fib .parts o m sp a)
 
 open SplitPresAt public
 
 -- ==================================================================
--- The bridge to `ChangeOfTheory`: at the CANONICAL substrate (the
+-- The bridge to `ChangeOfTheory`: at the CANONICAL promodel (the
 -- equational presentation), a `ModelHom` is precisely a carrier map
 -- that preserves every splitting.  `homOp` is the whole content of
 -- `homSplit`, and `homParts` is then `Eq.refl`.
@@ -84,10 +84,10 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {M : Model σ ℓX}
 -- Reinterpretation.
 -- ==================================================================
 
-module Along {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {Sub : Substrate σ ℓX ℓP}
-             (h : CarrierMap Sub) where
+module Along {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {Fib : Fibered σ ℓX ℓP}
+             (h : CarrierMap Fib) where
 
-  open SubNotation Sub
+  open FibNotation Fib
 
   pull : {s : S} → TheoryTy ℓA s → TheoryTy ℓA s
   pull {s = s} B m = B (h .hom s m)
@@ -132,7 +132,7 @@ module Along {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {Sub : Substrate σ ℓ
   -- transport: `pull ⌈ a ⌉ m` is `hom m Eq.≡ a`, not `m Eq.≡ a`.
 
   private
-    coeTy : {s : S} (B : TheoryTy ℓA s) {x y : Sub .carrier s}
+    coeTy : {s : S} (B : TheoryTy ℓA s) {x y : Fib .carrier s}
           → x Eq.≡ y → B y → B x
     coeTy B Eq.refl b = b
 
@@ -148,13 +148,13 @@ module Along {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {Sub : Substrate σ ℓ
       P .homSplit m sp , λ a → coeTy (B a) (P .homParts m sp a) (k a)
 
   -- ... and invertible exactly when `h` REFLECTS splittings: the
-  -- discrete Conduché condition of `ChangeOfTheory`, at a substrate.
+  -- discrete Conduché condition of `ChangeOfTheory`, at a promodel.
   ReflectsSplitAt : (o : σ .ops) → Type (ℓ-max ℓ' (ℓ-max ℓX ℓP))
   ReflectsSplitAt o =
-    (m : Sub .carrier (σ .resultSort o)) (sp' : Sub .Split o (h .hom _ m))
-    → Σ[ sp ∈ Sub .Split o m ]
-        ((a : σ .arities o) → Sub .parts o (h .hom _ m) sp' a
-                              Eq.≡ h .hom _ (Sub .parts o m sp a))
+    (m : Fib .carrier (σ .resultSort o)) (sp' : Fib .Split o (h .hom _ m))
+    → Σ[ sp ∈ Fib .Split o m ]
+        ((a : σ .arities o) → Fib .parts o (h .hom _ m) sp' a
+                              Eq.≡ h .hom _ (Fib .parts o m sp a))
 
   module _ (o : σ .ops) (R : ReflectsSplitAt o)
            {B : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a)} where
@@ -175,7 +175,7 @@ module Along {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {Sub : Substrate σ ℓ
   module Transport (P : (o : σ .ops) → SplitPresAt h o)
                    (ℓD : Level) (X : Type ℓV) (xs : X → S) where
 
-    open Ind Sub ℓD X xs
+    open Ind Fib ℓD X xs
 
     private
       ℓT : Level
@@ -191,11 +191,11 @@ module Along {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {Sub : Substrate σ ℓ
 
     private
       coeF : (B : Ix → Type ℓM) {s : S} (F : Functor s)
-             {x y : Sub .carrier s} → x Eq.≡ y → ⟦ F ⟧ B y → ⟦ F ⟧ B x
+             {x y : Fib .carrier s} → x Eq.≡ y → ⟦ F ⟧ B y → ⟦ F ⟧ B x
       coeF B F Eq.refl t = t
 
     mapF : (B : Ix → Type ℓM) {s : S} (F : Functor s) → Tr F
-         → (m : Sub .carrier s)
+         → (m : Fib .carrier s)
          → ⟦ F ⟧ (λ i → B (i .fst , h .hom _ (i .snd))) m
          → ⟦ F ⟧ B (h .hom s m)
     mapF B (⌜ C ⌝)  tr m (sh , _) = lift (tr .lower _ (sh .lower)) , λ ()
@@ -210,20 +210,20 @@ module Along {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {Sub : Substrate σ ℓ
       (P o .homSplit m sp , λ a → step a .fst) , λ { (a , p) → step a .snd p }
       where
       step : (a : σ .arities o)
-           → ⟦ G a ⟧ B (Sub .parts o (h .hom _ m) (P o .homSplit m sp) a)
+           → ⟦ G a ⟧ B (Fib .parts o (h .hom _ m) (P o .homSplit m sp) a)
       step a = coeF B (G a) (P o .homParts m sp a)
                  (mapF B (G a) (tr a) _ (sh a , λ p → f (a , p)))
 
     -- the transport itself: a single generic `fold`
     mapμ : (F : (x : X) → Functor (xs x)) → ((x : X) → Tr (F x))
-         → (x : X) (m : Sub .carrier (xs x))
+         → (x : X) (m : Fib .carrier (xs x))
          → μ F (x , m) → μ F (x , h .hom _ m)
     mapμ F tr x m d = fold Mot α (x , m) d
       where
       Mot : Ix → Type ℓμ
       Mot i = μ F (i .fst , h .hom _ (i .snd))
 
-      α : (x' : X) (m' : Sub .carrier (xs x')) (sh : Sh (F x') m')
+      α : (x' : X) (m' : Fib .carrier (xs x')) (sh : Sh (F x') m')
         → ((p : Pos (F x') m' sh) → Mot (nx (F x') m' sh p)) → Mot (x' , m')
       α x' m' sh rc =
         μ-alg F x' (h .hom _ m') (mapF (μ F) (F x') (tr x') m' (sh , rc))

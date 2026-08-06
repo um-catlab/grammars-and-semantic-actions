@@ -53,6 +53,7 @@ open import Cubical.Data.Unit
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.Decidable
+open import TheoryGrammar.Enumerable
 open import TheoryGrammar.View
 
 -- ==================================================================
@@ -125,9 +126,28 @@ spanFib .parts     = SpanParts
 -- `List` that has to be proved complete separately.
 -- ==================================================================
 
+-- `shift` lifted over a list, spelled out rather than via `map`, so
+-- completeness below is a two-line induction with no `map` lemma.
+shifts : {n : ℕ} → List (Cut n) → List (Cut (suc n))
+shifts []       = []
+shifts (c ∷ cs) = shift c ∷ shifts cs
+
 allCuts : (n : ℕ) → List (Cut n)
 allCuts zero    = here ∷ []
-allCuts (suc n) = here ∷ map shift (allCuts n)
+allCuts (suc n) = here ∷ shifts (allCuts n)
+
+-- ... AND IT MISSES NONE.  This is the whole residual obligation, and
+-- it is an induction on a NUMBER.  Compare `Strings.Enumeration`, where
+-- the same fact is an induction on a string carrying a `Split3`.
+∈-shifts : {n : ℕ} {c : Cut n} {cs : List (Cut n)}
+         → c ∈L cs → shift c ∈L shifts cs
+∈-shifts here      = here
+∈-shifts (there p) = there (∈-shifts p)
+
+allCutsComplete : (n : ℕ) (c : Cut n) → c ∈L allCuts n
+allCutsComplete zero    here      = here
+allCutsComplete (suc n) here      = here
+allCutsComplete (suc n) (shift c) = there (∈-shifts (allCutsComplete n c))
 
 -- ==================================================================
 -- SANITY: the whole layer really is available with no point.

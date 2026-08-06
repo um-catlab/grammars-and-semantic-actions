@@ -6,7 +6,7 @@
     Tensor       `⊗-miss`, `⊗-refute`, and `dec-⊗` from unique readability
     Splittings   the INTERFACE `DecSplittings`, with two routes into it:
                  `fromReadable` (unique readability) and `fromEnumerable`
-                 (the splittings are listable -- what resource substrates
+                 (the splittings are listable -- what resource promodels
                  need, since `splitProp` is false for them)
     Representable  `dec-⌈⌉`, decidability of a representable
 

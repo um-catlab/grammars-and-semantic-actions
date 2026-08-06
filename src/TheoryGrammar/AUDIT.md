@@ -138,7 +138,8 @@ should meet.
 | 3 | Bags' internal `NonTrivial`, mirroring Strings | **done** |
 | 4 | shared `Theories/Monoid.agda` | open |
 | 5 | `parseAB` via intro rules | open |
-| 6 | `le` as a decision rather than a `Bool` | open |
+| 6 | `le` as a decision rather than a `Bool` | withdrawn — see below |
+| 7 | quicksort's sortedness (found while fixing 2) | **done** |
 
 ### What changed
 
@@ -163,3 +164,59 @@ would be cosmetic, since a constant grammar carries no index constraint.
 The meaningful target is `Cover Bagged`, which needs `mergeG : Bagged ⊗
 Bagged ⊢ Bagged` — blocked on `permTrans` / `permInsert` / `mergePerm`.
 Until those exist, `mergesort`'s honest type is the one it has.
+
+### Item 5: `parseAB` via intro rules — done
+
+`Strings/Examples.parseAB` now reads
+`node tt (cons nil) (literalNN true _ Eq.refl) (literalNN false _ Eq.refl) leafA leafB`.
+No `sup`, no `Sh`/`Pos`, no absurd position functions.
+
+### Item 6 is withdrawn
+
+The stated benefit was wrong. `leTotal` and `leTrans` are propositions
+*about the given `le`*, so they cannot disagree with it — there is no
+mismatch for a decision-valued comparison to rule out. The real payoff
+of a proof-carrying comparison is that `partition` would get its
+ordering witnesses for free rather than via `leTotal`; that is a
+convenience, not a soundness gap, and it is now moot because item 7
+extracts those witnesses anyway.
+
+### Item 7: quicksort is sorted, and it fell out of the description
+
+`quicksortS : ⊤G ⊢ SortedOf` — the output is a sorted permutation of the
+input **by type**, from the *same coalgebra* as the plain sort. Nothing
+was re-verified afterwards.
+
+The design point, which is the reusable part:
+
+> the ordering facts `partition` discovers are exactly the facts the
+> algebra needs, so they belong in the description's **slots**, not in a
+> separate pass.
+
+Concretely `QG piv true` went from `Var tt` to `&e Bool (QLo piv)` with
+`QLo piv true = Var tt`, `QLo piv false = ⌜ Above piv ⌝` — "a recursive
+subproblem AND a proof it lies below the pivot" — and dually
+`⌜ Below piv ⌝` on the high side. Guardedness needed nothing new: a
+bound contributes no positions, so `≤&e` with `≤⌜⌝` on the constant
+branch descends exactly as `≤Var` did.
+
+The one genuine step is that the slots' facts are about the **input**
+parts while sortedness is about the **sorted outputs**, and those differ
+by a permutation. That is `abovePerm` / `belowPerm`, and it is why they
+exist. The order-theoretic content is a single lemma, `sortedApp`.
+
+New file `Bags/Order.agda`, placed between `Permutation` and
+`QuicksortFunctor` because both sorters need it — mergesort to state
+`mergeSorted`, quicksort to carry the bounds. `Sorted.agda`'s private
+copies of `Below`/`Sorted`/`belowTrans` are gone.
+
+Both intrinsic sorters compute: `qsortS` and `msortS` in
+`Bags/Examples` are `tagA Bag ∘g …`, checked by `refl` on
+`5 ∷ 3 ∷ 4 ∷ 1 ∷ 2 ∷ []`. That `tagA` applies to `SortedOf` unchanged —
+it is a `⊕ᴰ` over the output bag, exactly as `SpecG` was — is the check
+that the intrinsic version did not leave the interface.
+
+### What remains
+
+`Instances/Lambda/` (item 2d) is still unassessed; it is another agent's
+in-flight work. Everything else in the ranked table is closed.

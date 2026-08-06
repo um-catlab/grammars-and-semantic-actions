@@ -19,15 +19,15 @@ open import Cubical.Data.Unit
 open import Cubical.Data.Empty using (⊥*)
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Rules
-open import TheoryGrammar.RulesSub
+open import TheoryGrammar.RulesFib
 
 private variable ℓS ℓ ℓ' ℓX ℓP ℓA : Level
 
-module ParS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ ℓX ℓP) where
+module ParS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP) where
 
-  open RulesS Sub public
+  open RulesF Fib public
 
   private variable s : S
 
@@ -43,16 +43,16 @@ module ParS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ ℓX
   Allˢ : (o : σ .ops)
      → ((a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
      → TheoryTy (ℓ-max ℓP (ℓ-max ℓ' ℓA)) (σ .resultSort o)
-  Allˢ o A m = (sp : Sub .Split o m)
-           → ((a : σ .arities o) → A a (Sub .parts o m sp a))
+  Allˢ o A m = (sp : Fib .Split o m)
+           → ((a : σ .arities o) → A a (Fib .parts o m sp a))
 
   module _ (o : σ .ops)
            (A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a)) where
 
     -- the slotwise refutation at one decomposition
     Miss : TheoryTy (ℓ-max ℓP (ℓ-max ℓ' ℓA)) (σ .resultSort o)
-    Miss m = (sp : Sub .Split o m)
-           → ((a : σ .arities o) → A a (Sub .parts o m sp a)) → ⊥* {ℓ-zero}
+    Miss m = (sp : Fib .Split o m)
+           → ((a : σ .arities o) → A a (Fib .parts o m sp a)) → ⊥* {ℓ-zero}
 
     -- ================================================================
     -- Refuting a tensor is a PRODUCT of refutations, one per
@@ -64,7 +64,7 @@ module ParS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ ℓX
     -- `∀sp. ¬(P × Q)`, never `∀sp. (¬P ⊎ ¬Q)`.
     -- ================================================================
 
-    ¬⊗-curry : (m : Sub .carrier (σ .resultSort o)) → Iso ((¬G (⊗ˢ o A)) m) (Miss m)
+    ¬⊗-curry : (m : Fib .carrier (σ .resultSort o)) → Iso ((¬G (⊗ˢ o A)) m) (Miss m)
     ¬⊗-curry m .Iso.fun f sp h = f (sp , h)
     ¬⊗-curry m .Iso.inv g (sp , h) = g sp h
     ¬⊗-curry m .Iso.sec _ = refl

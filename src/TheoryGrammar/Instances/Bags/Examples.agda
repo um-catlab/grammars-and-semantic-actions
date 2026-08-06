@@ -18,7 +18,19 @@ leℕ zero    _       = true
 leℕ (suc m) zero    = false
 leℕ (suc m) (suc n) = leℕ m n
 
-open Sort  leℕ
+leTotalℕ : (x y : ℕ) → leℕ x y Eq.≡ false → leℕ y x Eq.≡ true
+leTotalℕ zero    y       ()
+leTotalℕ (suc x) zero    e = Eq.refl
+leTotalℕ (suc x) (suc y) e = leTotalℕ x y e
+
+leTransℕ : (x y z : ℕ) → leℕ x y Eq.≡ true → leℕ y z Eq.≡ true
+         → leℕ x z Eq.≡ true
+leTransℕ zero    y       z       p q = Eq.refl
+leTransℕ (suc x) zero    z       () q
+leTransℕ (suc x) (suc y) zero    p ()
+leTransℕ (suc x) (suc y) (suc z) p q = leTransℕ x y z p q
+
+open Sort  leℕ leTotalℕ leTransℕ
 open MSort leℕ
 
 _ : quicksort [] ≡ []
@@ -72,4 +84,28 @@ _ : passes (run empty? at ([] ↦ true ∷ (3 ∷ []) ↦ false ∷ []))
 _ = refl
 
 _ : passes (run someElem at ([] ↦ nothing ∷ (3 ∷ 1 ∷ []) ↦ just 3 ∷ []))
+_ = refl
+
+-- ==================================================================
+-- ... and the FULLY intrinsic sorters: the output is a sorted
+-- permutation of the input by TYPE, so these `passes` checks are
+-- confirming that it computes, not that it is correct.  Both are read
+-- by the same generic `tagA`, since `SortedOf` is a `⊕ᴰ` over the
+-- output bag just as `SpecG` was.
+-- ==================================================================
+
+open Sortedness leℕ leTotalℕ leTransℕ
+
+qsortS : ⊤G ⊢ Δ Bag
+qsortS = tagA Bag ∘g quicksortS
+
+msortS : ⊤G ⊢ Δ Bag
+msortS = tagA Bag ∘g mergesortS
+
+_ : passes (run qsortS at
+      ([] ↦ [] ∷ (5 ∷ 3 ∷ 4 ∷ 1 ∷ 2 ∷ []) ↦ (1 ∷ 2 ∷ 3 ∷ 4 ∷ 5 ∷ []) ∷ []))
+_ = refl
+
+_ : passes (run msortS at
+      ([] ↦ [] ∷ (5 ∷ 3 ∷ 4 ∷ 1 ∷ 2 ∷ []) ↦ (1 ∷ 2 ∷ 3 ∷ 4 ∷ 5 ∷ []) ∷ []))
 _ = refl

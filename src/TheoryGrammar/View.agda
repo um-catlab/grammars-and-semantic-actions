@@ -56,7 +56,7 @@ open import Cubical.Data.Bool using (Bool; true; false)
 open import Cubical.Data.Unit
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
 open import TheoryGrammar.Distributive
@@ -65,15 +65,15 @@ open import TheoryGrammar.Decidable.Tensor
 private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓB ℓC ℓM ℓY ℓV : Level
 
 -- ==================================================================
--- The view layer.  Deliberately NOT re-exporting `RulesS` -- instances
+-- The view layer.  Deliberately NOT re-exporting `RulesF` -- instances
 -- already open it themselves, and a second copy would make every
 -- combinator ambiguous at the use site.
 -- ==================================================================
 
-module Views {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ ℓX ℓP) where
+module Views {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP) where
 
-  open DecSub Sub
-  open Dist ⌊ Sub ⌋ using (dist&r; ⊕ᴰ-&-in)
+  open DecFib Fib
+  open Dist (Fib .carrier) using (dist&r; ⊕ᴰ-&-in)
 
   private variable s : S
 
@@ -164,24 +164,30 @@ module Views {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ ℓ
             → P ⇛ Q → Q ⇛ P → Probe P → Probe Q
   probe-map P Q f g p = dec-map P Q f g ∘g p
 
-  -- forgetting the refutation: a probe seen as a partial view in
-  -- `MaybeG` form.  This is the only sanctioned way to weaken a
-  -- decision -- writing `inl`/`inr` by hand is not.
+  -- Forgetting the refutation.  This is NOT specific to probes: a
+  -- `Probe P` is a `Cover (Result (¬G P) P)` and a `Cover (MaybeG P)`
+  -- is a `Cover (Result ⊤G P)`, so weakening one to the other is
+  -- `Result`'s `toMaybe = mapE ⊤-I`, uniform in the error grammar.
   probe→maybe : (P : TheoryTy ℓA s) → Probe P → Cover (MaybeG P)
-  probe→maybe P p = ⊕-E just-I nothing-I ∘g p
+  probe→maybe P p = toMaybe P ∘g p
 
   -- ================================================================
-  -- OBSERVING a view.  Reading off "did it succeed?" is `⊕-E` into a
-  -- CONSTANT grammar -- never a metalanguage match on `inl`/`inr`.
-  -- Same move as `Lambda.Modes.Core.accepts`.  Test suites should go
-  -- through these rather than defining their own `succeeded`/`isYes`.
+  -- OBSERVING a view.  There is ONE observer, not one per shape:
+  -- `okA P E : Result E P ⊢ Δ Bool` (TheoryGrammar.SemanticAction) is
+  -- uniform in `E`, so the SAME term reads a probe and a maybe.  The
+  -- two names below are that one term at the two error grammars, kept
+  -- only because they say which shape is expected at the use site.
+  --
+  -- Test suites should go through these -- or through `accepts?`, which
+  -- is `run` of the same thing -- rather than defining their own
+  -- `succeeded`/`isYes`.
   -- ================================================================
 
-  probe→Bool : (P : TheoryTy ℓA s) → Probe P → Cover (λ _ → Bool)
-  probe→Bool P p = ⊕-E (λ _ _ → true) (λ _ _ → false) ∘g p
+  probe→Bool : (P : TheoryTy ℓA s) → Probe P → Cover (Δ Bool)
+  probe→Bool P p = okA P (¬G P) ∘g p
 
-  maybe→Bool : (P : TheoryTy ℓA s) → Cover (MaybeG P) → Cover (λ _ → Bool)
-  maybe→Bool P v = MaybeG-E {A = P} (λ _ _ → true) (λ _ _ → false) v
+  maybe→Bool : (P : TheoryTy ℓA s) → Cover (MaybeG P) → Cover (Δ Bool)
+  maybe→Bool P v = okA P ⊤G ∘g v
 
   -- ================================================================
   -- Descending into a tensor.
@@ -233,7 +239,7 @@ module Views {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ ℓ
 -- ==================================================================
 
 module Rec {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
-           (GS : GradedSubstrate σ ℓX ℓP) (ℓA : Level)
+           (GS : GradedFib σ ℓX ℓP) (ℓA : Level)
            (X : Type ℓV) (xs : X → S) where
 
   open Guard GS ℓA X xs

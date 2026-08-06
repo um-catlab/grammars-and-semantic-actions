@@ -41,41 +41,93 @@ open import Cubical.Data.Nat.Order
 open import Cubical.Induction.WellFounded
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 
 private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓM ℓN ℓV : Level
 
 -- ==================================================================
--- A substrate with a grading.
+-- A promodel with a grading.
 -- ==================================================================
 
-record GradedSubstrate {S : Type ℓS} (σ : SortedSig S ℓ ℓ') ℓX ℓP
+record GradedFib {S : Type ℓS} (σ : SortedSig S ℓ ℓ') ℓX ℓP
   : Type (ℓ-max ℓS (ℓ-max ℓ (ℓ-max ℓ' (ℓ-max (ℓ-suc ℓX) (ℓ-suc ℓP))))) where
   field
-    sub : Substrate σ ℓX ℓP
-    deg : (s : S) → sub .carrier s → ℕ
+    fib : Fibered σ ℓX ℓP
+    deg : (s : S) → fib .carrier s → ℕ
 
     -- Properness is DATA ON THE SPLITTING.  Phrasing it this way dodges
     -- "some slot other than a", and hence dodges needing
     -- `Discrete (arities o)` -- the same problem `Focus` was introduced
     -- to avoid.  For strings, `Proper appop w sp false` says the left
     -- part is nonempty.
-    Proper : (o : σ .ops) (m : sub .carrier (σ .resultSort o))
-           → sub .Split o m → σ .arities o → Type ℓP
+    Proper : (o : σ .ops) (m : fib .carrier (σ .resultSort o))
+           → fib .Split o m → σ .arities o → Type ℓP
 
     -- slots never grow ...
-    deg≤ : (o : σ .ops) (m : sub .carrier (σ .resultSort o))
-           (sp : sub .Split o m) (a : σ .arities o)
-         → deg _ (sub .parts o m sp a) ≤ deg _ m
+    deg≤ : (o : σ .ops) (m : fib .carrier (σ .resultSort o))
+           (sp : fib .Split o m) (a : σ .arities o)
+         → deg _ (fib .parts o m sp a) ≤ deg _ m
 
     -- ... and a proper slot strictly shrinks
-    deg< : (o : σ .ops) (m : sub .carrier (σ .resultSort o))
-           (sp : sub .Split o m) (a : σ .arities o)
+    deg< : (o : σ .ops) (m : fib .carrier (σ .resultSort o))
+           (sp : fib .Split o m) (a : σ .arities o)
          → Proper o m sp a
-         → deg _ (sub .parts o m sp a) < deg _ m
+         → deg _ (fib .parts o m sp a) < deg _ m
 
-open GradedSubstrate public
+open GradedFib public
+
+-- ==================================================================
+-- THE GRADING, UNBUNDLED -- a structure OVER a promodel, exactly as
+-- `Focus` is, and for the same reason.
+--
+-- `GradedFib` bundles the promodel, which makes one thing UNSTATABLE:
+-- "for every grading of THIS promodel".  That quantification is what the
+-- obstruction theorems need -- `Instances/Group/NoGrading` wants to say
+-- ℤ admits only the degenerate grading, and with the bundled record it
+-- had to unbundle into four module parameters and rebuild `GradedFib` by
+-- hand at every use.  Both the group and the ring instance did exactly
+-- that, independently, which is the signal that the record is shaped
+-- wrong.
+--
+-- Note this does NOT say "ℤ has no grading": the trivial grading
+-- (`deg = const 0`, `Proper = ⊥`) always exists, so the honest theorem is
+-- RIGIDITY -- that it is the only one.  Stating rigidity is precisely
+-- what needs the quantifier this record provides.
+-- ==================================================================
+
+record Grading {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP)
+  : Type (ℓ-max ℓS (ℓ-max ℓ (ℓ-max ℓ' (ℓ-max ℓX (ℓ-suc ℓP))))) where
+  field
+    deg    : (s : S) → Fib .carrier s → ℕ
+    Proper : (o : σ .ops) (m : Fib .carrier (σ .resultSort o))
+           → Fib .Split o m → σ .arities o → Type ℓP
+    deg≤   : (o : σ .ops) (m : Fib .carrier (σ .resultSort o))
+             (sp : Fib .Split o m) (a : σ .arities o)
+           → deg _ (Fib .parts o m sp a) ≤ deg _ m
+    deg<   : (o : σ .ops) (m : Fib .carrier (σ .resultSort o))
+             (sp : Fib .Split o m) (a : σ .arities o)
+           → Proper o m sp a
+           → deg _ (Fib .parts o m sp a) < deg _ m
+
+open Grading public
+
+-- The two presentations are the same data, and both directions are
+-- definitional -- there is no content here, only shape.
+gradingOf : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
+            (GS : GradedFib σ ℓX ℓP) → Grading (GS .fib)
+gradingOf GS .deg    = GS .deg
+gradingOf GS .Proper = GS .Proper
+gradingOf GS .deg≤   = GS .deg≤
+gradingOf GS .deg<   = GS .deg<
+
+graded : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
+         (Fib : Fibered σ ℓX ℓP) → Grading Fib → GradedFib σ ℓX ℓP
+graded Fib G .fib    = Fib
+graded Fib G .deg    = G .deg
+graded Fib G .Proper = G .Proper
+graded Fib G .deg≤   = G .deg≤
+graded Fib G .deg<   = G .deg<
 
 -- ==================================================================
 -- ▷, next, löb -- first-order, exactly as Grammar/Later/Ordered.agda
@@ -83,10 +135,10 @@ open GradedSubstrate public
 -- ==================================================================
 
 module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
-             (GS : GradedSubstrate σ ℓX ℓP) (ℓA : Level)
+             (GS : GradedFib σ ℓX ℓP) (ℓA : Level)
              (X : Type ℓV) (xs : X → S) where
 
-  open Ind (GS .sub) ℓA X xs public
+  open Ind (GS .fib) ℓA X xs public
 
   degIx : Ix → ℕ
   degIx (x , m) = GS .deg (xs x) m
@@ -116,18 +168,18 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   -- ================================================================
 
   Guarded≤ : {s : S} → Functor s → Type (ℓ-max ℓX (ℓ-max ℓSh ℓPos))
-  Guarded≤ {s} F = (m : GS .sub .carrier s) (sh : Sh F m) (p : Pos F m sh)
+  Guarded≤ {s} F = (m : GS .fib .carrier s) (sh : Sh F m) (p : Pos F m sh)
                  → degIx (nx F m sh p) ≤ GS .deg s m
 
   Guarded : {s : S} → Functor s → Type (ℓ-max ℓX (ℓ-max ℓSh ℓPos))
-  Guarded {s} F = (m : GS .sub .carrier s) (sh : Sh F m) (p : Pos F m sh)
+  Guarded {s} F = (m : GS .fib .carrier s) (sh : Sh F m) (p : Pos F m sh)
                 → degIx (nx F m sh p) < GS .deg s m
 
   Guarded→≤ : {s : S} {F : Functor s} → Guarded F → Guarded≤ F
   Guarded→≤ g m sh p = <-weaken (g m sh p)
 
   -- every former is non-increasing ...
-  ≤⌜⌝ : {s : S} (A : SubNotation.TheoryTy (GS .sub) ℓA s) → Guarded≤ ⌜ A ⌝
+  ≤⌜⌝ : {s : S} (A : FibNotation.TheoryTy (GS .fib) ℓA s) → Guarded≤ ⌜ A ⌝
   ≤⌜⌝ A m sh ()
 
   ≤Var : (x : X) → Guarded≤ (Var x)
@@ -149,8 +201,8 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   -- ... and ⊗e at a proper splitting is the one STRICT step.
   <⊗e : (o : σ .ops) (G : (a : σ .arities o) → Functor (σ .sortOf o a))
       → ((a : σ .arities o) → Guarded≤ (G a))
-      → ((m : GS .sub .carrier (σ .resultSort o)) (sp : GS .sub .Split o m)
-         (sh : (a : σ .arities o) → Sh (G a) (GS .sub .parts o m sp a))
+      → ((m : GS .fib .carrier (σ .resultSort o)) (sp : GS .fib .Split o m)
+         (sh : (a : σ .arities o) → Sh (G a) (GS .fib .parts o m sp a))
          (a : σ .arities o) → Pos (G a) _ (sh a) → Proper GS o m sp a)
       → Guarded (⊗e o G)
   <⊗e o G g pr m (sp , sh) (a , p) =
@@ -164,7 +216,7 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
 
   mapGuarded : {s : S} (F : Functor s) → Guarded F
              → {A : Ix → Type ℓM} {B : Ix → Type ℓN}
-               (m : GS .sub .carrier s)
+               (m : GS .fib .carrier s)
              → ((j : Ix) → degIx j < GS .deg s m → A j → B j)
              → ⟦ F ⟧ A m → ⟦ F ⟧ B m
   mapGuarded F gF m r (sh , f) = sh , λ p → r _ (gF m sh p) (f p)
@@ -204,31 +256,31 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
     ≤<-tr p q = ≤-trans (suc-≤-suc p) q
 
   ⊗-guard : (o : σ .ops) (G : (a : σ .arities o) → Functor (σ .sortOf o a))
-          → ((m : GS .sub .carrier (σ .resultSort o)) (sp : GS .sub .Split o m)
-             (sh : (a : σ .arities o) → Sh (G a) (GS .sub .parts o m sp a))
+          → ((m : GS .fib .carrier (σ .resultSort o)) (sp : GS .fib .Split o m)
+             (sh : (a : σ .arities o) → Sh (G a) (GS .fib .parts o m sp a))
              (a : σ .arities o) (p : Pos (G a) _ (sh a))
              → degIx (nx (G a) _ (sh a) p) < GS .deg _ m)
           → Guarded (⊗e o G)
   ⊗-guard o G h m (sp , sh) (a , p) = h m sp sh a p
 
   -- Way 1: the slot's own description already strictly decreases.
-  slotGuarded : (o : σ .ops) (m : GS .sub .carrier (σ .resultSort o))
-                (sp : GS .sub .Split o m) (a : σ .arities o)
+  slotGuarded : (o : σ .ops) (m : GS .fib .carrier (σ .resultSort o))
+                (sp : GS .fib .Split o m) (a : σ .arities o)
                 {G : Functor (σ .sortOf o a)} → Guarded G
-              → (sh : Sh G (GS .sub .parts o m sp a)) (p : Pos G _ sh)
+              → (sh : Sh G (GS .fib .parts o m sp a)) (p : Pos G _ sh)
               → degIx (nx G _ sh p) < GS .deg _ m
   slotGuarded o m sp a g sh p = <≤-tr (g _ sh p) (GS .deg≤ o m sp a)
 
   -- Way 2: the slot does not grow, and IS a proper part.
-  slotProper : (o : σ .ops) (m : GS .sub .carrier (σ .resultSort o))
-               (sp : GS .sub .Split o m) (a : σ .arities o)
+  slotProper : (o : σ .ops) (m : GS .fib .carrier (σ .resultSort o))
+               (sp : GS .fib .Split o m) (a : σ .arities o)
                {G : Functor (σ .sortOf o a)} → Guarded≤ G → Proper GS o m sp a
-             → (sh : Sh G (GS .sub .parts o m sp a)) (p : Pos G _ sh)
+             → (sh : Sh G (GS .fib .parts o m sp a)) (p : Pos G _ sh)
              → degIx (nx G _ sh p) < GS .deg _ m
   slotProper o m sp a g pr sh p = ≤<-tr (g _ sh p) (GS .deg< o m sp a pr)
 
   -- strict versions of the additive formers
-  <⌜⌝ : {s : S} (A : SubNotation.TheoryTy (GS .sub) ℓA s) → Guarded ⌜ A ⌝
+  <⌜⌝ : {s : S} (A : FibNotation.TheoryTy (GS .fib) ℓA s) → Guarded ⌜ A ⌝
   <⌜⌝ A m sh ()
 
   <⊕e : {s : S} (Y : Type ℓA) (G : Y → Functor s)
@@ -251,12 +303,12 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   -- would stall the entire recursion.
   -- ================================================================
 
-  GuardedAt : {s : S} (F : Functor s) (m : GS .sub .carrier s)
+  GuardedAt : {s : S} (F : Functor s) (m : GS .fib .carrier s)
             → Sh F m → ℕ → Type ℓPos
   GuardedAt F m sh n = (p : Pos F m sh) → degIx (nx F m sh p) < n
 
   mapC : {A B : Ix → Type ℓSh} {s : S} (F : Functor s)
-         (m : GS .sub .carrier s) (n : ℕ) (t : ⟦ F ⟧c A m)
+         (m : GS .fib .carrier s) (n : ℕ) (t : ⟦ F ⟧c A m)
        → GuardedAt F m (shapeOf F m t) n
        → ((j : Ix) → degIx j < n → A j → B j)
        → ⟦ F ⟧c B m
@@ -290,6 +342,6 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   -- ================================================================
 
   ▷pos : {A : Ix → Type ℓM} {s : S} (F : Functor s) → Guarded F
-       → (m : GS .sub .carrier s) (sh : Sh F m) (p : Pos F m sh)
+       → (m : GS .fib .carrier s) (sh : Sh F m) (p : Pos F m sh)
        → ((j : Ix) → degIx j < GS .deg s m → A j) → A (nx F m sh p)
   ▷pos F g m sh p r = r (nx F m sh p) (g m sh p)

@@ -27,34 +27,11 @@ open import TheoryGrammar.Instances.Bags.QuicksortFunctor A public
 open Views bagFib
 -- (the semantic actions now arrive via `DecFib` in Base)
 
-partition : (p : A → Bool) (xs : Bag)
-          → Σ[ lo ∈ Bag ] Σ[ hi ∈ Bag ] Ilv lo hi xs
-partition p [] = [] , [] , nil
-partition p (y ∷ xs) with p y
-... | true  = let (lo , hi , s) = partition p xs in (y ∷ lo) , hi , left s
-... | false = let (lo , hi , s) = partition p xs in lo , (y ∷ hi) , right s
-
 -- element and a rest.  This is the bag instance of "⊤ is the initial
 -- algebra of the shape functor" -- no comparison appears in it.
 bagCase : Cover (⌈ [] ⌉ ⊕ ⊕ᴰ A (λ x → ⌈ x ∷ [] ⌉ ⊗' ⊤G))
 bagCase []       _ = inl Eq.refl
 bagCase (x ∷ xs) _ = inr (x , ⊗-mk (left (ilvApp [] xs)) Eq.refl tt)
-
--- (2) PARTITION.  Given the pivot and the rest, split the rest by
--- comparison and regroup so the pivot sits in the middle.  This is
--- the ONLY place the ordering `le` is used.
---
--- Typed as `⇛`: a VIEW MORPHISM, re-analysing one pattern as another.
--- `_⇛_` is `_⊢_`; the name records the role, not a new notion.
-splitAround : (le : A → A → Bool) (x : A)
-            → (⌈ x ∷ [] ⌉ ⊗' ⊤G) ⇛ (⊤G ⊗' (⌈ x ∷ [] ⌉ ⊗' ⊤G))
-splitAround le x w ((u , v , s) , h) = go (h true) s
-  where
-    go : u Eq.≡ x ∷ [] → Ilv u v w → (⊤G ⊗' (⌈ x ∷ [] ⌉ ⊗' ⊤G)) w
-    go Eq.refl s' =
-      let (lo , hi , t) = partition (λ y → le y x) v
-          (rest , e1 , e2) = ilvAssoc s' t
-      in ⊗-mk e1 tt (⊗-mk e2 Eq.refl tt)
 
 -- THE INTRINSIC SPECIFICATION.  The motive of the hylomorphism IS the
 -- statement to be proved: "a bag equivalent to the input".  Nothing is
@@ -73,18 +50,60 @@ specJoin : (piv : A) {lo rest w p1 hi : Bag}
 specJoin piv e1 e2 Eq.refl (loOut , pl) (hiOut , ph) =
   (loOut ++ (piv ∷ hiOut)) , permMerge pl (cons ph e2) e1
 
-module Sort (le : A → A → Bool) where
+module Sort (le : A → A → Bool)
+            (leTotal : (x y : A) → le x y Eq.≡ false → le y x Eq.≡ true)
+            (leTrans : (x y z : A) → le x y Eq.≡ true → le y z Eq.≡ true
+                     → le x z Eq.≡ true)
+            where
+
+  open QSF le leTrans public
+
+  -- (2) PARTITION.  Split the rest by comparison against the pivot,
+  -- KEEPING the two ordering facts discovered along the way.  Those
+  -- facts are not an afterthought: they are precisely what the algebra
+  -- needs to conclude sortedness, so they travel with the parts.
+  -- This is the ONLY place the ordering `le` is used.
+  partitionOrd : (x : A) (xs : Bag)
+    → Σ[ lo ∈ Bag ] Σ[ hi ∈ Bag ] (Ilv lo hi xs × Above x lo × Below x hi)
+  partitionOrd x []       = [] , [] , nil , []ᵃ , []ᵇ
+  partitionOrd x (y ∷ xs) = go (le y x) Eq.refl (partitionOrd x xs)
+    where
+      Res : Bag → Type₀
+      Res b = Σ[ lo ∈ Bag ] Σ[ hi ∈ Bag ] (Ilv lo hi b × Above x lo × Below x hi)
+
+      go : (bl : Bool) → le y x Eq.≡ bl → Res xs → Res (y ∷ xs)
+      go true  e (lo , hi , t , aa , bb) =
+        (y ∷ lo) , hi , left t , (e ∷ᵃ aa) , bb
+      go false e (lo , hi , t , aa , bb) =
+        lo , (y ∷ hi) , right t , aa , (leTotal y x e ∷ᵇ bb)
+
+  -- Typed as `⇛`: a VIEW MORPHISM, re-analysing one pattern as another.
+  -- `_⇛_` is `_⊢_`; the name records the role, not a new notion.  The
+  -- codomain now says `lo` is below the pivot and `hi` above it.
+  splitAround : (x : A)
+              → (⌈ x ∷ [] ⌉ ⊗' ⊤G)
+              ⇛ ((⊤G & Above x) ⊗' (⌈ x ∷ [] ⌉ ⊗' (⊤G & Below x)))
+  splitAround x w ((u , v , s) , h) = go (h true) s
+    where
+      go : u Eq.≡ x ∷ [] → Ilv u v w
+         → ((⊤G & Above x) ⊗' (⌈ x ∷ [] ⌉ ⊗' (⊤G & Below x))) w
+      go Eq.refl s' =
+        let (lo , hi , t , aa , bb) = partitionOrd x v
+            (rest , e1 , e2)        = ilvAssoc s' t
+        in ⊗-mk e1 (tt , aa) (⊗-mk e2 Eq.refl (tt , bb))
 
   -- Plumbing between two spellings of one type: the description's ⊗e
   -- carries a Lift on the representable, and its arity-family is not
   -- `if`-shaped, so the implicits must be pinned.  Pure coercion.
-  intoQ : (x : A) → (⊤G ⊗' (⌈ x ∷ [] ⌉ ⊗' ⊤G))
+  intoQ : (x : A) → ((⊤G & Above x) ⊗' (⌈ x ∷ [] ⌉ ⊗' (⊤G & Below x)))
                   ⊢ ⟦ ⊗e appop (QG x) ⟧c (λ _ → Unit)
   intoQ x w ((lo , rest , e1) , h) =
-    ⊗I {P = λ a → ⟦ QG x a ⟧c (λ _ → Unit)} e1 tt
-      (⊗E {P = λ a → if a then ⌈ x ∷ [] ⌉ else ⊤G}
-          (λ p1 hi e2 pf _ →
-             ⊗I {P = λ a → ⟦ QG' x a ⟧c (λ _ → Unit)} e2 (lift pf) tt)
+    ⊗I {P = λ a → ⟦ QG x a ⟧c (λ _ → Unit)} e1
+      (λ { true → tt ; false → lift (h true .snd) })
+      (⊗E {P = λ a → if a then ⌈ x ∷ [] ⌉ else (⊤G & Below x)}
+          (λ p1 hi e2 pf bb →
+             ⊗I {P = λ a → ⟦ QG' x a ⟧c (λ _ → Unit)} e2 (lift pf)
+               (λ { true → tt ; false → lift (bb .snd) }))
           (h false))
 
   -- THE COALGEBRA, point-free: decompose, then for each pivot
@@ -101,7 +120,7 @@ module Sort (le : A → A → Bool) where
     caseOf bagCase
       (⊕ᴰ-I _ true ∘g liftg)
       (⊕ᴰ-E (λ x → ⊕ᴰ-I _ false ∘g ⊕ᴰ-I _ x
-                      ∘g intoQ x ∘g splitAround le x))
+                      ∘g intoQ x ∘g splitAround x))
 
   -- THE ALGEBRA, point-free: the empty branch returns ε, the pivot
   -- branch concatenates around the pivot.
@@ -111,8 +130,8 @@ module Sort (le : A → A → Bool) where
               ; false → ⊕ᴰ-E λ piv → λ w t →
                   ⊗E {P = λ a → ⟦ QG piv a ⟧c (λ _ → Bag)} {w = w}
                      (λ _ _ _ sLo inner →
-                        sLo ++ (piv ∷ ⊗E {P = λ a → ⟦ QG' piv a ⟧c (λ _ → Bag)}
-                                          (λ _ _ _ _ sHi → sHi) inner)) t }
+                        sLo true ++ (piv ∷ ⊗E {P = λ a → ⟦ QG' piv a ⟧c (λ _ → Bag)}
+                                          (λ _ _ _ _ sHi → sHi true) inner)) t }
 
   quicksort : Bag → Bag
   quicksort m = hyloC qfGuarded qcoalg qalg (tt , m) tt
@@ -126,7 +145,7 @@ module Sort (le : A → A → Bool) where
                      (λ lo rest e1 sLo inner →
                         ⊗E {P = λ a → ⟦ QG' piv a ⟧c Spec}
                            (λ p1 hi e2 pf sHi →
-                              specJoin piv e1 e2 (lower pf) sLo sHi)
+                              specJoin piv e1 e2 (lower pf) (sLo true) (sHi true))
                            inner) t }
 
   -- INTRINSICALLY VERIFIED QUICKSORT.

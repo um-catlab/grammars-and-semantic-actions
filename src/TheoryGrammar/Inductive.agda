@@ -1,5 +1,5 @@
 {-
-  GENERIC INDUCTIVE TYPES over a substrate.
+  GENERIC INDUCTIVE TYPES over a promodel.
 
   The functor language: a `Functor s` is a description built from
   constants, nonterminal references, indexed sums and products, and the
@@ -29,19 +29,19 @@ open import Cubical.Data.Unit
 open import Cubical.Data.Empty using (⊥*)
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 
 private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓB ℓV : Level
 
 module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
-           (Sub : Substrate σ ℓX ℓP) (ℓA : Level)
+           (Fib : Fibered σ ℓX ℓP) (ℓA : Level)
            (X : Type ℓV) (xs : X → S) where
 
-  open SubNotation Sub
+  open FibNotation Fib
 
   -- an index is a nonterminal together with a point of its sort
   Ix : Type (ℓ-max ℓV ℓX)
-  Ix = Σ[ x ∈ X ] Sub .carrier (xs x)
+  Ix = Σ[ x ∈ X ] Fib .carrier (xs x)
 
   private
     ℓF : Level
@@ -68,22 +68,22 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   -- Container semantics: shapes, positions, next index.
   -- ================================================================
 
-  Sh : {s : S} → Functor s → Sub .carrier s → Type ℓSh
+  Sh : {s : S} → Functor s → Fib .carrier s → Type ℓSh
   Sh (⌜ A ⌝)   m = Lift (ℓ-max ℓ' ℓP) (A m)
   Sh (Var x)   m = Unit*
   Sh (⊕e Y G)  m = Σ[ y ∈ Y ] Sh (G y) m
   Sh (&e Y G)  m = (y : Y) → Sh (G y) m
-  Sh (⊗e o G)  m = Σ[ sp ∈ Sub .Split o m ]
-                     ((a : σ .arities o) → Sh (G a) (Sub .parts o m sp a))
+  Sh (⊗e o G)  m = Σ[ sp ∈ Fib .Split o m ]
+                     ((a : σ .arities o) → Sh (G a) (Fib .parts o m sp a))
 
-  Pos : {s : S} (F : Functor s) (m : Sub .carrier s) → Sh F m → Type ℓPos
+  Pos : {s : S} (F : Functor s) (m : Fib .carrier s) → Sh F m → Type ℓPos
   Pos (⌜ A ⌝)  m sh        = ⊥*
   Pos (Var x)  m sh        = Unit*
   Pos (⊕e Y G) m (y , sh)  = Pos (G y) m sh
   Pos (&e Y G) m sh        = Σ[ y ∈ Y ] Pos (G y) m (sh y)
   Pos (⊗e o G) m (sp , sh) = Σ[ a ∈ σ .arities o ] Pos (G a) _ (sh a)
 
-  nx : {s : S} (F : Functor s) (m : Sub .carrier s) (sh : Sh F m)
+  nx : {s : S} (F : Functor s) (m : Fib .carrier s) (sh : Sh F m)
      → Pos F m sh → Ix
   nx (Var x)  m sh        p       = x , m
   nx (⊕e Y G) m (y , sh)  p       = nx (G y) m sh p
@@ -95,7 +95,7 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   -- ================================================================
 
   data μ (F : (x : X) → Functor (xs x)) : Ix → Type ℓμ where
-    sup : {x : X} {m : Sub .carrier (xs x)}
+    sup : {x : X} {m : Fib .carrier (xs x)}
         → (sh : Sh (F x) m)
         → ((p : Pos (F x) m sh) → μ F (nx (F x) m sh p))
         → μ F (x , m)
@@ -103,27 +103,27 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   module _ {F : (x : X) → Functor (xs x)} where
 
     -- one-step unfolding: μ is an algebra, definitionally
-    unroll : {x : X} {m : Sub .carrier (xs x)} → μ F (x , m)
+    unroll : {x : X} {m : Fib .carrier (xs x)} → μ F (x , m)
            → Σ[ sh ∈ Sh (F x) m ] ((p : Pos (F x) m sh) → μ F (nx (F x) m sh p))
     unroll (sup sh f) = sh , f
 
-    roll : {x : X} {m : Sub .carrier (xs x)}
+    roll : {x : X} {m : Fib .carrier (xs x)}
          → Σ[ sh ∈ Sh (F x) m ] ((p : Pos (F x) m sh) → μ F (nx (F x) m sh p))
          → μ F (x , m)
     roll (sh , f) = sup sh f
 
-    roll-unroll : {x : X} {m : Sub .carrier (xs x)} (t : μ F (x , m))
+    roll-unroll : {x : X} {m : Fib .carrier (xs x)} (t : μ F (x , m))
                 → roll (unroll t) ≡ t
     roll-unroll (sup sh f) = refl
 
-    unroll-roll : {x : X} {m : Sub .carrier (xs x)}
+    unroll-roll : {x : X} {m : Fib .carrier (xs x)}
                   (t : Σ[ sh ∈ Sh (F x) m ] _)
                 → unroll (roll t) ≡ t
     unroll-roll t = refl
 
     -- the recursor: an algebra over an arbitrary motive
     fold : {ℓM : Level} (M : Ix → Type ℓM)
-         → ((x : X) (m : Sub .carrier (xs x)) (sh : Sh (F x) m)
+         → ((x : X) (m : Fib .carrier (xs x)) (sh : Sh (F x) m)
             → ((p : Pos (F x) m sh) → M (nx (F x) m sh p)) → M (x , m))
          → (i : Ix) → μ F i → M i
     fold M α (x , m) (sup sh f) = α x m sh (λ p → fold M α _ (f p))
@@ -142,17 +142,17 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   -- ================================================================
 
   ⟦_⟧ : {ℓM : Level} {s : S} → Functor s → (Ix → Type ℓM)
-      → Sub .carrier s → Type (ℓ-max ℓSh (ℓ-max ℓPos ℓM))
+      → Fib .carrier s → Type (ℓ-max ℓSh (ℓ-max ℓPos ℓM))
   ⟦ F ⟧ A m = Σ[ sh ∈ Sh F m ] ((p : Pos F m sh) → A (nx F m sh p))
 
   Fmap : {ℓM ℓN : Level} {A : Ix → Type ℓM} {B : Ix → Type ℓN} {s : S}
          (F : Functor s)
        → ((i : Ix) → A i → B i)
-       → (m : Sub .carrier s) → ⟦ F ⟧ A m → ⟦ F ⟧ B m
+       → (m : Fib .carrier s) → ⟦ F ⟧ A m → ⟦ F ⟧ B m
   Fmap F h m (sh , f) = sh , λ p → h _ (f p)
 
   Fmap-id : {ℓM : Level} {A : Ix → Type ℓM} {s : S} (F : Functor s)
-            (m : Sub .carrier s) (t : ⟦ F ⟧ A m)
+            (m : Fib .carrier s) (t : ⟦ F ⟧ A m)
           → Fmap {A = A} {B = A} F (λ _ x → x) m t ≡ t
   Fmap-id F m t = refl
 
@@ -160,7 +160,7 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
            {A : Ix → Type ℓM} {B : Ix → Type ℓN} {C : Ix → Type ℓO}
            {s : S} (F : Functor s)
            (g : (i : Ix) → B i → C i) (h : (i : Ix) → A i → B i)
-           (m : Sub .carrier s) (t : ⟦ F ⟧ A m)
+           (m : Fib .carrier s) (t : ⟦ F ⟧ A m)
          → Fmap F (λ i x → g i (h i x)) m t ≡ Fmap F g m (Fmap F h m t)
   Fmap-∘ F g h m t = refl
 
@@ -168,10 +168,10 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   module _ (F : (x : X) → Functor (xs x)) where
 
     Alg : {ℓM : Level} → (Ix → Type ℓM) → Type _
-    Alg A = (x : X) (m : Sub .carrier (xs x)) → ⟦ F x ⟧ A m → A (x , m)
+    Alg A = (x : X) (m : Fib .carrier (xs x)) → ⟦ F x ⟧ A m → A (x , m)
 
     Coalg : {ℓM : Level} → (Ix → Type ℓM) → Type _
-    Coalg A = (x : X) (m : Sub .carrier (xs x)) → A (x , m) → ⟦ F x ⟧ A m
+    Coalg A = (x : X) (m : Fib .carrier (xs x)) → A (x , m) → ⟦ F x ⟧ A m
 
     -- μ is an algebra, definitionally, and `fold` is the map out of it
     μ-alg : Alg (μ F)
@@ -197,15 +197,15 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   -- constant former carries a `Lift`, exactly as `Sh` does.
   -- ================================================================
 
-  ⟦_⟧c : {s : S} → Functor s → (Ix → Type ℓSh) → Sub .carrier s → Type ℓSh
+  ⟦_⟧c : {s : S} → Functor s → (Ix → Type ℓSh) → Fib .carrier s → Type ℓSh
   ⟦ ⌜ B ⌝  ⟧c A m = Lift (ℓ-max ℓ' ℓP) (B m)
   ⟦ Var x  ⟧c A m = A (x , m)
   ⟦ ⊕e Y G ⟧c A m = Σ[ y ∈ Y ] ⟦ G y ⟧c A m
   ⟦ &e Y G ⟧c A m = (y : Y) → ⟦ G y ⟧c A m
-  ⟦ ⊗e o G ⟧c A m = Σ[ sp ∈ Sub .Split o m ]
-                      ((a : σ .arities o) → ⟦ G a ⟧c A (Sub .parts o m sp a))
+  ⟦ ⊗e o G ⟧c A m = Σ[ sp ∈ Fib .Split o m ]
+                      ((a : σ .arities o) → ⟦ G a ⟧c A (Fib .parts o m sp a))
 
-  toC : {A : Ix → Type ℓSh} {s : S} (F : Functor s) (m : Sub .carrier s)
+  toC : {A : Ix → Type ℓSh} {s : S} (F : Functor s) (m : Fib .carrier s)
       → ⟦ F ⟧ A m → ⟦ F ⟧c A m
   toC ⌜ B ⌝    m (b , _)        = b
   toC (Var x)  m (sh , f)       = f tt*
@@ -214,7 +214,7 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   toC (⊗e o G) m ((sp , sh) , f) =
     sp , λ a → toC (G a) _ (sh a , λ p → f (a , p))
 
-  fromC : {A : Ix → Type ℓSh} {s : S} (F : Functor s) (m : Sub .carrier s)
+  fromC : {A : Ix → Type ℓSh} {s : S} (F : Functor s) (m : Fib .carrier s)
         → ⟦ F ⟧c A m → ⟦ F ⟧ A m
   fromC ⌜ B ⌝    m b       = b , λ ()
   fromC (Var x)  m a       = tt* , λ _ → a
@@ -226,10 +226,10 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
 
   -- algebras and coalgebras stated INTERNALLY
   AlgC : (F : (x : X) → Functor (xs x)) → (Ix → Type ℓSh) → Type _
-  AlgC F B = (x : X) (m : Sub .carrier (xs x)) → ⟦ F x ⟧c B m → B (x , m)
+  AlgC F B = (x : X) (m : Fib .carrier (xs x)) → ⟦ F x ⟧c B m → B (x , m)
 
   CoalgC : (F : (x : X) → Functor (xs x)) → (Ix → Type ℓSh) → Type _
-  CoalgC F A = (x : X) (m : Sub .carrier (xs x)) → A (x , m) → ⟦ F x ⟧c A m
+  CoalgC F A = (x : X) (m : Fib .carrier (xs x)) → A (x , m) → ⟦ F x ⟧c A m
 
   -- THE RECURSOR, against a connective-form algebra.  `fold` is stated
   -- with `Sh`/`Pos`, which is not what an algebra should ever be written
@@ -246,10 +246,43 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   -- applied to a term written against the connectives, WITHOUT the
   -- container round trip (which is not definitionally the identity: the
   -- ⊗e case rebuilds a function over the arity, and arities have no η).
-  shapeOf : {A : Ix → Type ℓSh} {s : S} (F : Functor s) (m : Sub .carrier s)
+  shapeOf : {A : Ix → Type ℓSh} {s : S} (F : Functor s) (m : Fib .carrier s)
           → ⟦ F ⟧c A m → Sh F m
   shapeOf ⌜ B ⌝    m b       = b
   shapeOf (Var x)  m a       = tt*
   shapeOf (⊕e Y G) m (y , t) = y , shapeOf (G y) m t
   shapeOf (&e Y G) m h       = λ y → shapeOf (G y) m (h y)
   shapeOf (⊗e o G) m (sp , h) = sp , λ a → shapeOf (G a) _ (h a)
+
+
+  -- ================================================================
+  -- WHY THERE IS NO GENERIC `rollg` / `unrollg`.
+  --
+  -- `roll`/`unroll` are stated at the CONTAINER form `⟦ F ⟧`, which
+  -- names the recursive positions -- necessary for guardedness, but not
+  -- what programs are written against.  The connective-form versions,
+  --
+  --     rollg   : ⟦ F x ⟧c (μ F) m → μ F (x , m)
+  --     unrollg : μ F (x , m) → ⟦ F x ⟧c (μ F) m
+  --
+  -- would remove the hand-written `sup` / `tt*` / `lower` surgery that
+  -- `Instances/Strings/KleeneStar.agda` pays in `nil*` / `cons*` /
+  -- `unroll*`.  They CANNOT be stated here, and the obstruction is the
+  -- level stratification, not anything mathematical:
+  --
+  --     μ F   : Ix → Type ℓμ        ℓμ  = ℓSh ⊔ ℓV ⊔ ℓX
+  --     ⟦_⟧c  : ... → (Ix → Type ℓSh) → ...
+  --
+  -- so `⟦ F x ⟧c (μ F)` is ill-typed unless `ℓV` and `ℓX` are below
+  -- `ℓSh`.  Making `⟦_⟧c` motive-polymorphic would fix it and is NOT
+  -- worth it: the `Var` case would have to become `Lift ℓSh (A (x , m))`,
+  -- reintroducing a coercion at every recursive position -- exactly the
+  -- thing the note above says motives sit at `ℓSh` to avoid.  The cure
+  -- is worse than the disease.
+  --
+  -- So define them per instance, where the levels are concrete.  Every
+  -- instance in this tree has `X = Unit` and a carrier at `ℓ-zero`, hence
+  -- `ℓμ = ℓSh`, and the two definitions are one line each -- see
+  -- `Instances/Nat/Species.agda`, where the Dyck constructors are then
+  -- combinator composites rather than pointful matches.
+  -- ================================================================

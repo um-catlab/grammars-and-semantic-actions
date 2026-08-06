@@ -23,6 +23,7 @@ open import Cubical.Data.Sum using (inl; inr)
 open import Cubical.Data.Unit
 open import Cubical.Data.List using (List; []; _∷_)
 open import Cubical.Data.Nat using (ℕ; suc; _+_)
+import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
@@ -82,13 +83,56 @@ module Initial (Name : Type₀) where
   AppA : TheoryTy ℓM tm → TheoryTy ℓM tm
   AppA M = ⊗ˢ appOp (λ _ → M)
 
+  -- NAMED, not an extended lambda: `lamOp`'s slot family is the one that
+  -- is a match on the arity, and two syntactically distinct pattern
+  -- lambdas over `LAr lamOp` are never convertible (the same fact
+  -- `readback-unique` pays `lamJ` for).  So the family has to be a
+  -- definition, or `LamA-E` cannot even be stated at `LamA`'s own `A`.
+  LamSlots : TheoryTy ℓM tm → (a : LAr lamOp) → TheoryTy ℓM (LSortOf lamOp a)
+  LamSlots M true  = ⊤*
+  LamSlots M false = M
+
   LamA : TheoryTy ℓM tm → TheoryTy ℓM tm
-  LamA M = ⊗ˢ lamOp (λ { true → ⊤* ; false → M })
+  LamA M = ⊗ˢ lamOp (LamSlots M)
 
   AllStep : (Scope → TheoryTy ℓM tm) → Scope → TheoryTy ℓM tm
   AllStep {ℓM} M Γ = VarA ℓM ⊕ (AppA (M Γ) ⊕ LamA (M Γ))
 
-  -- PRIMITIVE (1 of 3): the container encoding respelled in the
+  -- ================================================================
+  -- ... AND THEIR ELIMINATORS, at an arbitrary motive.  `Lambda.Base`'s
+  -- `var-elim`/`app-elim`/`lam-elim` invert the splitting BY MATCHING;
+  -- these do not.  What replaces the match is `λ-unsplit`, the substrate
+  -- soundness law: `⊗ˢ-E` hands back the parts, and `λ-unsplit` says
+  -- reassembling them IS the index, so the motive transports onto it.
+  --
+  -- `Eq.transport` and not `subst`: it reduces on `Eq.refl`, which every
+  -- clause of `λ-unsplit` is, so these eliminators still compute.  The
+  -- cubical transport would leave the tests green but inert -- the trap
+  -- `DeBruijn.agda`'s header records for `⌈⌉-E`.
+  -- ================================================================
+
+  private
+    onto : (P : TheoryTy ℓM tm) (o : LOp) (m : Raw) (sp : LSplit o m)
+         → P (Op o (LParts o m sp)) → P m
+    onto P o m sp = Eq.transport P (λ-unsplit o m sp)
+
+  VarA-E : {P : TheoryTy ℓM tm} → ((n : Name) → P (var n)) → VarA ℓM ⊢ P
+  VarA-E {P = P} pv = ⊗ˢ-E varOp λ m sp _ →
+    onto P varOp m sp (pv (LParts varOp m sp tt))
+
+  AppA-E : {P : TheoryTy ℓM tm}
+         → ((u v : Raw) → P u → P v → P (app u v)) → AppA P ⊢ P
+  AppA-E {P = P} pa = ⊗ˢ-E appOp {A = λ _ → P} {B = P} λ m sp h →
+    onto P appOp m sp
+      (pa (LParts appOp m sp true) (LParts appOp m sp false) (h true) (h false))
+
+  LamA-E : {P : TheoryTy ℓM tm}
+         → ((n : Name) (t : Raw) → P t → P (lam n t)) → LamA P ⊢ P
+  LamA-E {P = P} pl = ⊗ˢ-E lamOp {A = LamSlots P} {B = P}
+    λ m sp h → onto P lamOp m sp
+      (pl (LParts lamOp m sp true) (LParts lamOp m sp false) (h false))
+
+  -- PRIMITIVE (1 of 2): the container encoding respelled in the
   -- connectives, exactly as `Scoped.⟦Sc⟧`.  Nothing is matched but the
   -- tag and the boolean slot; `sp` passes through abstractly.
   ⟦All⟧ : {M : Ix → Type ℓM} (Γ : Scope)
@@ -128,7 +172,7 @@ module Initial (Name : Type₀) where
   -- INITIALITY.
   -- ================================================================
 
-  -- PRIMITIVE (2 of 3): every element of the carrier is uniquely built
+  -- PRIMITIVE (2 of 2): every element of the carrier is uniquely built
   -- from the operations.  The only recursion on `Raw` in the tree.
   readback : (Γ : Scope) → ⊤G ⊢ Everything Γ
   readback Γ (var n) _ =
@@ -228,19 +272,19 @@ module Initial (Name : Type₀) where
   -- ARBITRARY motive level.
   -- ================================================================
 
-  -- PRIMITIVE (3 of 3): `var-elim`/`app-elim`/`lam-elim` of
-  -- `Lambda.Base` at a general motive level.  It matches the
-  -- the theory's `Split`, never a `Raw`, and it does not recurse.
+  -- DERIVED: `⟦All⟧` respells the container as `VarA ⊕ (AppA ⊕ LamA)`,
+  -- and the three tensors are then eliminated by the rules above.  So
+  -- this is `⊕-E`, `⊕-E`, and one substrate law -- no match on a
+  -- splitting, no match on a `Raw`, and no recursion.
   AllAlg : (P : Raw → Type ℓM)
          → ((n : Name) → P (var n))
          → ((u v : Raw) → P u → P v → P (app u v))
          → ((n : Name) (t : Raw) → P t → P (lam n t))
          → (Γ : Scope) (m : Raw) (sh : Sh (AllF Γ) m)
          → ((p : Pos (AllF Γ) m sh) → P (nx (AllF Γ) m sh p .snd)) → P m
-  AllAlg P pv pa pl Γ _ (aVar , mkVar n   , _) rc = pv n
-  AllAlg P pv pa pl Γ _ (aApp , mkApp u v , _) rc =
-    pa u v (rc (true , tt*)) (rc (false , tt*))
-  AllAlg P pv pa pl Γ _ (aLam , mkLam n t , _) rc = pl n t (rc (false , tt*))
+  AllAlg P pv pa pl Γ m sh rc =
+    ⊕-E (VarA-E pv) (⊕-E (AppA-E pa) (LamA-E pl))
+        m (⟦All⟧ {M = λ i → P (i .snd)} Γ m (sh , rc))
 
   -- ================================================================
   -- `readback` is a MAP OUT OF `⊤` at the shape `Result ⊥G` -- it

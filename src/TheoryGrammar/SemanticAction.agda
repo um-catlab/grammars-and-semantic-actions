@@ -38,15 +38,16 @@ module TheoryGrammar.SemanticAction where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool using (Bool; true; false)
+open import Cubical.Data.List using (List; []; _∷_; map)
 open import Cubical.Data.Maybe using (Maybe; just; nothing)
 open import Cubical.Data.Sigma
 open import Cubical.Data.Sum using (_⊎_; inl; inr)
 open import Cubical.Data.Unit
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Rules
-open import TheoryGrammar.RulesSub
+open import TheoryGrammar.RulesFib
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Distributive
 open import TheoryGrammar.Result
@@ -55,16 +56,55 @@ private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓB ℓC ℓE ℓY ℓZ ℓW : Le
 
 
 -- ==================================================================
+-- §0  TEST SUITES.  Independent of any theory: once `run` has produced
+--     a metalanguage value, checking a batch of cases is list algebra.
+--
+--     A CASE is `observed ↦ expected`, a SUITE is a list of them, and
+--
+--         passes cs  =  map fst cs ≡ map snd cs
+--
+--     is the statement that every case holds -- proved by ONE `refl`
+--     exactly when every case holds definitionally.  Writing a suite
+--     rather than N separate `_ : … ≡ …` declarations also keeps the
+--     term under test written once.
+-- ==================================================================
+
+module Suite where
+
+  Case : Type ℓY → Type ℓY
+  Case X = X × X
+
+  -- `input ↦ expected`.  Heterogeneous, because with `_at_` below the
+  -- left component is the WORLD to run at and the right is the value.
+  infix 6 _↦_
+  _↦_ : {W : Type ℓZ} {X : Type ℓY} → W → X → W × X
+  a ↦ b = a , b
+
+  -- ... and the whole suite as one proposition
+  passes : {X : Type ℓY} → List (Case X) → Type ℓY
+  passes cs = map fst cs ≡ map snd cs
+
+  -- The common shape: ONE observation applied at many worlds.  Written
+  -- `p at (w₁ ↦ v₁ ∷ … ∷ [])`, so the term under test appears once.
+  infix 3 _at_
+  _at_ : {W : Type ℓZ} {X : Type ℓY}
+       → (W → X) → List (W × X) → List (Case X)
+  f at cs = map (λ c → f (c .fst) ↦ c .snd) cs
+
+open Suite public
+
+
+-- ==================================================================
 -- §1  ADDITIVELY.  Nothing here mentions the operations, so a `Model`
 --     suffices -- exactly as in `Decidable.Additive` and `Result`.
 -- ==================================================================
 
-module Act {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
+module Act {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Car : S → Type ℓX) where
 
-  open Notation M
-  open Rules M
-  open Dist M using (⊕ᴰ-&-in)
-  open Res M using (Result; ok; err; caseR; MaybeG; toMaybe)
+  open CarrierNotation Car
+  open RulesCarrier Car
+  open Dist Car using (⊕ᴰ-&-in)
+  open Res Car using (Result; ok; err; caseR; MaybeG; toMaybe)
 
   private variable
     s : S
@@ -97,6 +137,17 @@ module Act {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
   -- the identity action: `Δ X` observes itself
   idA : {X : Type ℓY} → Action (Δ {s = s} X) X
   idA = id⊢
+
+  -- PRIMITIVE, and the DEFINING property: `Δ X` does not depend on the
+  -- world, so its elements move between worlds for free.  That is
+  -- exactly what makes `Δ` the externalisation, and it is what lets an
+  -- action combine payloads sitting at DIFFERENT worlds -- the slots of
+  -- a splitting -- with no residual.  `Δ-⊗` (§2) is the point-free
+  -- form; this is the form needed wherever the slot family is an
+  -- extended lambda and so cannot be unified against (arities have no
+  -- η) -- see `Lambda.DeBruijn`.
+  Δ-at : {X : Type ℓY} (m m' : Car s) → Δ {s = s} X m → Δ {s = s} X m'
+  Δ-at m m' d = d
 
   -- ================================================================
   -- Functoriality, in both variables.  These are the only two ways to
@@ -163,19 +214,19 @@ module Act {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
   ⊥A = ⊥-E
 
   -- a representable is observed by naming what to say there
-  ⌈⌉A : {a : M .carrier s} {X : Type ℓY} → X → Action ⌈ a ⌉ X
+  ⌈⌉A : {a : Car s} {X : Type ℓY} → X → Action ⌈ a ⌉ X
   ⌈⌉A {X = X} x = pureA X x
 
   -- ================================================================
   -- EXTERNALISATION.  The only place a term leaves the calculus.
   -- ================================================================
 
-  run : {s : S} {X : Type ℓY} → ⊤G {s} ⊢ Δ {s = s} X → M .carrier s → X
+  run : {s : S} {X : Type ℓY} → ⊤G {s} ⊢ Δ {s = s} X → Car s → X
   run f m = f m tt .fst
 
   -- a program (`Views.Cover P`) observed by an action
   observe : {P : TheoryTy ℓA s} {X : Type ℓY}
-          → ⊤G ⊢ P → Action P X → M .carrier s → X
+          → ⊤G ⊢ P → Action P X → Car s → X
   observe p a = run (a ∘⊢ p)
 
   -- ================================================================
@@ -190,7 +241,7 @@ module Act {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
   okA A E = caseA (pureA Bool true) (pureA Bool false)
 
   accepts? : (A : TheoryTy ℓA s) (E : TheoryTy ℓE s)
-           → ⊤G ⊢ Result E A → M .carrier s → Bool
+           → ⊤G ⊢ Result E A → Car s → Bool
   accepts? A E p = observe p (okA A E)
 
   -- what did it produce?  The failure is observed too, at `Unit`, so
@@ -200,8 +251,22 @@ module Act {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
   maybeA A E {X = X} a = caseA (mapA just a) (pureA (Maybe X) nothing)
 
   runResult : (A : TheoryTy ℓA s) (E : TheoryTy ℓE s) {X : Type ℓY}
-            → ⊤G ⊢ Result E A → Action A X → M .carrier s → Maybe X
+            → ⊤G ⊢ Result E A → Action A X → Car s → Maybe X
   runResult A E p a = observe p (maybeA A E a)
+
+  -- ... and the form that keeps the action INSIDE the term.  A program
+  -- whose semantic action has already been applied is
+  --
+  --     mapR E (Δ X) act ∘⊢ p   :   ⊤G ⊢ Result E (Δ X)
+  --
+  -- which is still a term of the calculus -- the witness sits in `Δ`,
+  -- the failure still carries whatever `E` carries, and nothing has been
+  -- externalised.  `runΔ` is then the SINGLE place it leaves, and it
+  -- belongs at the OBSERVATION, not at the definition of the pipeline:
+  -- a name like `elab : Raw → Maybe (DB 0)` has already left.
+  runΔ : (X : Type ℓY) (E : TheoryTy ℓE s)
+       → ⊤G ⊢ Result E (Δ {s = s} X) → Car s → Maybe X
+  runΔ X E p = runResult (Δ X) E p idA
 
   -- ... and with the failure observed as well
   eitherA : (A : TheoryTy ℓA s) (E : TheoryTy ℓE s)
@@ -212,7 +277,7 @@ module Act {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
   runEither : (A : TheoryTy ℓA s) (E : TheoryTy ℓE s)
               {X : Type ℓY} {Z : Type ℓZ}
             → ⊤G ⊢ Result E A → Action A X → Action E Z
-            → M .carrier s → X ⊎ Z
+            → Car s → X ⊎ Z
   runEither A E p a b = observe p (eitherA A E a b)
 
 
@@ -221,11 +286,11 @@ module Act {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
 --     the slotwise action is its composite with the tensor's own map.
 -- ==================================================================
 
-module ActSub {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
-              (Sub : Substrate σ ℓX ℓP) where
+module ActFib {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
+              (Fib : Fibered σ ℓX ℓP) where
 
-  open RulesS Sub
-  open Act ⌊ Sub ⌋ public
+  open RulesF Fib
+  open Act {σ = σ} (Fib .carrier) public
 
   -- PRIMITIVE.  A splitting with a discrete payload at every slot is a
   -- discrete payload at the whole: the splitting itself is discarded,
@@ -250,12 +315,12 @@ module ActSub {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
 -- ==================================================================
 
 module ActInd {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
-              (Sub : Substrate σ ℓX ℓP) (ℓA : Level)
+              (Fib : Fibered σ ℓX ℓP) (ℓA : Level)
               (V : Type ℓY) (vs : V → S) where
 
-  open SubNotation Sub using (TheoryTy)
-  open Ind Sub ℓA V vs
-  open Act ⌊ Sub ⌋ using (Δ; Action)
+  open FibNotation Fib using (TheoryTy)
+  open Ind Fib ℓA V vs
+  open Act {σ = σ} (Fib .carrier) using (Δ; Action)
 
   -- the inductive grammar at a nonterminal, as a type of the calculus
   Deriv : ((x : V) → Functor (vs x)) → (x : V) → TheoryTy ℓμ (vs x)

@@ -35,7 +35,7 @@
   tuples together with a proof, i.e. it is `Split` chosen freely.
 -}
 {-# OPTIONS --lossy-unification #-}
-module TheoryGrammar.Substrate where
+module TheoryGrammar.Fibered where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.Isomorphism
@@ -50,59 +50,83 @@ open import TheoryGrammar.Base
 private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓB ℓC ℓY : Level
 
 -- ==================================================================
--- A substrate: a model presented with its splittings as DATA rather
+-- A promodel: a model presented with its splittings as DATA rather
 -- than as an equation.
 -- ==================================================================
 
-record Substrate {S : Type ℓS} (σ : SortedSig S ℓ ℓ') ℓX ℓP
+record Fibered {S : Type ℓS} (σ : SortedSig S ℓ ℓ') ℓX ℓP
   : Type (ℓ-max ℓS (ℓ-max ℓ (ℓ-max ℓ' (ℓ-max (ℓ-suc ℓX) (ℓ-suc ℓP))))) where
   field
     carrier : S → Type ℓX
-    -- the algebra structure
-    op      : (o : σ .ops)
-            → ((a : σ .arities o) → carrier (σ .sortOf o a))
-            → carrier (σ .resultSort o)
     -- ways of seeing m as an o-composite, indexed BY THE OUTPUT
     Split   : (o : σ .ops) → carrier (σ .resultSort o) → Type ℓP
     parts   : (o : σ .ops) (m : carrier (σ .resultSort o))
             → Split o m → (a : σ .arities o) → carrier (σ .sortOf o a)
+
+open Fibered public
+
+-- ==================================================================
+-- A CHOSEN TOTAL POINT, separately.
+--
+-- `op`, `split` and `parts-split` used to sit in the record above.  They
+-- do not belong there, and the reason is sharp: `⊗ˢ`, `MultiHomˢ`, `⊸ᶠ`
+-- -- the whole multiplicative layer -- mention only `Split` and `parts`.
+-- The three totality fields are load-bearing for nothing except
+-- asserting themselves, while excluding every PARTIAL algebra: separation
+-- logic, and anything where combining requires disjoint resources.
+--
+-- Split out, they are exactly a lax point: an operation together with a
+-- proof that the relation CONTAINS its graph.  `Bags` is the instance
+-- showing the containment must be allowed to be strict -- `Ilv u v w`
+-- does not imply `u ++ v ≡ w` -- so this is never an isomorphism.
+-- ==================================================================
+
+record LaxPoint {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP)
+  : Type (ℓ-max ℓS (ℓ-max ℓ (ℓ-max ℓ' (ℓ-max ℓX ℓP)))) where
+  field
+    op      : (o : σ .ops)
+            → ((a : σ .arities o) → Fib .carrier (σ .sortOf o a))
+            → Fib .carrier (σ .resultSort o)
     -- every tuple splits its own composite ...
     split   : (o : σ .ops)
-              (m⃗ : (a : σ .arities o) → carrier (σ .sortOf o a))
-            → Split o (op o m⃗)
+              (m⃗ : (a : σ .arities o) → Fib .carrier (σ .sortOf o a))
+            → Fib .Split o (op o m⃗)
     -- ... and does so at the tuple you started with
     parts-split : (o : σ .ops)
-                  (m⃗ : (a : σ .arities o) → carrier (σ .sortOf o a))
-                → parts o (op o m⃗) (split o m⃗) ≡ m⃗
+                  (m⃗ : (a : σ .arities o) → Fib .carrier (σ .sortOf o a))
+                → Fib .parts o (op o m⃗) (split o m⃗) ≡ m⃗
 
-open Substrate public
+open LaxPoint public
 
--- the underlying model
-⌊_⌋ : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} → Substrate σ ℓX ℓP → Model σ ℓX
-⌊ Sub ⌋ .Model.carrier = Sub .carrier
-⌊ Sub ⌋ .Model.op = Sub .op
+-- the underlying model -- available only WITH a total point
+⌊_⌋ : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {Fib : Fibered σ ℓX ℓP}
+    → LaxPoint Fib → Model σ ℓX
+⌊_⌋ {Fib = Fib} P .Model.carrier = Fib .carrier
+⌊_⌋ {Fib = Fib} P .Model.op = P .op
 
 -- ==================================================================
--- The connectives over a substrate.
+-- The connectives over a promodel.  NOTE what this module does NOT
+-- take: no `LaxPoint`, so everything below is available to a partial
+-- algebra.
 -- ==================================================================
 
-module SubNotation {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ ℓX ℓP) where
+module FibNotation {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP) where
 
-  open Notation ⌊ Sub ⌋ public
+  open CarrierNotation (Fib .carrier) public
 
   -- the convolution, with NO proof component
   ⊗ˢ : (o : σ .ops)
      → ((a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
      → TheoryTy (ℓ-max ℓP (ℓ-max ℓ' ℓA)) (σ .resultSort o)
-  ⊗ˢ o A m = Σ[ sp ∈ Sub .Split o m ] ((a : σ .arities o) → A a (Sub .parts o m sp a))
+  ⊗ˢ o A m = Σ[ sp ∈ Fib .Split o m ] ((a : σ .arities o) → A a (Fib .parts o m sp a))
 
   MultiHomˢ : (o : σ .ops)
             → ((a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
             → TheoryTy ℓB (σ .resultSort o)
             → Type (ℓ-max ℓX (ℓ-max ℓP (ℓ-max ℓ' (ℓ-max ℓA ℓB))))
   MultiHomˢ o A B =
-    (m : Sub .carrier (σ .resultSort o)) (sp : Sub .Split o m)
-    → ((a : σ .arities o) → A a (Sub .parts o m sp a))
+    (m : Fib .carrier (σ .resultSort o)) (sp : Fib .Split o m)
+    → ((a : σ .arities o) → A a (Fib .parts o m sp a))
     → B m
 
   module _ (o : σ .ops)
@@ -142,9 +166,9 @@ module SubNotation {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate 
      → TheoryTy ℓB (σ .resultSort o)
      → TheoryTy (ℓ-max ℓX (ℓ-max ℓP (ℓ-max ℓ' (ℓ-max ℓA ℓB)))) (σ .sortOf o i)
   ⊸ˢ o i A B x =
-    (m : Sub .carrier (σ .resultSort o)) (sp : Sub .Split o m)
-    → (Sub .parts o m sp i ≡ x)
-    → ((a : σ .arities o) → A a (Sub .parts o m sp a))
+    (m : Fib .carrier (σ .resultSort o)) (sp : Fib .Split o m)
+    → (Fib .parts o m sp i ≡ x)
+    → ((a : σ .arities o) → A a (Fib .parts o m sp a))
     → B m
 
   module _ (o : σ .ops) (i : σ .arities o)
@@ -153,20 +177,27 @@ module SubNotation {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate 
 
     -- generic ⊸-app / ⟜-app: no transport, no match
     ⊸ˢ-app : (A i ⊢ ⊸ˢ o i A B) → (⊗ˢ o A ⊢ B)
-    ⊸ˢ-app g m (sp , h) = g (Sub .parts o m sp i) (h i) m sp refl h
+    ⊸ˢ-app g m (sp , h) = g (Fib .parts o m sp i) (h i) m sp refl h
 
 -- ==================================================================
 -- The equational presentation is the FREE choice of Split.
 -- ==================================================================
 
-canonical : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} → Model σ ℓX → Substrate σ ℓX (ℓ-max ℓ' ℓX)
+canonical : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} → Model σ ℓX → Fibered σ ℓX (ℓ-max ℓ' ℓX)
 canonical {σ = σ} M .carrier = M .Model.carrier
-canonical {σ = σ} M .op = M .Model.op
 canonical {σ = σ} M .Split o m =
   Σ[ m⃗ ∈ ((a : σ .arities o) → M .Model.carrier (σ .sortOf o a)) ] (M .Model.op o m⃗ Eq.≡ m)
 canonical {σ = σ} M .parts o m sp = sp .fst
-canonical {σ = σ} M .split o m⃗ = m⃗ , Eq.refl
-canonical {σ = σ} M .parts-split o m⃗ = refl
+
+-- ... and a model is exactly what points it.  Splitting the record makes
+-- this direction visible: `canonical` needs only the carrier and the
+-- operation to build the SPLITTINGS, and the total point is then a
+-- separate, automatic consequence.
+canonicalPoint : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX)
+               → LaxPoint (canonical M)
+canonicalPoint {σ = σ} M .op = M .Model.op
+canonicalPoint {σ = σ} M .split o m⃗ = m⃗ , Eq.refl
+canonicalPoint {σ = σ} M .parts-split o m⃗ = refl
 
 -- ==================================================================
 -- DEFINITIONAL β/η FOR THE RESIDUAL.
@@ -174,36 +205,36 @@ canonical {σ = σ} M .parts-split o m⃗ = refl
 -- `⊸ˢ` above still carries a `parts o m sp i ≡ x` component, so it has
 -- the same disease one level down: a Path is not a record, so the
 -- residual's η needs a match.  The same cure applies -- have the
--- substrate supply the FOCUSED splittings (the zipper view: a splitting
+-- promodel supply the FOCUSED splittings (the zipper view: a splitting
 -- seen from slot i, with slot i's content as the index) rather than
 -- reconstructing them with an equation.  Then the residual is a plain Π
 -- and BOTH laws are refl.
 -- ==================================================================
 
 record Focus {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
-             (Sub : Substrate σ ℓX ℓP) (o : σ .ops) (i : σ .arities o)
+             (Fib : Fibered σ ℓX ℓP) (o : σ .ops) (i : σ .arities o)
   : Type (ℓ-max ℓS (ℓ-max ℓ (ℓ-max (ℓ-suc ℓ') (ℓ-max ℓX (ℓ-suc ℓP))))) where
   field
     -- splittings viewed from slot i, indexed by what sits in slot i:
     -- the generic one-hole context / zipper.
-    SplitAt  : Sub .carrier (σ .sortOf o i) → Type ℓP
-    whole    : {x : Sub .carrier (σ .sortOf o i)} → SplitAt x
-             → Sub .carrier (σ .resultSort o)
+    SplitAt  : Fib .carrier (σ .sortOf o i) → Type ℓP
+    whole    : {x : Fib .carrier (σ .sortOf o i)} → SplitAt x
+             → Fib .carrier (σ .resultSort o)
     -- THE COMPLEMENT OF SLOT i, supplied as data.  This is what lets the
     -- residual omit the focused argument without needing `Discrete
     -- (arities o)` to compute "every slot except i".
     Rest     : Type ℓ'
     restOf   : Rest → σ .arities o
-    restSlot : {x : Sub .carrier (σ .sortOf o i)} → SplitAt x
-             → (r : Rest) → Sub .carrier (σ .sortOf o (restOf r))
+    restSlot : {x : Fib .carrier (σ .sortOf o i)} → SplitAt x
+             → (r : Rest) → Fib .carrier (σ .sortOf o (restOf r))
 
 open Focus public
 
 module FocusNotation {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
-                     {Sub : Substrate σ ℓX ℓP}
-                     {o : σ .ops} {i : σ .arities o} (Φ : Focus Sub o i) where
+                     {Fib : Fibered σ ℓX ℓP}
+                     {o : σ .ops} {i : σ .arities o} (Φ : Focus Fib o i) where
 
-  open SubNotation Sub
+  open FibNotation Fib
 
   -- The residual.  Note A is used only at `restOf r` -- the focused slot
   -- is genuinely absent, which is what makes this a residual and not a
@@ -220,7 +251,7 @@ module FocusNotation {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
 
     -- the hom-set it classifies: focused argument supplied ONCE
     FocusedHom : Type (ℓ-max ℓX (ℓ-max ℓP (ℓ-max ℓ' (ℓ-max ℓA ℓB))))
-    FocusedHom = (x : Sub .carrier (σ .sortOf o i)) (sa : Φ .SplitAt x)
+    FocusedHom = (x : Fib .carrier (σ .sortOf o i)) (sa : Φ .SplitAt x)
                → A i x
                → ((r : Φ .Rest) → A (Φ .restOf r) (Φ .restSlot sa r))
                → B (Φ .whole sa)

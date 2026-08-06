@@ -81,6 +81,51 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
   ⟪ t ⟫ = ⊗ᶠ (λ ρ → eval ρ t)
 
   -- ================================================================
+  -- THE REASSOCIATED FORM, and why it is the one to build maps INTO.
+  --
+  -- `⊗ᶠ` pairs a valuation with a payload indexed by it.  That is fine
+  -- to consume but bad to produce, because `Val vs` is a Π and Π has no
+  -- η at a variable context: a valuation reassembled slotwise, as
+  -- `λ { x → … ; y → … }`, is only PROPOSITIONALLY the valuation it came
+  -- from.  The equation component `f ρ Eq.≡ m` then sits over a `funExt`,
+  -- i.e. a `PathP` over a family Agda cannot see is constant, and the
+  -- bridge stalls.
+  --
+  -- Reassociating moves the payload inside the Π:
+  --
+  --     Σ[ ρ ∈ Π v. carrier (vs v) ] Π v. A v (ρ v)
+  --          ≅   Π v. Σ[ c ∈ carrier (vs v) ] A v c
+  --
+  -- and now the funExt is over a family that does NOT mention the
+  -- payload, so `f (fst ∘ θ)` IS definitionally constant along it and
+  -- the equation component is `refl` again.
+  --
+  -- This is the same move `Fibered.agda` makes one level down -- split
+  -- the data apart from the equation, expose the pieces as projections --
+  -- and it is made for the same reason.  `⊗ᶠ` remains the definition;
+  -- `⊗ᶠ'` is the form to target.
+  -- ================================================================
+
+  ⊗ᶠ' : {V : Type ℓV} {vs : V → S} {s : S}
+      → (Val vs → M .carrier s)
+      → ((v : V) → TheoryTy ℓA (vs v))
+      → TheoryTy (ℓ-max ℓV (ℓ-max ℓX ℓA)) s
+  ⊗ᶠ' {V = V} {vs = vs} f A m =
+    Σ[ θ ∈ ((v : V) → Σ[ c ∈ M .carrier (vs v) ] A v c) ]
+      (f (λ v → θ v .fst) Eq.≡ m)
+
+  -- Both round trips are `refl`: Σ-η and Π-η, nothing else.
+  ⊗ᶠ-reassoc : {V : Type ℓV} {vs : V → S} {s : S}
+               (f : Val vs → M .carrier s)
+               (A : (v : V) → TheoryTy ℓA (vs v))
+               (m : M .carrier s)
+             → Iso (⊗ᶠ f A m) (⊗ᶠ' f A m)
+  ⊗ᶠ-reassoc f A m .Iso.fun (ρ , e , k) = (λ v → ρ v , k v) , e
+  ⊗ᶠ-reassoc f A m .Iso.inv (θ , e) = (λ v → θ v .fst) , e , (λ v → θ v .snd)
+  ⊗ᶠ-reassoc f A m .Iso.sec _ = refl
+  ⊗ᶠ-reassoc f A m .Iso.ret _ = refl
+
+  -- ================================================================
   -- Equality of shapes gives isomorphism of connectives.
   -- ================================================================
 
