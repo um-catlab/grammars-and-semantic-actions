@@ -3,6 +3,9 @@
 
     Additive     needs only a `Model`: `¬G`, `Dec⟨_⟩`, complements,
                  `dist&`, `deMorgan`, closure under `⊕`, `&`, `⊤`, `⊥`
+    Listable     the INDEXED additives, `dec-⊕ᴰ` / `dec-&ᴰ`, which need
+                 the tag type listable -- what makes a decision over a
+                 description (`Inductive.Functor`) a `⊢`-composite
     Tensor       `⊗-miss`, `⊗-refute`, and `dec-⊗` from unique readability
     Splittings   the INTERFACE `DecSplittings`, with two routes into it:
                  `fromReadable` (unique readability) and `fromEnumerable`
@@ -17,6 +20,7 @@
 module TheoryGrammar.Decidable where
 
 open import TheoryGrammar.Decidable.Additive     public
+open import TheoryGrammar.Decidable.Listable     public
 open import TheoryGrammar.Decidable.Tensor       public
 open import TheoryGrammar.Decidable.Splittings   public
 open import TheoryGrammar.Decidable.Representable public

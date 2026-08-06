@@ -330,3 +330,4 @@ no-lit = refute ⌈ true ∷ [] ⌉ (¬G ⌈ true ∷ [] ⌉) (litProbe true) (f
 -- refuting `⌈ [] ⌉` at a non-empty word RETURNS the non-triviality
 nonTrivial-ab : NonTrivial (true ∷ false ∷ [])
 nonTrivial-ab = refute ⌈ [] ⌉ NonTrivial charCase (true ∷ false ∷ []) refl
+

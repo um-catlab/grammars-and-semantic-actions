@@ -49,6 +49,31 @@ module DecEnum {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
             (m : Fib .carrier (σ .resultSort o)) → Fib .Split o m → Type (ℓ-max ℓ' ℓA)
   Refutes o A m sp = ⊗at o A m sp → ⊥* {ℓ-zero}
 
+  -- ================================================================
+  -- THE TENSOR, DECIDED FROM A DECISION AT EACH SPLITTING.
+  --
+  -- `decAt` (the record field below) forces the two slots to be decided
+  -- INDEPENDENTLY, and a guarded recursion cannot supply that: the
+  -- recursive call at a slot is available only once the SIBLING has
+  -- certified that slot to be a proper part.  What such a recursion can
+  -- always supply is a decision of the splitting AS A WHOLE, because
+  -- refuting one slot refutes the splitting even when the other slot is
+  -- not decidable at all.  That short circuit is the whole of "CNF has
+  -- no ε-productions, therefore CYK terminates".
+  --
+  -- The proof is `decΣ` and nothing else: `⊗ˢ o A m` IS `Σ` of `⊗at`
+  -- over the splittings, definitionally, and `Refutes` IS `No ⊗at`.  So
+  -- the search over splittings and the search over the tags of a `⊕ᴰ`
+  -- (`Decidable.Listable.dec-⊕ᴰ`) are literally the same combinator.
+  -- ================================================================
+
+  dec-⊗-cuts : (o : σ .ops) (A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
+               (m : Fib .carrier (σ .resultSort o))
+               (sps : List (Fib .Split o m)) → ((sp : Fib .Split o m) → sp ∈L sps)
+             → ((sp : Fib .Split o m) → ⊗at o A m sp ⊎ Refutes o A m sp)
+             → Dec⟨ ⊗ˢ o A ⟩ m
+  dec-⊗-cuts o A m sps complete d = decΣ sps complete d
+
   -- every splitting in a list is refuted
   AllNo : (o : σ .ops) (A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
           (m : Fib .carrier (σ .resultSort o))

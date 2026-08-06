@@ -140,7 +140,7 @@ Not a plan — a measurement against the 21 modules currently in
 | Yoneda | 2 | `Representable` (`⌈⌉-UP`) | **done** |
 | Later | 7 | `Graded` (`▷`, `löb`, `hyloC`) | **partial** — `Box`, `Infix` not ported |
 | Subgrammar | 2 | — | **not started**, but additive; should be easy |
-| **Derivative** | 3 | — | **not started**; needs a unary operation |
+| Derivative | 3 | `Derivative` (`δ`, `DerivTensor`) | **done** |
 | **SequentialUnambiguity** | 5 | — | **not started**; needs Levi |
 | **Greedy** | 2 | — | **not started**; needs Levi |
 | **RegularExpression** | 2 | — | **not started**; needs Derivative first |
@@ -153,12 +153,30 @@ hypothesis rather than on volume.
 
 ## The remaining work, in dependency order
 
-1. **`Derivative` (3 files).** Unblocks `RegularExpression`, and is the
-   third constructor for `⊗-EM` (`Decidable/Rule.agda`) — the one that
-   decides a tensor with *no search*, since the `length w + 1`
-   decompositions are the unfolding of a two-case law. Needs a unary
-   operation to differentiate along; exists for strings (`cons c`) and
-   bags (`add x`), and `δ` does **not** lift to bags because Levi fails.
+1. ~~**`Derivative`**~~ — **done**. The correction to this entry is
+   worth keeping: it does *not* need a unary operation. The derivative
+   is **precomposition along a map of carriers**, and the maps worth
+   using come from pinning all-but-one slot of an operation — which is
+   already `Assembly` (`CanonicalFocus`). So `δ` exists for any theory,
+   once per (operation, slot, choice of the rest). Every additive law
+   (`⊤ ⊥ & ⊕ ⇒ ⊕ᴰ &ᴰ`) is `refl`, because the additive connectives are
+   pointwise in the index and precomposition is what commutes with
+   pointwise structure.
+
+   What is genuinely non-generic is the ⊗ law, which must decide which
+   slot absorbed the action — equidivisibility. It is `DerivTensor`, an
+   inversion principle for `Split o (act x)`, discharged for strings by
+   **pattern-matching `Split3`**: four lines, and `split++` never
+   appears. That is the payoff the inductive-`Split` refactor was
+   predicted to have, now measured.
+
+   `strDecTensorδ` is the third `⊗-EM` constructor, and reaches the
+   same `DecTensorRule` that `Strings/Decidable` reaches by
+   enumeration. Deciding by differentiation is not generic either, for
+   a sharper reason than "needs a unary operation": it recurses on the
+   carrier, and it re-indexes the slot family at each step, so it needs
+   decisions at *every* element rather than at the parts of one
+   splitting. `RegularExpression` is now unblocked.
 2. **`SequentialUnambiguity` + `Greedy` (7 files).** Both need
    equidivisibility (Levi's lemma), which is a genuine property of the
    theory — true for free monoids, false for commutative ones. It should

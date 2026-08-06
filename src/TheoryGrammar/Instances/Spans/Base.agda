@@ -168,6 +168,20 @@ infixr 21 _⊗ᶜ_
 _⊗ᶜ_ : SpanG → SpanG → SpanG
 A ⊗ᶜ B = ⊗ˢ cat (λ b → if b then A else B)
 
+-- The level coercion the constant former `⌜_⌝` of a description carries
+-- (`Inductive.⟦ ⌜ B ⌝ ⟧c A m = Lift _ (B m)`).  Pure bookkeeping, and
+-- both directions are maps of the calculus, so a description's constants
+-- are discharged by composition rather than by `lift`/`lower` surgery --
+-- the same role `liftg`/`lowerg` play in `Instances.Nat.Connectives`.
+Liftg : SpanG → SpanG
+Liftg A s = Lift ℓ-zero (A s)
+
+liftg : {A : SpanG} → A ⊢ Liftg A
+liftg _ = lift
+
+lowerg : {A : SpanG} → Liftg A ⊢ A
+lowerg _ = lower
+
 private
   -- the additives, the tensor's functorial action, the decision layer
   -- and the view layer, all with no point in sight

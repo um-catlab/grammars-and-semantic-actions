@@ -313,6 +313,9 @@ private
 
   -- (c·f = e) and (d·e = n)  ⟹  c·(f·d) = n.  This is step (iv)/(v) of
   -- the plan: a factor of the COFACTOR is a factor of the whole.
+  tSwap : {a b c : ℕ} → Times a b c → Times b a c
+  tSwap {a} {b} {c} t = subst (Times b a) (·-comm b a ∙ timesPath t) (timesAll b a)
+
   timesAssoc : {c f e d n : ℕ} → Times c f e → Times d e n → Times c (f · d) n
   timesAssoc {c} {f} {e} {d} {n} tcf tde =
     subst (Times c (f · d)) pf (timesAll c (f · d))
@@ -385,7 +388,7 @@ lpf : (k : ℕ)
     → NoSmall k ⊢ (δ ⊕ ⊕ᴰ (P≥ k) (λ pp → ⌈ pv pp ⌉ ⊗' NoSmall (val (pv pp))))
 lpf k (zero , ()) ns
 lpf k (suc zero , tt) ns = inl (tt , λ ())
-lpf k (suc (suc m) , tt) ns = inr (pp , payload)
+lpf k (suc (suc m) , tt) ns = go (leastFactor N 2≤N)
   where
     N : ℕ
     N = suc (suc m)
@@ -393,24 +396,55 @@ lpf k (suc (suc m) , tt) ns = inr (pp , payload)
     2≤N : 2 ≤ N
     2≤N = suc-≤-suc (suc-≤-suc zero-≤)
 
-    L : LF N
-    L = leastFactor N 2≤N
+    -- Destructured rather than projected: `leastFactor` is defined by a
+    -- `with` on the divisibility test, so `LF.lfd (leastFactor …)` is a
+    -- stuck term and nothing depending on it would reduce.  Matching the
+    -- record once puts plain variables in scope instead.
+    go : LF N
+       → (δ ⊕ ⊕ᴰ (P≥ k) (λ pp → ⌈ pv pp ⌉ ⊗' NoSmall (val (pv pp))))
+           (suc (suc m) , tt)
+    go (mkLF d e 2≤d t least) = inr (pp , payload)
+      where
+        dp ep : ℕ₊
+        dp = d , nz2≤ 2≤d
+        ep = e , nzCofactor t 2≤N
 
-    dp ep : ℕ₊
-    dp = LF.lfd L , nz2≤ (LF.lf2≤ L)
-    ep = LF.lfe L , nzCofactor (LF.lfT L) 2≤N
+        -- (iv) THE LEAST FACTOR IS IRREDUCIBLE, and minimality is the
+        -- whole proof: if it split as a·b with both sides ≥ 2 then `a`
+        -- would also divide N (that is `timesAssoc`) and be strictly
+        -- smaller, which the minimality certificate forbids.  No prior
+        -- theory of primes is used anywhere.
+        irred : (a b : ℕ₊) → Times (val a) (val b) d
+              → IsUnit (val a) ⊎ IsUnit (val b)
+        irred (zero , ()) b tab
+        irred (suc zero , _) b tab = inl tt
+        irred (suc (suc a') , _) (zero , ()) tab
+        irred (suc (suc a') , _) (suc zero , _) tab = inr tt
+        irred (suc (suc a') , nza) (suc (suc b') , nzb) tab =
+          E.rec (¬m<m (≤-trans a<d d≤a))
+          where
+            2a : 2 ≤ suc (suc a')
+            2a = suc-≤-suc (suc-≤-suc zero-≤)
+            2b : 2 ≤ suc (suc b')
+            2b = suc-≤-suc (suc-≤-suc zero-≤)
+            a<d : suc (suc a') < d
+            a<d = degLtL (suc (suc a') , nza) (suc (suc b') , nzb) dp tab 2b
+            d≤a : d ≤ suc (suc a')
+            -- note the SWAP: here `tab` lands at `d`, so the outer
+            -- factorisation must be read as e·d = N rather than d·e = N
+            d≤a = least (suc (suc a')) (suc (suc b') · e)
+                        (timesAssoc tab (tSwap t)) 2a
 
-    -- (iii) the least factor is ≥ k, straight from the invariant coming in
-    pp : P≥ k
-    pp = dp , (LF.lf2≤ L , ns dp ep (LF.lfT L) (LF.lf2≤ L))
+        -- (iii) the least factor is ≥ k, from the invariant coming in
+        pp : P≥ k
+        pp = dp , ((2≤d , irred) , ns dp ep t 2≤d)
 
-    -- (v) the cofactor inherits the invariant, at the sharper bound `d`
-    nsE : NoSmall (LF.lfd L) ep
-    nsE c f tcf 2c =
-      LF.lfLeast L (val c) (val f · LF.lfd L) (timesAssoc tcf (LF.lfT L)) 2c
+        -- (v) the cofactor inherits the invariant, at the sharper bound d
+        nsE : NoSmall d ep
+        nsE c f tcf 2c = least (val c) (val f · d) (timesAssoc tcf t) 2c
 
-    payload : (⌈ dp ⌉ ⊗' NoSmall (LF.lfd L)) (suc (suc m) , tt)
-    payload = ⊗-mk dp ep (LF.lfT L) Eq.refl nsE
+        payload : (⌈ dp ⌉ ⊗' NoSmall d) (suc (suc m) , tt)
+        payload = ⊗-mk dp ep t Eq.refl nsE
 
 -- Plumbing between two spellings of one type.  Pure coercion: the
 -- description carries a `Lift` on the representable and its slot family

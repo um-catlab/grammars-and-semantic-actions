@@ -23,6 +23,7 @@ open import TheoryGrammar.Rules
 open import TheoryGrammar.RulesFib
 open import TheoryGrammar.SemanticAction
 open import TheoryGrammar.Decidable.Additive
+open import TheoryGrammar.Decidable.Listable
 
 private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓB ℓC ℓY : Level
 
@@ -43,6 +44,11 @@ module DecFib {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
            ¬G-excludes; largest; toDec; decDefault;
            &-swap; contra; dist&; ¬G-map; deMorgan;
            dec-map; dec-⊕; dec-&; dec-⊤; dec-⊥; dni; dec-¬)
+  -- ... and the INDEXED additives, whose decision needs the tag type to
+  -- be listable.  `⟦ ⊕e Y G ⟧c` is `⊕ᴰ Y` and `⟦ &e Y G ⟧c` is `&ᴰ Y`
+  -- definitionally, so these two are what makes a decision procedure
+  -- over a description a composite of `⊢`-terms.
+  open DecList (Fib .carrier) public using (dec-⊕ᴰ; dec-&ᴰ)
 
   -- ----------------------------------------------------------------
   -- The internal half, with NO hypotheses: a term that is not an

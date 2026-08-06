@@ -76,8 +76,8 @@ decompGuarded tt = <⊕e Bool decompAlt alt
 
 -- PRIMITIVE, and the only content of the exclusion: the empty word is
 -- trivial.  A splitting of `[]` cannot have a one-character left part.
-¬NT[] : NonTrivial [] → E.⊥
-¬NT[] (c , (u , v , s) , h) = go (h true) s
+nil-trivial : NonTrivial [] → E.⊥
+nil-trivial (c , (u , v , s) , h) = go (h true) s
   where go : u Eq.≡ c ∷ [] → Split3 u v [] → E.⊥
         go Eq.refl ()
 
@@ -91,6 +91,6 @@ emptyOrNot .total =
 emptyOrNot .exclusive true  true  d = λ _ _ → E.rec (d refl)
 emptyOrNot .exclusive false false d = λ _ _ → E.rec (d refl)
 emptyOrNot .exclusive true  false _ =
-  λ { .([]) (Eq.refl , nt) → E.rec (¬NT[] nt) }
+  λ { .([]) (Eq.refl , nt) → E.rec (nil-trivial nt) }
 emptyOrNot .exclusive false true  _ =
-  λ { .([]) (nt , Eq.refl) → E.rec (¬NT[] nt) }
+  λ { .([]) (nt , Eq.refl) → E.rec (nil-trivial nt) }

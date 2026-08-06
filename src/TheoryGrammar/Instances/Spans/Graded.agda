@@ -71,6 +71,23 @@ neLen {i , n} (j , c , h) = subst (0 <_) (cut-sum c) lem
     lem : 0 < cutL c + cutR c
     lem = subst (λ k → 0 < k + cutR c) (sym l1) (suc-≤-suc zero-≤)
 
+-- PRIMITIVE (phase 1).  The converse bridge: a span of positive length
+-- IS non-empty.  `neLen` and `mkNE` together are the whole relationship
+-- between the internal predicate and the grading, and nothing else in
+-- the span instance may look at a length.
+mkNE : (s : Span) → 0 < s .snd → NonEmpty s
+mkNE (j , zero)  p = E.rec (¬-<-zero p)
+mkNE (j , suc k) _ = j , shift here , λ { true → Eq.refl ; false → tt }
+
+-- ... and so non-emptiness is DECIDED, as an internal probe.  This is
+-- the resource test the parser branches on; it is `Probe`-typed, so
+-- every consumer eliminates it with `dec-elim` and never sees a length.
+probe-NE : Probe NonEmpty
+probe-NE (j , zero)  _ =
+  dec-no NonEmpty (j , zero) λ ne → E.rec (¬-<-zero (neLen ne))
+probe-NE (j , suc k) _ =
+  dec-yes NonEmpty (j , suc k) (mkNE (j , suc k) (suc-≤-suc zero-≤))
+
 -- ==================================================================
 -- The graded structure.
 -- ==================================================================

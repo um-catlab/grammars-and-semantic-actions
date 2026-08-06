@@ -69,7 +69,25 @@ module Core (Name : Type₀)
   asm .restOf _   = false
   asm .tuple Γ f b = if b then Γ else f tt
 
-  open Canon CFib CPoint mul true asm public using (⊸ᶠ; ⊸ᶠ-lam; ⊸ᶠ-app; ⊸ᶠ-β; ⊸ᶠ-η)
+  private module Cn = Canon CFib CPoint mul true asm
+
+  open Cn public using (⊸ᶠ; ⊸ᶠ-lam; ⊸ᶠ-app; ⊸ᶠ-β; ⊸ᶠ-η)
+
+  -- The generic residual's hypothesis, discharged.  The complement of
+  -- `mul`'s left slot is ONE slot, so a rest-argument at ⌈Δ⌉ is a single
+  -- equation `f tt Eq.≡ Δ` -- and `singJ` is its induction principle,
+  -- whose computation rule is definitional.  This is the ONLY place the
+  -- singleton shape of the complement is used; nothing here transports
+  -- by hand, and `⟜-lam` below is no longer a primitive.
+  repJ : (Δ : Ctx) → ∀ {ℓM}
+         (M : (f : Unit → Ctx) → ((r : Unit) → f r Eq.≡ Δ) → Type ℓM)
+       → M (λ _ → Δ) (λ _ → Eq.refl)
+       → (f : Unit → Ctx) (q : (r : Unit) → f r Eq.≡ Δ) → M f q
+  repJ Δ M m f q = singJ (λ y e → M (λ _ → y) (λ _ → e)) m (f tt) (q tt)
+
+  private
+    module Res (Δ : Ctx) =
+      Cn.Residual {A = λ _ → ⌈ Δ ⌉} (λ _ → Δ) (λ _ → Eq.refl) (repJ Δ) (λ _ _ → refl)
 
   _⟜ᶜ_ : CtxG → Ctx → CtxG
   B ⟜ᶜ Δ = ⊸ᶠ (λ _ → ⌈ Δ ⌉) B
@@ -78,22 +96,22 @@ module Core (Name : Type₀)
   shift : CtxG → Ctx → CtxG
   shift B Δ Γ = B (Γ · Δ)
 
-  -- ⊸-ELIM at the representable: `Canon.plug` with the point `Eq.refl`.
+  -- ⊸-ELIM and ⊸-INTRO at the representable, and their two round trips:
+  -- all four are `Canon.Residual` instantiated at `repJ`.  β is `refl`
+  -- there and η is one `funExt`; neither is reproved here.
   ⟜-app : (B : CtxG) (Δ : Ctx) → (B ⟜ᶜ Δ) ⊢ shift B Δ
-  ⟜-app B Δ = Canon.plug CFib CPoint mul true asm {A = λ _ → ⌈ Δ ⌉} {B = B}
-                         (λ _ → Δ) (λ _ → Eq.refl)
+  ⟜-app B Δ = Res.⊸-app Δ {B = B}
 
-  -- ⊸-INTRO at the representable.
-  --
-  -- MEASUREMENT.  This is the one step of the mode development that is
-  -- not a combinator: it transports along the representable's equation.
-  -- It is a SINGLE `Eq.transport` only because the complement of the
-  -- focused slot is a singleton, so the rest-tuple is determined by one
-  -- component; for a wider complement the same step would need function
-  -- extensionality for `Eq`, which does not hold definitionally.  The
-  -- generic `Canon.plug` (the elim) needs no such thing.
   ⟜-lam : (B : CtxG) (Δ : Ctx) → shift B Δ ⊢ (B ⟜ᶜ Δ)
-  ⟜-lam B Δ Γ b f e = Eq.transport (λ z → B (Γ · z)) (Eq.sym (e tt)) b
+  ⟜-lam B Δ = Res.⊸-lam Δ {B = B}
+
+  ⟜-β : (B : CtxG) (Δ : Ctx) (Γ : Ctx) (b : shift B Δ Γ)
+      → ⟜-app B Δ Γ (⟜-lam B Δ Γ b) ≡ b
+  ⟜-β B Δ = Res.⊸-β Δ {B = B}
+
+  ⟜-η : (B : CtxG) (Δ : Ctx) (Γ : Ctx) (h : (B ⟜ᶜ Δ) Γ)
+      → ⟜-lam B Δ Γ (⟜-app B Δ Γ h) ≡ h
+  ⟜-η B Δ = Res.⊸-η Δ {B = B}
 
   -- ================================================================
   -- The grammar and its checker.  A mode supplies only the leaf.
