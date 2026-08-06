@@ -13,11 +13,11 @@
                   which the representable `⌈ A ⌉` pins to the index
     Check  switch synthesis at the very same type
            lam    only when the index type SPLITS as an arrow -- and the
-                  splitting comes from the substrate at sort `ty`, so no
+                  splitting comes from the promodel at sort `ty`, so no
                   case analysis on `Ty` appears in the description
 
   That last point is what the third sort buys: `⊕e (IsArr C)` is the
-  substrate's own `Split arrOp C`, so the lambda rule is present exactly
+  promodel's own `Split arrOp C`, so the lambda rule is present exactly
   when the checking type is an arrow, with `dom`/`cod` read off by
   `parts` rather than by matching.
 
@@ -38,7 +38,7 @@ open import Cubical.Relation.Nullary.Base using (Discrete)
 open import TheoryGrammar.Base
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Instances.SimplyTyped.Signature
-open import TheoryGrammar.Instances.SimplyTyped.Substrate
+open import TheoryGrammar.Instances.SimplyTyped.Fibered
 open import TheoryGrammar.Instances.SimplyTyped.Base
 open import TheoryGrammar.Instances.SimplyTyped.Readable
 open import TheoryGrammar.Instances.SimplyTyped.Types
@@ -58,7 +58,7 @@ module Judgments (Name : Type₀) (_≟_ : Discrete Name) where
   NT = Mode × Ctx × Ty
 
   -- both nonterminals live at sort `tm`
-  open Ind stlcSub ℓ-zero NT (λ _ → tm) public
+  open Ind stlcFib ℓ-zero NT (λ _ → tm) public
 
   data InfTag : Type₀ where
     tVar tApp tAnn : InfTag

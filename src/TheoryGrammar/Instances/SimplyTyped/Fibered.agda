@@ -1,5 +1,5 @@
 {-
-  The substrate: raw annotated terms AND simple types, with splittings
+  The promodel: raw annotated terms AND simple types, with splittings
   as output-indexed data.
 
   The carrier is now a three-element family; `Ty` is a carrier, not a
@@ -10,7 +10,7 @@
   now at two different sorts at once.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-module TheoryGrammar.Instances.SimplyTyped.Substrate where
+module TheoryGrammar.Instances.SimplyTyped.Fibered where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
@@ -19,7 +19,7 @@ open import Cubical.Data.Empty using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Instances.SimplyTyped.Signature
 
 infixr 20 _⇒ᵗ_
@@ -86,29 +86,34 @@ module Terms (Name : Type₀) where
   TParts baseOp _ mkBase      ()
   TParts arrOp  _ (mkArr A B) b     = if b then A else B
 
-  stlcSub : Substrate stlcSig ℓ-zero ℓ-zero
-  stlcSub .carrier        = Carrier
-  stlcSub .op             = Op
-  stlcSub .Split          = TSplit
-  stlcSub .parts          = TParts
-  stlcSub .split varOp  f = mkVar (f tt)
-  stlcSub .split appOp  f = mkApp (f true) (f false)
-  stlcSub .split lamOp  f = mkLam (f true) (f false)
-  stlcSub .split annOp  f = mkAnn (f true) (f false)
-  stlcSub .split baseOp f = mkBase
-  stlcSub .split arrOp  f = mkArr (f true) (f false)
+  stlcFib : Fibered stlcSig ℓ-zero ℓ-zero
+  stlcFib .carrier        = Carrier
+  stlcFib .Split          = TSplit
+  stlcFib .parts          = TParts
+
+  -- The total point, separately: term formation IS total here, so the
+  -- split costs this instance nothing.  What it buys is that the
+  -- multiplicative layer (`RulesF stlcFib`) never consults it.
+  stlcPoint : LaxPoint stlcFib
+  stlcPoint .op             = Op
+  stlcPoint .split varOp  f = mkVar (f tt)
+  stlcPoint .split appOp  f = mkApp (f true) (f false)
+  stlcPoint .split lamOp  f = mkLam (f true) (f false)
+  stlcPoint .split annOp  f = mkAnn (f true) (f false)
+  stlcPoint .split baseOp f = mkBase
+  stlcPoint .split arrOp  f = mkArr (f true) (f false)
   -- MEASUREMENT: `varOp` is refl (Unit has definitional η); `baseOp` is
   -- funExt at the EMPTY arity, which is the degenerate case of the same
   -- failure; the four Bool arities need funExt with refl at each slot.
-  stlcSub .parts-split varOp  f = refl
-  stlcSub .parts-split appOp  f = funExt λ { true → refl ; false → refl }
-  stlcSub .parts-split lamOp  f = funExt λ { true → refl ; false → refl }
-  stlcSub .parts-split annOp  f = funExt λ { true → refl ; false → refl }
-  stlcSub .parts-split baseOp f = funExt λ ()
-  stlcSub .parts-split arrOp  f = funExt λ { true → refl ; false → refl }
+  stlcPoint .parts-split varOp  f = refl
+  stlcPoint .parts-split appOp  f = funExt λ { true → refl ; false → refl }
+  stlcPoint .parts-split lamOp  f = funExt λ { true → refl ; false → refl }
+  stlcPoint .parts-split annOp  f = funExt λ { true → refl ; false → refl }
+  stlcPoint .parts-split baseOp f = funExt λ ()
+  stlcPoint .parts-split arrOp  f = funExt λ { true → refl ; false → refl }
 
-  -- The extra substrate law the representables need: a splitting is
-  -- FAITHFUL -- reassembling its parts gives the whole back.  `Substrate`
+  -- The extra promodel law the representables need: a splitting is
+  -- FAITHFUL -- reassembling its parts gives the whole back.  `Fibered`
   -- has `parts-split` (tuple ↦ splitting ↦ tuple) but not this
   -- (splitting ↦ tuple ↦ whole); every clause is `Eq.refl`.
   unsplit : (o : TOp) (m : Carrier (TResult o)) (sp : TSplit o m)

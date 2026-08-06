@@ -2,7 +2,7 @@
   The connectives of the lambda theory: one tensor per operation, plus
   the whole generic combinator layer in one `open`.
 
-  Downstream modules open THIS, not `RulesSub`/`Decidable` directly.
+  Downstream modules open THIS, not `RulesFib`/`Decidable` directly.
   `LamG` is the reason the theory is many-sorted: its two slots live in
   different grammar sorts, so `if_then_else_` cannot express it.
 -}
@@ -14,18 +14,18 @@ open import Cubical.Data.Bool hiding (_⊕_)
 open import Cubical.Data.Unit
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
-open import TheoryGrammar.RulesSub
+open import TheoryGrammar.Fibered
+open import TheoryGrammar.RulesFib
 open import TheoryGrammar.Decidable
 open import TheoryGrammar.Instances.Lambda.Signature
-open import TheoryGrammar.Instances.Lambda.Substrate
+open import TheoryGrammar.Instances.Lambda.Fibered
 
 module LamBase (Name : Type₀) where
 
   open Terms Name public
   -- connectives, every additive intro/elim, and the generic internal
   -- theory of decisions
-  open DecSub λSub public
+  open DecFib λFib public
 
   TmG : Type₁
   TmG = TheoryTy ℓ-zero tm          -- Raw  → Type

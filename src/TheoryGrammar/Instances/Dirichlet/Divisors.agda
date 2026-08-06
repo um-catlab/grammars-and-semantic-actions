@@ -3,7 +3,7 @@
   DIVISORS FOR FREE.
 
   The point of this file is that almost nothing happens in it.  Once the
-  substrate is in place, the classical arithmetic functions are already
+  promodel is in place, the classical arithmetic functions are already
   present as connectives, and the theorems about them are `refl`.
 
       δ  =  ⌈1⌉   =  the ⊗-unit
@@ -62,7 +62,7 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 
 open import TheoryGrammar.Instances.Dirichlet.Connectives public
 
@@ -75,7 +75,7 @@ open import TheoryGrammar.Instances.Dirichlet.Connectives public
 ζ = ⊤'
 
 -- δ is `⊗ˢ oneop`; that it is also the representable at 1 is the
--- substrate's unit law, and both directions are phase 2.
+-- promodel's unit law, and both directions are phase 2.
 δ→⌈1⌉ : δ ⊢ ⌈ one₊ ⌉
 δ→⌈1⌉ (zero , ())
 δ→⌈1⌉ (suc zero , p) _ = Eq.refl

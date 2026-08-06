@@ -78,7 +78,7 @@
   language on the nose is a change of SIGNATURE, not of model.)
 
   One friction, recorded rather than papered over: `Length.agda` works at
-  `Strings/Base.agda`'s copy of `monSig`, while this file works at
+  `Strings/Base.agda`'s copy of `monoidSig`, while this file works at
   `Nat/Base.agda`'s copy.  The two `MonOp` datatypes are identical and
   definitionally distinct, so the composite cannot be written down
   without the shared-signature refactor described in `Length.agda`'s
@@ -98,7 +98,7 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
 

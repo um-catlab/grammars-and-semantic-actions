@@ -11,7 +11,7 @@
 
   is a SUBSINGLETON in its index: the sum has at most one summand
   inhabited.  That is the same shape of fact `Split-isProp` states for
-  the substrate -- at most one splitting -- and it plays the same role:
+  the promodel -- at most one splitting -- and it plays the same role:
   it is what turns a positive answer somewhere else into a REFUTATION
   here.  See `Check.agda`, where `dec-at` takes it as a hypothesis.
 
@@ -40,7 +40,7 @@ import Cubical.Data.Equality as Eq
 open import TheoryGrammar.Base
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Instances.SimplyTyped.Signature
-open import TheoryGrammar.Instances.SimplyTyped.Substrate
+open import TheoryGrammar.Instances.SimplyTyped.Fibered
 open import TheoryGrammar.Instances.SimplyTyped.Base
 open import TheoryGrammar.Instances.SimplyTyped.Readable
 open import TheoryGrammar.Instances.SimplyTyped.Types

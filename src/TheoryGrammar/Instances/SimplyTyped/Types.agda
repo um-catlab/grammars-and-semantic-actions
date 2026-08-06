@@ -25,7 +25,7 @@ import Cubical.Data.Equality as Eq
 open import TheoryGrammar.Base
 open import TheoryGrammar.Decidable
 open import TheoryGrammar.Instances.SimplyTyped.Signature
-open import TheoryGrammar.Instances.SimplyTyped.Substrate
+open import TheoryGrammar.Instances.SimplyTyped.Fibered
 open import TheoryGrammar.Instances.SimplyTyped.Base
 open import TheoryGrammar.Instances.SimplyTyped.Readable
 

@@ -8,14 +8,14 @@
   ------------------------------------------------------------------
   The argument.
 
-  `GradedSubstrate` asks for a degree `deg : carrier → ℕ` such that
+  `GradedFib` asks for a degree `deg : carrier → ℕ` such that
 
       deg≤ :  every slot of every splitting is NO BIGGER than the whole,
       deg< :  a PROPER slot is STRICTLY smaller.
 
   Call an operation `o` GROUP-LIKE at slot `a` when
 
-      GroupLike Sub o a  =  every element `h` occurs in slot `a` of some
+      GroupLike Fib o a  =  every element `h` occurs in slot `a` of some
                             splitting of every element `m`.
 
   This is exactly the defining feature of an invertible operation: in a
@@ -42,8 +42,8 @@
   What is NOT true, and must not be claimed.
 
   "ℤ has no grading" is FALSE as stated: `deg = const 0`, `Proper = ⊥`
-  is a perfectly legal `GradedSubstrate`.  What is true is that EVERY
-  grading of a group-like substrate is that degenerate one.  The result
+  is a perfectly legal `GradedFib`.  What is true is that EVERY
+  grading of a group-like promodel is that degenerate one.  The result
   is a rigidity theorem, not a non-existence theorem, and the two are
   worth not conflating.  `no-guarded` below is where the degeneracy
   becomes a real prohibition.
@@ -65,7 +65,7 @@
 
   ------------------------------------------------------------------
   BELONGS UPSTREAM.  `Degenerate` and `GroupObstruction` below are
-  generic structural theorems about `GradedSubstrate`, not facts about
+  generic structural theorems about `GradedFib`, not facts about
   any particular instance; they live here only because this agent was
   scoped to `Instances/Group/`.  Their home is `TheoryGrammar.Graded`.
 
@@ -87,7 +87,7 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
 
@@ -109,18 +109,18 @@ private
 -- ==================================================================
 
 module Degenerate {σ : SortedSig Unit ℓ ℓ'}
-                  (GS : GradedSubstrate σ ℓX ℓP)
-                  (deg-const : (m m' : GS .sub .carrier tt)
+                  (GS : GradedFib σ ℓX ℓP)
+                  (deg-const : (m m' : GS .fib .carrier tt)
                              → GS .deg tt m ≡ GS .deg tt m')
   where
 
   -- THEOREM.  No splitting has a proper slot, at any operation.
-  no-proper : (o : σ .ops) (m : GS .sub .carrier (σ .resultSort o))
-              (sp : GS .sub .Split o m) (a : σ .arities o)
+  no-proper : (o : σ .ops) (m : GS .fib .carrier (σ .resultSort o))
+              (sp : GS .fib .Split o m) (a : σ .arities o)
             → Proper GS o m sp a → ⊥
   no-proper o m sp a pr =
     ¬m<m (subst (λ n → n < GS .deg tt m)
-                (deg-const (GS .sub .parts o m sp a) m)
+                (deg-const (GS .fib .parts o m sp a) m)
                 (GS .deg< o m sp a pr))
 
   -- ================================================================
@@ -137,7 +137,7 @@ module Degenerate {σ : SortedSig Unit ℓ ℓ'}
     -- guarded", which is what `<⊗e` would need contradicted: once the
     -- degree is constant, `degIx j < deg m` is unsatisfiable outright,
     -- so guardedness fails for EVERY former with an inhabited `Pos`.
-    no-guarded : {s : Unit} (F : Functor s) (m : GS .sub .carrier s)
+    no-guarded : {s : Unit} (F : Functor s) (m : GS .fib .carrier s)
                  (sh : Sh F m) → Guarded F → Pos F m sh → ⊥
     no-guarded F m sh gF p =
       ¬m<m (subst (λ n → n < GS .deg tt m)
@@ -145,7 +145,7 @@ module Degenerate {σ : SortedSig Unit ℓ ℓ'}
                   (gF m sh p))
 
     -- `Var` -- i.e. ANY recursive reference -- is never guarded.
-    no-guarded-Var : (x : V) (m : GS .sub .carrier (vs x))
+    no-guarded-Var : (x : V) (m : GS .fib .carrier (vs x))
                    → Guarded (Var x) → ⊥
     no-guarded-Var x m g = no-guarded (Var x) m tt* g tt*
 
@@ -153,17 +153,17 @@ module Degenerate {σ : SortedSig Unit ℓ ℓ'}
     -- exactly the premise `<⊗e` / `⊗-guard` demand, refuted.
     no-guarded-⊗e : (o : σ .ops)
                     (G : (a : σ .arities o) → Functor (σ .sortOf o a))
-                    (m : GS .sub .carrier (σ .resultSort o))
-                    (sp : GS .sub .Split o m)
-                    (sh : (a : σ .arities o) → Sh (G a) (GS .sub .parts o m sp a))
+                    (m : GS .fib .carrier (σ .resultSort o))
+                    (sp : GS .fib .Split o m)
+                    (sh : (a : σ .arities o) → Sh (G a) (GS .fib .parts o m sp a))
                     (a : σ .arities o) → Pos (G a) _ (sh a)
                   → Guarded (⊗e o G) → ⊥
     no-guarded-⊗e o G m sp sh a p g = no-guarded (⊗e o G) m (sp , sh) g (a , p)
 
     -- `slotProper` (Graded.agda, "Way 2") is unusable: its `Proper`
     -- premise is uninhabited.
-    no-slotProper : (o : σ .ops) (m : GS .sub .carrier (σ .resultSort o))
-                    (sp : GS .sub .Split o m) (a : σ .arities o)
+    no-slotProper : (o : σ .ops) (m : GS .fib .carrier (σ .resultSort o))
+                    (sp : GS .fib .Split o m) (a : σ .arities o)
                   → Proper GS o m sp a → ⊥
     no-slotProper = no-proper
 
@@ -173,7 +173,7 @@ module Degenerate {σ : SortedSig Unit ℓ ℓ'}
     -- ================================================================
 
     guarded→const : {s : Unit} (F : Functor s) (gF : Guarded F)
-                    {A : Ix → Type ℓM} (m : GS .sub .carrier s)
+                    {A : Ix → Type ℓM} (m : GS .fib .carrier s)
                   → Iso (⟦ F ⟧ A m) (Sh F m)
     guarded→const F gF m .Iso.fun = fst
     guarded→const F gF m .Iso.inv sh = sh , λ p → E.rec (no-guarded F m sh gF p)
@@ -182,10 +182,10 @@ module Degenerate {σ : SortedSig Unit ℓ ℓ'}
       cong (sh ,_) (⊥ext (no-guarded F m sh gF) _ f)
 
     -- ... and its least fixed point has depth one.  "There are no
-    -- well-founded inductive types over a group-like substrate" in its
+    -- well-founded inductive types over a group-like promodel" in its
     -- sharpest form: `μ` degenerates to its own shape functor.
     μ-noRec : (F : (x : V) → Functor (vs x)) (gF : (x : V) → Guarded (F x))
-              (x : V) (m : GS .sub .carrier (vs x))
+              (x : V) (m : GS .fib .carrier (vs x))
             → Iso (μ F (x , m)) (Sh (F x) m)
     μ-noRec F gF x m .Iso.fun (sup sh f) = sh
     μ-noRec F gF x m .Iso.inv sh = sup sh λ p → E.rec (no-guarded (F x) m sh (gF x) p)
@@ -204,29 +204,29 @@ module Degenerate {σ : SortedSig Unit ℓ ℓ'}
 -- the theorem applies to any operation that is "solvable in slot a" --
 -- division rings, torsors, and the multiplicative structure of ℕ AT
 -- ZERO (see Instances/Ring/Grading).
-GroupLike : {σ : SortedSig Unit ℓ ℓ'} (Sub : Substrate σ ℓX ℓP)
+GroupLike : {σ : SortedSig Unit ℓ ℓ'} (Fib : Fibered σ ℓX ℓP)
             (o : σ .ops) (a : σ .arities o) → Type (ℓ-max ℓX ℓP)
-GroupLike {σ = σ} Sub o a =
-  (m : Sub .carrier (σ .resultSort o)) (h : Sub .carrier (σ .sortOf o a))
-  → Σ[ sp ∈ Sub .Split o m ] (Sub .parts o m sp a ≡ h)
+GroupLike {σ = σ} Fib o a =
+  (m : Fib .carrier (σ .resultSort o)) (h : Fib .carrier (σ .sortOf o a))
+  → Σ[ sp ∈ Fib .Split o m ] (Fib .parts o m sp a ≡ h)
 
 module GroupObstruction {σ : SortedSig Unit ℓ ℓ'}
-                        (GS : GradedSubstrate σ ℓX ℓP)
+                        (GS : GradedFib σ ℓX ℓP)
                         (o : σ .ops) (a : σ .arities o)
-                        (gl : GroupLike (GS .sub) o a)
+                        (gl : GroupLike (GS .fib) o a)
   where
 
   private
     -- `deg≤` at a group-like slot says: deg x ≤ deg y for ARBITRARY
     -- x and y, because x is a slot of some splitting of y.
-    bound : (x y : GS .sub .carrier tt) → GS .deg tt x ≤ GS .deg tt y
+    bound : (x y : GS .fib .carrier tt) → GS .deg tt x ≤ GS .deg tt y
     bound x y =
       subst (λ z → GS .deg tt z ≤ GS .deg tt y)
             (gl y x .snd)
             (GS .deg≤ o y (gl y x .fst) a)
 
   -- THEOREM.  The degree is constant.  (Antisymmetry of ≤ on ℕ.)
-  deg-const : (m m' : GS .sub .carrier tt) → GS .deg tt m ≡ GS .deg tt m'
+  deg-const : (m m' : GS .fib .carrier tt) → GS .deg tt m ≡ GS .deg tt m'
   deg-const m m' = ≤-antisym (bound m m') (bound m' m)
 
   -- ... hence everything in Part A.

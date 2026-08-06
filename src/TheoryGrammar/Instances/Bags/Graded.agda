@@ -63,7 +63,7 @@ Proper' : (o : MonOp) (m : Bag) → MonSplit o m → MonAr o → Type₀
 Proper' nilop m sp ()
 Proper' appop m (u , v , _) b = NonTrivial (if b then v else u)
 
-bagGraded : GradedFib cmSig ℓ-zero ℓ-zero
+bagGraded : GradedFib monoidSig ℓ-zero ℓ-zero
 bagGraded .fib    = bagFib
 bagGraded .deg _  = length
 bagGraded .Proper = Proper'

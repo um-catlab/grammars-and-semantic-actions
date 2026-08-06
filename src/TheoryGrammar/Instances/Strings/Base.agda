@@ -1,5 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- The monoid signature, splittings as an inductive family, and the substrate. -}
+{- The monoid signature, splittings as an inductive family, and the promodel. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Strings.Base (Char : Type₀) where
@@ -15,8 +15,9 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
-open import TheoryGrammar.RulesSub
+open import TheoryGrammar.Theories.Monoid public
+open import TheoryGrammar.Fibered
+open import TheoryGrammar.RulesFib
 open import TheoryGrammar.SemanticAction
 open import TheoryGrammar.Decidable.Tensor
 
@@ -25,18 +26,6 @@ String = List Char
 
 -- Signature of monoids; splittings inductively.
 
-data MonOp : Type₀ where
-  nilop appop : MonOp
-
-MonAr : MonOp → Type₀
-MonAr nilop = ⊥
-MonAr appop = Bool
-
-monSig : SortedSig Unit ℓ-zero ℓ-zero
-monSig .ops          = MonOp
-monSig .arities      = MonAr
-monSig .sortOf _ _   = tt
-monSig .resultSort _ = tt
 
 data Split3 : String → String → String → Type₀ where
   nil  : ∀ {v} → Split3 [] v v
@@ -61,22 +50,27 @@ MonParts : (o : MonOp) (w : String) → MonSplit o w → MonAr o → String
 MonParts nilop w sp ()
 MonParts appop w (u , v , _) b = if b then u else v
 
-strSub : Substrate monSig ℓ-zero ℓ-zero
-strSub .carrier _   = String
-strSub .op nilop _  = []
-strSub .op appop f  = f true ++ f false
-strSub .Split       = MonSplit
-strSub .parts       = MonParts
-strSub .split nilop f = tt
-strSub .split appop f = f true , f false , splitAll (f true) (f false)
-strSub .parts-split nilop f = funExt λ ()
-strSub .parts-split appop f = funExt λ { false → refl ; true → refl }
+strFib : Fibered monoidSig ℓ-zero ℓ-zero
+strFib .carrier _   = String
+strFib .Split       = MonSplit
+strFib .parts       = MonParts
+
+-- The total point, separately: strings DO have a total concatenation, so
+-- this instance loses nothing by the split.  What the split buys is that
+-- `RulesF strFib` never consults it.
+strPoint : LaxPoint strFib
+strPoint .op nilop _  = []
+strPoint .op appop f  = f true ++ f false
+strPoint .split nilop f = tt
+strPoint .split appop f = f true , f false , splitAll (f true) (f false)
+strPoint .parts-split nilop f = funExt λ ()
+strPoint .parts-split appop f = funExt λ { false → refl ; true → refl }
 
 -- The connectives, the decision layer and the semantic actions in one
--- open: `DecSub` is the aggregation point (`RulesS` + `ActSub` +
+-- open: `DecFib` is the aggregation point (`RulesF` + `ActFib` +
 -- `DecAdd`), so this instance gets `Dec⟨_⟩` and `run` without
 -- redefining either.
-open DecSub strSub public
+open DecFib strFib public
 
 Gr : Type₁
 Gr = TheoryTy ℓ-zero tt

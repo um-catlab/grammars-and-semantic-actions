@@ -15,7 +15,7 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import Cubical.Foundations.Isomorphism
 
 open import TheoryGrammar.Instances.Strings.Base Char public
@@ -45,7 +45,7 @@ infixr 20 _⊗'_
 
 -- The residual, at slot `false` (the right factor).
 
-focR : Focus strSub appop false
+focR : Focus strFib appop false
 focR .SplitAt v  = Σ[ u ∈ String ] Σ[ w ∈ String ] Split3 u v w
 focR .whole (u , w , _) = w
 focR .Rest       = Unit

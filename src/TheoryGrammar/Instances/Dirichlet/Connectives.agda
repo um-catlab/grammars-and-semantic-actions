@@ -1,6 +1,6 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 {-
-  LambekD's connectives at the Dirichlet substrate.
+  LambekD's connectives at the Dirichlet promodel.
 
   This file is, deliberately, Instances/Strings/Connectives with `Split3`
   replaced by `Times`.  That it can be is the whole content: the calculus
@@ -29,7 +29,7 @@
   stated intro/elim shape, and they are the only pointful things any
   later file is allowed to use.  `⊗-mk`, `⊗I`, `⊗E`, `⊗-elim` are the
   intro/elim pair for `⊗ˢ mulop`; `⊕-elim`, `⊕ᴰ-in`, `⊕ᴰ-elim`, `liftg`
-  are Gr-monomorphic spellings of the polymorphic rules from `RulesS`,
+  are Gr-monomorphic spellings of the polymorphic rules from `RulesF`,
   present only because grammar-valued implicits are not inferrable
   (CLAUDE.md, "Known traps").
 
@@ -56,7 +56,7 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 
 open import TheoryGrammar.Instances.Dirichlet.Base public
 
@@ -106,7 +106,7 @@ num n = ⌈ n ⌉
 δ-mk = tt , λ ()
 
 -- ==================================================================
--- Combinators.  Gr-monomorphic spellings of the rules in `RulesS`;
+-- Combinators.  Gr-monomorphic spellings of the rules in `RulesF`;
 -- programs downstream use these and nothing else.
 -- ==================================================================
 
@@ -138,7 +138,7 @@ liftg _ p = lift p
 -- supplied as data, `⟜-app` is a projection and not a transport.
 -- ==================================================================
 
-focR : Focus dirSub mulop false
+focR : Focus dirFib mulop false
 focR .SplitAt e = Σ[ d ∈ ℕ₊ ] Σ[ n ∈ ℕ₊ ] Times (val d) (val e) (val n)
 focR .whole (d , n , _)      = n
 focR .Rest                   = Unit

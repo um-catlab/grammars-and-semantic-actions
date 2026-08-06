@@ -20,11 +20,11 @@ open import Cubical.Data.Bool hiding (_⊕_)
 open import Cubical.Data.Unit
 open import Cubical.Data.List using ([]; _∷_)
 open import Cubical.Data.Nat.Order using (_<_)
-open import Cubical.Data.Empty as E using (⊥)
-open import Cubical.Relation.Nullary.Base using (yes; no; Discrete)
-import Cubical.Data.Equality as Eq
+open import Cubical.Relation.Nullary.Base using (Discrete)
 
 open import TheoryGrammar.Base
+open import TheoryGrammar.Fibered
+open import TheoryGrammar.Decidable
 open import TheoryGrammar.View
 open import TheoryGrammar.Instances.Lambda.Signature
 open import TheoryGrammar.Instances.Lambda.Base
@@ -40,15 +40,17 @@ module ScopeCheck (Name : Type₀) (_≟_ : Discrete Name) where
   open Readable Name
   open Binder Name
   open Wellscoped Name
-  open Views λSub
+  open Views λFib
 
   -- The ONE place `Discrete Name` is used -- and it is used to BUILD an
   -- internal map, never to case-split on one.  That is the whole rule
-  -- for how external decidability may enter the calculus.
+  -- for how external decidability may enter the calculus, and it is
+  -- stated generically in `Decidable.Representable`; this is only its
+  -- instantiation at the `nm` sort.
+  private module R = DecRep (λFib .carrier)
+
   dec-⌈⌉ : (m : Name) → ⊤G ⊢ Dec⟨ ⌈_⌉ {s = nm} m ⟩
-  dec-⌈⌉ m n _ with n ≟ m
-  ... | yes p = dec-yes (⌈_⌉ {s = nm} m) n (Eq.pathToEq p)
-  ... | no ¬p = dec-no  (⌈_⌉ {s = nm} m) n λ e → E.rec (¬p (Eq.eqToPath e))
+  dec-⌈⌉ = R.dec-⌈⌉ {s = nm} _≟_
 
   -- Membership is decidable by induction on the scope, using nothing
   -- but `⊥`'s rule and the generic `dec-⊕`.

@@ -53,7 +53,7 @@
   adjoints always exist, inverses need not.
 
   NOTE ON SIGNATURE DUPLICATION.  This file defines its own `MonOp` /
-  `monSig`, exactly as `Strings/Base.agda` and `Bags/Base.agda` each do.
+  `monoidSig`, exactly as `Strings/Base.agda` and `Bags/Base.agda` each do.
   The three are definitionally distinct datatypes with identical
   definitions, so a `ModelHom` between (say) the string model and the ℕ
   model cannot even be STATED without first choosing one of them.  That
@@ -73,8 +73,9 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
-open import TheoryGrammar.RulesSub
+open import TheoryGrammar.Theories.Monoid public
+open import TheoryGrammar.Fibered
+open import TheoryGrammar.RulesFib
 
 -- ==================================================================
 -- The signature of monoids.  (Commutativity of + is an EQUATION and
@@ -84,18 +85,6 @@ open import TheoryGrammar.RulesSub
 -- `length` a Conduché functor in Length.agda.)
 -- ==================================================================
 
-data MonOp : Type₀ where
-  nilop appop : MonOp
-
-MonAr : MonOp → Type₀
-MonAr nilop = ⊥
-MonAr appop = Bool
-
-monSig : SortedSig Unit ℓ-zero ℓ-zero
-monSig .ops          = MonOp
-monSig .arities      = MonAr
-monSig .sortOf _ _   = tt
-monSig .resultSort _ = tt
 
 -- ==================================================================
 -- Splittings, inductively.  `Add3 i j k` is `i + j = k` presented as
@@ -130,18 +119,23 @@ MonParts : (o : MonOp) (n : ℕ) → MonSplit o n → MonAr o → ℕ
 MonParts nilop n sp ()
 MonParts appop n (i , j , _) b = if b then i else j
 
-natSub : Substrate monSig ℓ-zero ℓ-zero
-natSub .carrier _   = ℕ
-natSub .op nilop _  = 0
-natSub .op appop f  = f true + f false
-natSub .Split       = MonSplit
-natSub .parts       = MonParts
-natSub .split nilop f = tt
-natSub .split appop f = f true , f false , addAll (f true) (f false)
-natSub .parts-split nilop f = funExt λ ()
-natSub .parts-split appop f = funExt λ { false → refl ; true → refl }
+natFib : Fibered monoidSig ℓ-zero ℓ-zero
+natFib .carrier _   = ℕ
+natFib .Split       = MonSplit
+natFib .parts       = MonParts
 
-open RulesS natSub public
+-- The total point, separately.  `(ℕ,+)` has a total addition, so nothing
+-- is lost here; what the split buys is that the whole multiplicative and
+-- additive layer -- `RulesF natFib` -- never consults it.
+natPoint : LaxPoint natFib
+natPoint .op nilop _  = 0
+natPoint .op appop f  = f true + f false
+natPoint .split nilop f = tt
+natPoint .split appop f = f true , f false , addAll (f true) (f false)
+natPoint .parts-split nilop f = funExt λ ()
+natPoint .parts-split appop f = funExt λ { false → refl ; true → refl }
+
+open RulesF natFib public
 
 -- A "grammar" here is a graded set: the coefficient sequence of a formal
 -- power series, with the coefficients given as TYPES rather than numbers.

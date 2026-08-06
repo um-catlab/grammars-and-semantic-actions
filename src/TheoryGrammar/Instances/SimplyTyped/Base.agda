@@ -15,18 +15,18 @@ open import Cubical.Data.Bool hiding (_⊕_)
 open import Cubical.Data.Unit
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
-open import TheoryGrammar.RulesSub
+open import TheoryGrammar.Fibered
+open import TheoryGrammar.RulesFib
 open import TheoryGrammar.Decidable
 open import TheoryGrammar.Distributive
 open import TheoryGrammar.Instances.SimplyTyped.Signature
-open import TheoryGrammar.Instances.SimplyTyped.Substrate
+open import TheoryGrammar.Instances.SimplyTyped.Fibered
 
 module StBase (Name : Type₀) where
 
   open Terms Name public
-  open DecSub stlcSub public
-  open Dist ⌊ stlcSub ⌋ public
+  open DecFib stlcFib public
+  open Dist (stlcFib .carrier) public
     using (⊕ᴰ-map; ⊕ᴰ-swap; ⊕ᴰ-⊕-out; ⊕ᴰ-⊕-in;
            ⊕ᴰ-&-out; ⊕ᴰ-&-in; dist&r; dist&₂)
 
@@ -89,18 +89,5 @@ module StBase (Name : Type₀) where
   Kty : {s : TSort} → Ty → Ty → TheoryTy ℓ-zero s
   Kty A B _ = TyEq A B
 
-  -- ================================================================
-  -- Two additive lemmas that belong upstream in `Decidable.Additive`
-  -- but are added here because existing files are not to be modified.
-  -- Both are compositions of intro/elim; neither splits a sum.
-  -- ================================================================
-
-  private variable s : TSort
-
-  -- double negation introduction
-  dni : {A : TheoryTy ℓ-zero s} → A ⊢ ¬G ¬G A
-  dni {A = A} = ⇒-I (contra {A = A})
-
-  -- negation of a decided grammar is decided
-  dec-¬ : (A : TheoryTy ℓ-zero s) → Dec⟨ A ⟩ ⊢ Dec⟨ ¬G A ⟩
-  dec-¬ A = ⊕-E (dec-no (¬G A) ∘g dni {A = A}) (dec-yes (¬G A))
+  -- (`dni` and `dec-¬` now live upstream in `Decidable.Additive`,
+  --  where they belong: neither mentions the operations.)

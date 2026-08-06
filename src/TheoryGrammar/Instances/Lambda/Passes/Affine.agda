@@ -28,7 +28,7 @@ import Cubical.Data.Equality as Eq
 open import TheoryGrammar.Base
 open import TheoryGrammar.CarrierMap
 open import TheoryGrammar.Instances.Lambda.Signature
-open import TheoryGrammar.Instances.Lambda.Substrate
+open import TheoryGrammar.Instances.Lambda.Fibered
 open import TheoryGrammar.Instances.Lambda.Base
 
 module Affine (Name : Type₀) where
@@ -37,7 +37,7 @@ module Affine (Name : Type₀) where
 
   -- PRIMITIVE (carrier map).  Carrier maps are external by definition:
   -- `ModelHom.hom` is an arbitrary function on the carrier.  This is
-  -- the boundary the calculus draws -- the map is substrate data, its
+  -- the boundary the calculus draws -- the map is promodel data, its
   -- action on derivations is what has to be a term.
   funPart argPart : Raw → Raw
   funPart (var n)   = var n
@@ -47,7 +47,7 @@ module Affine (Name : Type₀) where
   argPart (app _ v) = v
   argPart (lam n t) = lam n t
 
-  funCM argCM : CarrierMap λSub
+  funCM argCM : CarrierMap λFib
   funCM .hom nm n = n
   funCM .hom tm   = funPart
   argCM .hom nm n = n

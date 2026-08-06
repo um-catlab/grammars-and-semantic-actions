@@ -5,8 +5,13 @@
   `Ilv3` is `Bags.Base`'s `Ilv` plus one constructor, `both`, which sends
   a name to BOTH slots.  That single constructor is contraction: `A ⊢ A ⊗ A`
   becomes a splitting rather than a rule, so the grammar over this
-  substrate is unchanged.  Nothing is ever dropped, so weakening is still
+  promodel is unchanged.  Nothing is ever dropped, so weakening is still
   absent -- which is exactly relevant logic.
+
+  Splittings here are NOT unique, so `Precise` (hence `⊗-refute` and
+  `decSlots¹`/`decSlots²`) does not apply: a refutation has to walk the
+  whole enumeration.  What the instance does NOT do is match a sum --
+  every decision is consumed by the framework's `dec-elim`.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Modes.Overlap where
@@ -14,12 +19,11 @@ module TheoryGrammar.Instances.Lambda.Modes.Overlap where
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
 open import Cubical.Data.Sigma
-open import Cubical.Data.Sum using (inl; inr)
 open import Cubical.Data.Unit
 open import Cubical.Data.List using (List; []; _∷_; _++_)
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Decidable
 open import TheoryGrammar.Decidable.Splittings
 open import TheoryGrammar.Instances.Lambda.Modes.Ctx
@@ -47,28 +51,37 @@ module Overlap (Name : Type₀) where
   CParts : (o : CtxOp) (Γ : Ctx) → CSplit o Γ → CtxAr o → Ctx
   CParts mul Γ (u , v , _) b = if b then u else v
 
-  sub : Substrate ctxSig ℓ-zero ℓ-zero
-  sub .carrier _         = Ctx
-  sub .op mul f          = f true ++ f false
-  sub .Split             = CSplit
-  sub .parts             = CParts
-  sub .split mul f       = f true , f false , ilv3App (f true) (f false)
-  sub .parts-split mul f = funExt λ { true → refl ; false → refl }
+  fib : Fibered ctxSig ℓ-zero ℓ-zero
+  fib .carrier _         = Ctx
+  fib .Split             = CSplit
+  fib .parts             = CParts
 
-  open DecSub sub
+  -- The total point, separately.  As for `Interleave` the containment is
+  -- strict (`both` shares a name between the slots), and the
+  -- multiplicative layer below never consults it.
+  point : LaxPoint fib
+  point .op mul f          = f true ++ f false
+  point .split mul f       = f true , f false , ilv3App (f true) (f false)
+  point .parts-split mul f = funExt λ { true → refl ; false → refl }
 
-  -- PRIMITIVE (1 of 1 for this substrate).  Three recursive calls, one
+  open DecFib fib
+
+  -- PRIMITIVE (1 of 1 for this promodel).  Three recursive calls, one
   -- per constructor: left, right, shared.
   decTen : (A : CtxAr mul → TheoryTy ℓ-zero tt) (Γ : Ctx)
          → ((sp : CSplit mul Γ) (b : CtxAr mul) → Dec⟨ A b ⟩ (CParts mul Γ sp b))
          → Dec⟨ ⊗ˢ mul A ⟩ Γ
-  decTen A [] d with d ([] , [] , nil) true | d ([] , [] , nil) false
-  ... | inl p | inl q = dec-yes (⊗ˢ mul A) []
-                          (([] , [] , nil) , λ { true → p ; false → q })
-  ... | inr k | _     = dec-no (⊗ˢ mul A) []
-                          λ { ((_ , _ , nil) , h) → k (h true) }
-  ... | inl _ | inr k = dec-no (⊗ˢ mul A) []
-                          λ { ((_ , _ , nil) , h) → k (h false) }
+  decTen A [] d =
+    dec-elim (A true) []
+      (λ p → dec-elim (A false) []
+               (λ q → dec-yes (⊗ˢ mul A) []
+                        (([] , [] , nil) , λ { true → p ; false → q }))
+               (λ k → dec-no (⊗ˢ mul A) []
+                        λ { ((_ , _ , nil) , h) → k (h false) })
+               (d ([] , [] , nil) false))
+      (λ k → dec-no (⊗ˢ mul A) []
+               λ { ((_ , _ , nil) , h) → k (h true) })
+      (d ([] , [] , nil) true)
   decTen A (x ∷ Γ) d = go decL decR decB
     where
     Ten : TheoryTy ℓ-zero tt
@@ -121,15 +134,24 @@ module Overlap (Name : Type₀) where
         → ⊗ˢ mul AB Γ
     toB u v r h = (u , v , r) , λ { true → h true ; false → h false }
 
+    -- one `dec-elim` per constructor of `Ilv3`; only the last branch,
+    -- where every alternative was refuted, enumerates them again
     go : Dec⟨ ⊗ˢ mul AL ⟩ Γ → Dec⟨ ⊗ˢ mul AR ⟩ Γ → Dec⟨ ⊗ˢ mul AB ⟩ Γ
        → Dec⟨ Ten ⟩ (x ∷ Γ)
-    go (inl w)  _        _       = dec-yes Ten (x ∷ Γ) (fromL w)
-    go (inr _) (inl w)   _       = dec-yes Ten (x ∷ Γ) (fromR w)
-    go (inr _) (inr _)  (inl w)  = dec-yes Ten (x ∷ Γ) (fromB w)
-    go (inr kL) (inr kR) (inr kB) = dec-no Ten (x ∷ Γ)
-      λ { ((_ , _ , left r)  , h) → kL (toL _ _ r h)
-        ; ((_ , _ , right r) , h) → kR (toR _ _ r h)
-        ; ((_ , _ , both r)  , h) → kB (toB _ _ r h) }
+    go dL dR dB =
+      dec-elim (⊗ˢ mul AL) Γ
+        (λ w → dec-yes Ten (x ∷ Γ) (fromL w))
+        (λ kL → dec-elim (⊗ˢ mul AR) Γ
+          (λ w → dec-yes Ten (x ∷ Γ) (fromR w))
+          (λ kR → dec-elim (⊗ˢ mul AB) Γ
+            (λ w → dec-yes Ten (x ∷ Γ) (fromB w))
+            (λ kB → dec-no Ten (x ∷ Γ)
+                      λ { ((_ , _ , left r)  , h) → kL (toL _ _ r h)
+                        ; ((_ , _ , right r) , h) → kR (toR _ _ r h)
+                        ; ((_ , _ , both r)  , h) → kB (toB _ _ r h) })
+            dB)
+          dR)
+        dL
 
-  dec : DecSplittings sub ℓ-zero
+  dec : DecSplittings fib ℓ-zero
   dec .dec-⊗ˢ mul = decTen

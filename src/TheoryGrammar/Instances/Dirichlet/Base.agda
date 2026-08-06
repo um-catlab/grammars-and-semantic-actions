@@ -21,7 +21,7 @@
   at e is "for every d with A d, C (d·e)" -- division rather than
   left-quotient -- and `⊤ ⊗ ⊤` is the set of divisors.  Where a grammar
   over strings has an ordinary generating function Σ |A w| x^{|w|} whose
-  product is ⊗, a grammar over this substrate has a DIRICHLET series
+  product is ⊗, a grammar over this promodel has a DIRICHLET series
   Σ |A n| n^(-s) whose product is ⊗.  That is where the name comes from,
   and it is the only reason to expect the two instances to look alike.
 
@@ -71,7 +71,7 @@
   Two consequences, both wanted:
 
     * `parts` stays a projection, so `⊗-UP-β` and `⊗-UP-η` from
-      TheoryGrammar.Substrate remain `refl`;
+      TheoryGrammar.Fibered remain `refl`;
     * `split` stays definitional, because `_·₊_` is defined through
       projections and Σ has η, so `val (a ·₊ b)` REDUCES to
       `val a · val b` for variable a, b.
@@ -97,8 +97,8 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
-open import TheoryGrammar.RulesSub
+open import TheoryGrammar.Fibered
+open import TheoryGrammar.RulesFib
 
 -- ==================================================================
 -- The carrier: positive naturals.
@@ -205,7 +205,7 @@ dirSig .sortOf _ _   = tt
 dirSig .resultSort _ = tt
 
 -- ==================================================================
--- The substrate.  `Split mulop n` is the type of FACTORISATIONS of n.
+-- The promodel.  `Split mulop n` is the type of FACTORISATIONS of n.
 -- ==================================================================
 
 DirSplit : (o : DirOp) → ℕ₊ → Type₀
@@ -216,18 +216,24 @@ DirParts : (o : DirOp) (n : ℕ₊) → DirSplit o n → DirAr o → ℕ₊
 DirParts oneop n sp ()
 DirParts mulop n (d , e , _) b = if b then d else e
 
-dirSub : Substrate dirSig ℓ-zero ℓ-zero
-dirSub .carrier _     = ℕ₊
-dirSub .op oneop _    = one₊
-dirSub .op mulop f    = f true ·₊ f false
-dirSub .Split         = DirSplit
-dirSub .parts         = DirParts
-dirSub .split oneop f = tt
-dirSub .split mulop f = f true , f false , timesAll (val (f true)) (val (f false))
-dirSub .parts-split oneop f = funExt λ ()
-dirSub .parts-split mulop f = funExt λ { false → refl ; true → refl }
+dirFib : Fibered dirSig ℓ-zero ℓ-zero
+dirFib .carrier _     = ℕ₊
+dirFib .Split         = DirSplit
+dirFib .parts         = DirParts
 
-open RulesS dirSub public
+-- The total point, separately.  Multiplication on ℕ₊ is total, so this
+-- instance loses nothing; the payoff is that `RulesF dirFib` and the
+-- whole factorisation development never consult it -- they see only the
+-- SPLITTINGS, which is the right reading of Dirichlet convolution.
+dirPoint : LaxPoint dirFib
+dirPoint .op oneop _    = one₊
+dirPoint .op mulop f    = f true ·₊ f false
+dirPoint .split oneop f = tt
+dirPoint .split mulop f = f true , f false , timesAll (val (f true)) (val (f false))
+dirPoint .parts-split oneop f = funExt λ ()
+dirPoint .parts-split mulop f = funExt λ { false → refl ; true → refl }
+
+open RulesF dirFib public
 
 Gr : Type₁
 Gr = TheoryTy ℓ-zero tt

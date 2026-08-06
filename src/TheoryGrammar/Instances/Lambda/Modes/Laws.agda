@@ -3,15 +3,15 @@
 
   Every equation the mode development actually leans on, with its cost:
 
-    ⊗ˢ β/η at a context substrate .............. refl
+    ⊗ˢ β/η at a context promodel .............. refl
     ⊸ᶠ β/η at the canonical focus .............. refl
     ⟜ β at a representable (`⟜-app ∘ ⟜-lam`) ... refl
     ⟜ η at a representable (`⟜-lam ∘ ⟜-app`) ... funExt + Eq.J + sym-invol
-    parts-split (in the three substrate files) . funExt (Bool arity)
+    parts-split (in the three promodel files) . funExt (Bool arity)
 
   And the negative measurement that forced a new generic file:
   `splitNotProp` exhibits two distinct splittings of a one-name context,
-  so `DecReadable.splitProp` is FALSE for every context substrate here and
+  so `DecReadable.splitProp` is FALSE for every context promodel here and
   `Decidable.Tensor.dec-⊗` is unavailable.  `Decidable.Splittings` exists
   because of this line.
 -}
@@ -40,7 +40,7 @@ module Laws (Name : Type₀) (_≟_ : Discrete Name) where
 
   -- ================================================================
   -- refl.  The multiplicative and residual universal properties survive
-  -- instantiation at a context substrate: neither needs a pattern match.
+  -- instantiation at a context promodel: neither needs a pattern match.
   -- ================================================================
 
   module _ where

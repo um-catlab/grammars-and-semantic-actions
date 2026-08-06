@@ -13,6 +13,8 @@ open import Cubical.Foundations.Prelude
 open import Cubical.Data.Sigma
 open import Cubical.Data.List using ([]; _∷_; length)
 open import Cubical.Data.Nat using (ℕ; suc)
+open import Cubical.Data.Unit using (Unit; tt)
+open import Cubical.Data.Bool using (Bool; true; false; if_then_else_)
 open import Cubical.Data.FinData.Base using (Fin) renaming (zero to fzero; suc to fsuc)
 
 open import TheoryGrammar.Base
@@ -30,11 +32,12 @@ module DeBruijn (Name : Type₀) where
     dapp : ∀ {k} → DB k → DB k → DB k
     dlam : ∀ {k} → DB (suc k) → DB k
 
-  -- a constant grammar is a constant: the unique map into `λ _ → X`
-  constG : {s : LSort} {A : TheoryTy ℓ-zero s} {X : Type₀}
-         → X → A ⊢ (λ _ → X)
-  constG x _ _ = x
-
+  -- Elaboration is a SEMANTIC ACTION -- `Action A X = A ⊢ Δ X`, from
+  -- TheoryGrammar.SemanticAction -- not a map into a hand-written
+  -- constant grammar `λ _ → X`.  That is what lets it be composed with
+  -- a parser or a checker by the GENERIC `runResult`, with no `Maybe`
+  -- spelled out at the use site and no mention of `Raw` there at all.
+  --
   -- Reading a de Bruijn index off a scope membership.  The hit branch
   -- DISCARDS the representable rather than eliminating it with `⌈⌉-E`:
   -- `⌈⌉-E` matches `Eq.refl`, and a witness built from `Discrete Name`
@@ -42,22 +45,36 @@ module DeBruijn (Name : Type₀) where
   -- is fixed by the POSITION in the scope, not by the proof, so nothing
   -- is lost -- and this is the difference between the tests computing
   -- and not.
-  toIx : (Γ : Scope) → In Γ ⊢ (λ _ → Fin (length Γ))
-  toIx []      = ⊥-E
-  toIx (m ∷ Γ) = ⊕-E (constG fzero ∘g ⊤-I) ((λ _ → fsuc) ∘g toIx Γ)
+  toIxA : (Γ : Scope) → Action (In Γ) (Fin (length Γ))
+  toIxA []      = ⊥A
+  toIxA (m ∷ Γ) = caseA (pureA (Fin (length (m ∷ Γ))) fzero)
+                        (mapA fsuc (toIxA Γ))
 
   Mot : Ix → Type₀
-  Mot (Γ , _) = DB (length Γ)
+  Mot i = Δ (DB (length (i .fst))) (i .snd)
 
-  dbStep : (Γ : Scope) → Step (λ Δ _ → DB (length Δ)) Γ ⊢ (λ _ → DB (length Γ))
-  dbStep Γ = ⊕-E (var-elim λ n i → dvar (toIx Γ n i))
-            (⊕-E (app-elim λ _ _ a b → dapp a b)
-                 (⊕ᴰ-E λ _ → lam-elim λ _ _ _ d → dlam d))
+  -- One action per alternative.  Every branch is a composite of the
+  -- generic `Δ`-combinators (`Δ-map`, `Δ-pair`, `Δ-at`) with this
+  -- instance's own tensor eliminators; no constant grammar, no `Maybe`,
+  -- and nothing built by hand.  `Δ-at` is what crosses from a slot's
+  -- world to the whole's -- the move a residual would otherwise need,
+  -- and available here only because `Δ` is discrete.
+  module _ (Γ : Scope) where
+    private k = length Γ
 
-  toDB : (Γ : Scope) → Scoped Γ ⊢ (λ _ → DB (length Γ))
+    dbStepA : Step (λ Δ' x → Mot (Δ' , x)) Γ ⊢ Δ (DB k)
+    dbStepA =
+      ⊕-E (var-elim λ n i → Δ-map dvar (var n) (toIxA Γ n i))
+     (⊕-E (app-elim λ u v a b →
+             Δ-map (λ p → dapp (p .fst) (p .snd)) (app u v)
+                   (Δ-pair (app u v) (Δ-at u (app u v) a , Δ-at v (app u v) b)))
+          (⊕ᴰ-E λ _ → lam-elim λ n t _ d →
+                        Δ-map dlam (lam n t) (Δ-at t (lam n t) d)))
+
+  toDB : (Γ : Scope) → Action (Scoped Γ) (DB (length Γ))
   toDB Γ t d = fold Mot alg (Γ , t) d
     where
     alg : (Γ' : Scope) (t' : Raw) (sh : Sh (ScopedF Γ') t')
         → ((p : Pos (ScopedF Γ') t' sh) → Mot (nx (ScopedF Γ') t' sh p))
         → Mot (Γ' , t')
-    alg Γ' t' sh rc = dbStep Γ' t' (⟦Sc⟧ {M = Mot} Γ' t' (sh , rc))
+    alg Γ' t' sh rc = dbStepA Γ' t' (⟦Sc⟧ {M = Mot} Γ' t' (sh , rc))

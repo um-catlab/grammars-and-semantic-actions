@@ -89,6 +89,9 @@ module PassKit (Name : Type₀) where
   idPass : (Γ : Scope) → Scoped Γ ⊢ Out Γ
   idPass = runPass idAlg
 
-  -- observing a pass: the output term, internally
-  term : (Γ : Scope) → Out Γ ⊢ (λ _ → Raw)
-  term Γ = ⊕ᴰ-E λ t _ _ → t
+  -- Observing a pass: the output term, as a SEMANTIC ACTION.  `Out Γ`
+  -- is a `⊕ᴰ Raw`, so reading its index off is the GENERIC `tagA`
+  -- (TheoryGrammar.SemanticAction) -- there is nothing pass-specific
+  -- here, and no constant grammar.
+  term : (Γ : Scope) → Action (Out Γ) Raw
+  term Γ = tagA Raw

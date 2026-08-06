@@ -4,7 +4,7 @@
   lives in `Instances/Lambda/`.
 
     Signature   two sorts, three operations, mixed-sort arity
-    Substrate   raw terms; splittings as output-indexed data
+    Fibered   raw terms; splittings as output-indexed data
     Base        the connectives, and the generic combinator layer
     Residuals   one per (operation, slot)
     Adjunctions the tensor/residual adjunction, and what it costs
@@ -24,7 +24,7 @@ open import Cubical.Foundations.Prelude
 open import Cubical.Relation.Nullary.Base using (Discrete)
 
 open import TheoryGrammar.Instances.Lambda.Signature  public
-open import TheoryGrammar.Instances.Lambda.Substrate
+open import TheoryGrammar.Instances.Lambda.Fibered
 open import TheoryGrammar.Instances.Lambda.Base
 open import TheoryGrammar.Instances.Lambda.Residuals
 open import TheoryGrammar.Instances.Lambda.Adjunctions

@@ -46,7 +46,7 @@ open import Cubical.Data.Empty using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Instances.Semimodule.Base Char public
 
 -- ==================================================================
@@ -80,7 +80,7 @@ infix  25 !⟨_⟩_
 -- ==================================================================
 -- PRIMITIVES (phase 1): intro and elim for each tensor.  Everything
 -- downstream is a composite of these together with the combinators of
--- `RulesS`.
+-- `RulesF`.
 -- ==================================================================
 
 -- PRIMITIVE: intro for the action.

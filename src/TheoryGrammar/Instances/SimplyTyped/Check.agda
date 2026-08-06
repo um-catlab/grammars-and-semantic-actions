@@ -30,7 +30,6 @@ module TheoryGrammar.Instances.SimplyTyped.Check where
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
 open import Cubical.Data.Sigma
-open import Cubical.Data.Sum using (inl; inr)
 open import Cubical.Data.Unit
 open import Cubical.Data.List using (List; []; _∷_)
 open import Cubical.Data.Nat.Order using (_<_)
@@ -40,7 +39,7 @@ open import Cubical.Relation.Nullary.Base using (Discrete)
 open import TheoryGrammar.Base
 open import TheoryGrammar.Decidable
 open import TheoryGrammar.Instances.SimplyTyped.Signature
-open import TheoryGrammar.Instances.SimplyTyped.Substrate
+open import TheoryGrammar.Instances.SimplyTyped.Fibered
 open import TheoryGrammar.Instances.SimplyTyped.Base
 open import TheoryGrammar.Instances.SimplyTyped.Grading
 open import TheoryGrammar.Instances.SimplyTyped.Readable
@@ -156,9 +155,11 @@ module StCheck (Name : Type₀) (_≟_ : Discrete Name) where
              → ((sp : IsApp t) (A₀ : Ty)
                 → Dec⟨ Check Γ A₀ ⟩ (TParts appOp t sp false))
              → Dec⟨ AppGᵈ Γ ⟩ t
-    dec-appᵈ dFn dArg with ⊗-decSplit appOp t tt
-    ... | inr k = dec-no (AppGᵈ Γ) t λ y → k (y .fst , λ _ → tt)
-    ... | inl x = fromFn (x .fst) (dFn (x .fst))
+    dec-appᵈ dFn dArg =
+      dec-elim (⊗ˢ appOp (λ _ → ⊤G)) t
+        (λ x → fromFn (x .fst) (dFn (x .fst)))
+        (λ k → dec-no (AppGᵈ Γ) t λ y → k (y .fst , λ _ → tt))
+        (⊗-decSplit appOp t tt)
       where
       -- the function's type is an arrow, and the argument checks at its
       -- domain: the only positive case
@@ -166,15 +167,19 @@ module StCheck (Name : Type₀) (_≟_ : Discrete Name) where
               → Infer Γ (A₁ ⇒ᵗ B₁) (TParts appOp t sp true)
               → Dec⟨ Check Γ A₁ ⟩ (TParts appOp t sp false)
               → Dec⟨ AppGᵈ Γ ⟩ t
-      atArrow sp A₁ B₁ d (inl c) = dec-yes (AppGᵈ Γ) t (sp , (A₁ , B₁) , d , c)
-      atArrow sp A₁ B₁ d (inr k) = dec-no (AppGᵈ Γ) t λ y →
-        k (subst (λ X → Check Γ X (TParts appOp t sp false))
-                 (sym (⇒ᵗ-inj A₁ B₁ (align sp y .fst .fst) (align sp y .fst .snd)
-                        (synUnique Γ (A₁ ⇒ᵗ B₁)
-                                   (align sp y .fst .fst ⇒ᵗ align sp y .fst .snd)
-                                   (TParts appOp t sp true)
-                                   (d , align sp y .snd .fst)) .fst))
-                 (align sp y .snd .snd))
+      atArrow sp A₁ B₁ d =
+        dec-elim (Check Γ A₁) (TParts appOp t sp false)
+          (λ c → dec-yes (AppGᵈ Γ) t (sp , (A₁ , B₁) , d , c))
+          (λ k → dec-no (AppGᵈ Γ) t λ y →
+             k (subst (λ X → Check Γ X (TParts appOp t sp false))
+                      (sym (⇒ᵗ-inj A₁ B₁ (align sp y .fst .fst)
+                                         (align sp y .fst .snd)
+                             (synUnique Γ (A₁ ⇒ᵗ B₁)
+                                        (align sp y .fst .fst ⇒ᵗ
+                                         align sp y .fst .snd)
+                                        (TParts appOp t sp true)
+                                        (d , align sp y .snd .fst)) .fst))
+                      (align sp y .snd .snd)))
 
       -- SUBSINGLETON AT WORK: the synthesised type is the only one, so
       -- "it is not an arrow" really does refute the application
@@ -190,10 +195,12 @@ module StCheck (Name : Type₀) (_≟_ : Discrete Name) where
 
       fromFn : (sp : IsApp t) → Dec⟨ Syn Γ ⟩ (TParts appOp t sp true)
              → Dec⟨ AppGᵈ Γ ⟩ t
-      fromFn sp (inl (C , d)) = atType sp C d
-      fromFn sp (inr k) = dec-no (AppGᵈ Γ) t λ y →
-        k ( align sp y .fst .fst ⇒ᵗ align sp y .fst .snd
-          , align sp y .snd .fst )
+      fromFn sp =
+        dec-elim (Syn Γ) (TParts appOp t sp true)
+          (λ z → atType sp (z .fst) (z .snd))
+          (λ k → dec-no (AppGᵈ Γ) t λ y →
+             k ( align sp y .fst .fst ⇒ᵗ align sp y .fst .snd
+               , align sp y .snd .fst ))
 
   -- ================================================================
   -- THE LEMMA THE WHOLE QUESTION IS ABOUT.
@@ -202,10 +209,18 @@ module StCheck (Name : Type₀) (_≟_ : Discrete Name) where
   dec-at : (Γ : Ctx) (C : Ty)
          → ((A B : Ty) → (Infer Γ A & Infer Γ B) ⊢ Kty A B)
          → Dec⟨ Syn Γ ⟩ ⊢ Dec⟨ Infer Γ C ⟩
-  dec-at Γ C uniq t (inr k) = dec-no (Infer Γ C) t λ d → k (C , d)
-  dec-at Γ C uniq t (inl (A , d)) with dec-⌈⌉ᵗ C A tt
-  ... | inl e = dec-yes (Infer Γ C) t (tyCast (λ X → Infer Γ X) A C e t d)
-  ... | inr k = dec-no  (Infer Γ C) t λ d' → k (uniq A C t (d , d'))
+  -- The OUTER decision is uniform in the index, so it is the ordinary
+  -- `⊕-E`, and the ⊕ᴰ that guesses the synthesised type is `⊕ᴰ-E`.
+  -- Only the INNER one -- "is the synthesised type the one asked for?"
+  -- -- sits at a fixed index (that very type), and takes `dec-elim`.
+  dec-at Γ C uniq =
+    ⊕-E (⊕ᴰ-E λ A t d →
+           dec-elim (⌈_⌉ {s = ty} C) A
+             (λ e → dec-yes (Infer Γ C) t
+                      (tyCast (λ X → Infer Γ X) A C e t d))
+             (λ k → dec-no (Infer Γ C) t λ d' → k (uniq A C t (d , d')))
+             (dec-⌈⌉ᵗ C A tt))
+        (dec-no (Infer Γ C) ∘g ¬G-map (⊕ᴰ-I Ty {A = Infer Γ} C))
 
   -- ================================================================
   -- The checking side's lambda rule.
@@ -228,16 +243,21 @@ module StCheck (Name : Type₀) (_≟_ : Discrete Name) where
                    → Dec⟨ P sa (TParts lamOp t sp true) ⟩
                           (TParts lamOp t sp false))
                 → Dec⟨ LamCase Γ C ⟩ t
-    dec-lamCase d with ⊗-decSplit arrOp C tt
-    ... | inr k = dec-no (LamCase Γ C) t λ y → k (y .fst , λ _ → tt)
-    ... | inl x = at (x .fst)
+    dec-lamCase d =
+      dec-elim (⊗ˢ arrOp (λ _ → ⊤G)) C
+        (λ x → at (x .fst))
+        (λ k → dec-no (LamCase Γ C) t λ y → k (y .fst , λ _ → tt))
+        (⊗-decSplit arrOp C tt)
       where
       at : (sa : IsArr C) → Dec⟨ LamCase Γ C ⟩ t
-      at sa with dec-map (LamGᵈ (P sa)) (Q sa) lam-collapse⁻ lam-collapse t
-                         (dec-lamᵈ (P sa) t (d sa))
-      ... | inl q = dec-yes (LamCase Γ C) t (sa , q)
-      ... | inr k = dec-no  (LamCase Γ C) t λ y →
-        k (subst (λ s → Q s t) (Split-isProp arrOp C (y .fst) sa) (y .snd))
+      at sa =
+        dec-elim (Q sa) t
+          (λ q → dec-yes (LamCase Γ C) t (sa , q))
+          (λ k → dec-no (LamCase Γ C) t λ y →
+             k (subst (λ s → Q s t)
+                      (Split-isProp arrOp C (y .fst) sa) (y .snd)))
+          (dec-map (LamGᵈ (P sa)) (Q sa) lam-collapse⁻ lam-collapse t
+                   (dec-lamᵈ (P sa) t (d sa)))
 
   -- ================================================================
   -- The typechecker.

@@ -13,7 +13,6 @@ module TheoryGrammar.Instances.Lambda.Binder where
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
 open import Cubical.Data.Sigma
-open import Cubical.Data.Sum using (inl; inr)
 open import Cubical.Data.Unit
 import Cubical.Data.Equality as Eq
 
@@ -41,20 +40,26 @@ module Binder (Name : Type₀) where
   collapse⁻ t (sp , a) =
     LParts lamOp t sp true , sp , λ { true → Eq.refl ; false → a }
 
-  -- its decision, exactly parallel to the generic `dec-⊗`
+  -- its decision, exactly parallel to the generic `dec-⊗`: both
+  -- decisions -- of the body, and of there being a splitting at all --
+  -- live at a FIXED index, so both go through `dec-elim`.
   private
     decLam : (A : Name → TmG) (t : Raw) (sp : IsLam t)
            → Dec⟨ A (LParts lamOp t sp true) ⟩ (LParts lamOp t sp false)
            → Dec⟨ LamGᵈ A ⟩ t
-    decLam A t sp (inl a) = dec-yes (LamGᵈ A) t (sp , a)
-    decLam A t sp (inr k) = dec-no  (LamGᵈ A) t λ x →
-      k (subst (λ s → A (LParts lamOp t s true) (LParts lamOp t s false))
-               (Split-isProp lamOp t (x .fst) sp) (x .snd))
+    decLam A t sp =
+      dec-elim (A (LParts lamOp t sp true)) (LParts lamOp t sp false)
+        (λ a → dec-yes (LamGᵈ A) t (sp , a))
+        (λ k → dec-no (LamGᵈ A) t λ x →
+           k (subst (λ s → A (LParts lamOp t s true) (LParts lamOp t s false))
+                    (Split-isProp lamOp t (x .fst) sp) (x .snd)))
 
   dec-lamᵈ : (A : Name → TmG) (t : Raw)
            → ((sp : IsLam t)
               → Dec⟨ A (LParts lamOp t sp true) ⟩ (LParts lamOp t sp false))
            → Dec⟨ LamGᵈ A ⟩ t
-  dec-lamᵈ A t d with ⊗-decSplit lamOp t tt
-  ... | inl x = decLam A t (x .fst) (d (x .fst))
-  ... | inr k = dec-no (LamGᵈ A) t λ y → k (y .fst , λ _ → tt)
+  dec-lamᵈ A t d =
+    dec-elim (⊗ˢ lamOp (λ _ → ⊤G)) t
+      (λ x → decLam A t (x .fst) (d (x .fst)))
+      (λ k → dec-no (LamGᵈ A) t λ y → k (y .fst , λ _ → tt))
+      (⊗-decSplit lamOp t tt)

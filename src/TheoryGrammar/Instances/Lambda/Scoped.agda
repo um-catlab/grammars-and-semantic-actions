@@ -41,7 +41,7 @@ module Wellscoped (Name : Type₀) where
   In (m ∷ Γ) = ⌈ m ⌉ ⊕ In Γ
 
   -- nonterminals: one per scope, all at sort `tm`
-  open Ind λSub ℓ-zero Scope (λ _ → tm) public
+  open Ind λFib ℓ-zero Scope (λ _ → tm) public
 
   data ScTag : Type₀ where
     tVar tApp tLam : ScTag

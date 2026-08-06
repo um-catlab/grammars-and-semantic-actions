@@ -6,14 +6,14 @@
   The framing, and why it is the right one.
   ------------------------------------------------------------------
 
-  A grammar over the Dirichlet substrate is a family indexed by a
+  A grammar over the Dirichlet promodel is a family indexed by a
   positive integer; a `μ` of a description is a grammar defined by a
   recursion whose recursive slots sit at the parts of a splitting, i.e.
   at DIVISORS.  Because `deg n = n` (Graded.agda), the framework's Löb
   recursion over "strictly smaller degree" is literally strong induction
-  on the natural number, and the substrate restricts it to divisors.  So
+  on the natural number, and the promodel restricts it to divisors.  So
 
-      Löb over the Dirichlet substrate  =  strong induction on divisors,
+      Löb over the Dirichlet promodel  =  strong induction on divisors,
 
   and "a canonical factorisation of n" is not an auxiliary construction
   but the parse tree of n against the grammar
@@ -42,7 +42,7 @@
   is the closed form of the very same grammar: the unique factorisation
   theorem says the canonical-factorisation grammar is isomorphic to ⊤,
   which in the convolution algebra is the statement that ζ factors as an
-  infinite ⊗ of Kleene stars, one per prime.  `KL*` at this substrate is
+  infinite ⊗ of Kleene stars, one per prime.  `KL*` at this promodel is
   `μ` of `⌈1⌉ ⊕ (⌈p⌉ ⊗ Var)` -- the same description with the ⊕ᴰ over
   primes deleted -- and it is guarded for exactly the reason the string
   Kleene star is guarded: `⌈p⌉` is "non-nullable", which here means p ≥ 2.
@@ -100,7 +100,7 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
 
@@ -371,10 +371,11 @@ fundamentalTheorem n = factorize 0 n (noSmall0 n)
 -- reduces: the final `refl` is the evaluation.
 -- ==================================================================
 
--- `fold` at a connective-form algebra.  `toC` is the container-to-
--- connective translation from TheoryGrammar.Inductive.
-foldC : (i : Ix) → μ factF i → Fact i
-foldC = fold Fact (λ x m sh f → falg x m (toC (factF x) m (sh , f)))
+-- `fold` at a connective-form algebra is the GENERIC `Inductive.foldC`;
+-- this file used to re-derive it (as did `Lambda.Passes.Framework`,
+-- `Lambda.DeBruijn` and `SimplyTyped.Unique`).
+factorise : (i : Ix) → μ factF i → Fact i
+factorise = foldC Fact falg
 
 -- Everything ≥ 2 whose value is ≤ 3 is irreducible, because two factors
 -- ≥ 2 already multiply to ≥ 4.  Enough for 2 and 3.
@@ -415,5 +416,5 @@ parse12 =
 -- ... and reading it back through the specification-valued algebra
 -- produces the list of primes, with its own proof that they multiply
 -- back to 12.  Both halves compute.
-_ : foldC (0 , (12 , tt)) parse12 .fst ≡ prime2 ∷ prime2 ∷ prime3 ∷ []
+_ : factorise (0 , (12 , tt)) parse12 .fst ≡ prime2 ∷ prime2 ∷ prime3 ∷ []
 _ = refl

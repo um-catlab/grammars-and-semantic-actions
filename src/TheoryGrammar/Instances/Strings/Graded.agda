@@ -15,7 +15,7 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
 
@@ -40,12 +40,12 @@ split3LenR< (cons s) pr = suc-≤-suc (split3LenR s)
 -- THE RESOURCE PREDICATE, internally: `w` is non-trivial when it
 -- decomposes with an ATOM on the left.  Nothing about length appears;
 -- this is `⌈_⌉`, `⊗`, `⊕ᴰ` and `⊤` only, so it makes sense at any
--- substrate that has atoms.
+-- promodel that has atoms.
 NonTrivial : Gr
 NonTrivial = ⊕ᴰ Char (λ c → ⌈ c ∷ [] ⌉ ⊗' ⊤G)
 
 -- PRIMITIVE (phase 1).  The ONE bridge from the internal predicate to
--- the grading, confined to the substrate where the grading is defined.
+-- the grading, confined to the promodel where the grading is defined.
 ntLen : {v : String} → NonTrivial v → 0 < length v
 ntLen {v} (c , (u' , v' , s) , h) = go (h true) s
   where go : u' Eq.≡ c ∷ [] → Split3 u' v' v → 0 < length v
@@ -55,8 +55,8 @@ StrProper : (o : MonOp) (m : String) → MonSplit o m → MonAr o → Type₀
 StrProper nilop m sp ()
 StrProper appop w (u , v , _) b = NonTrivial (if b then v else u)
 
-strGraded : GradedSubstrate monSig ℓ-zero ℓ-zero
-strGraded .sub    = strSub
+strGraded : GradedFib monoidSig ℓ-zero ℓ-zero
+strGraded .fib    = strFib
 strGraded .deg _  = length
 strGraded .Proper = StrProper
 strGraded .deg≤ nilop m sp ()

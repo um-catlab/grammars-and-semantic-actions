@@ -1,11 +1,11 @@
 {-
   TWO CONVOLUTIONS ON ONE CARRIER: THE CAUCHY AND DIRICHLET PRODUCTS.
 
-  The semiring ℕ, presented as a SINGLE substrate carrying FOUR
+  The semiring ℕ, presented as a SINGLE promodel carrying FOUR
   operations -- `zeroOp`/`addOp` and `oneOp`/`mulOp`.  That is the point
   of the file: distributivity is a statement relating two operations of
   the SAME signature, so the two monoid structures must be splittings of
-  one substrate, not two substrates that happen to share a carrier.  (It
+  one promodel, not two promodels that happen to share a carrier.  (It
   is also why this file imports nothing from the Nat or Dirichlet
   instances elsewhere in `Instances/`: those are at different
   signatures.)
@@ -52,8 +52,8 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
-open import TheoryGrammar.RulesSub
+open import TheoryGrammar.Fibered
+open import TheoryGrammar.RulesFib
 
 -- ==================================================================
 -- The signature of a semiring: one sort, four operations.
@@ -116,24 +116,29 @@ RingParts addOp  n (i , j , _) b = if b then i else j
 RingParts oneOp  n sp ()
 RingParts mulOp  n (i , j , _) b = if b then i else j
 
-natSub : Substrate ringSig ℓ-zero ℓ-zero
-natSub .carrier _   = ℕ
-natSub .op zeroOp _ = 0
-natSub .op addOp f  = f true + f false
-natSub .op oneOp _  = 1
-natSub .op mulOp f  = f true · f false
-natSub .Split       = RingSplit
-natSub .parts       = RingParts
-natSub .split zeroOp f = tt
-natSub .split addOp f  = f true , f false , splitAllAdd (f true) (f false)
-natSub .split oneOp f  = tt
-natSub .split mulOp f  = f true , f false , Eq.refl
-natSub .parts-split zeroOp f = funExt λ ()
-natSub .parts-split addOp f  = funExt λ { true → refl ; false → refl }
-natSub .parts-split oneOp f  = funExt λ ()
-natSub .parts-split mulOp f  = funExt λ { true → refl ; false → refl }
+natFib : Fibered ringSig ℓ-zero ℓ-zero
+natFib .carrier _   = ℕ
+natFib .Split       = RingSplit
+natFib .parts       = RingParts
 
-open RulesS natSub public
+-- The total point, separately: (ℕ,0,+,1,·) is a total algebra, so the
+-- split loses nothing here.  What it buys is that `RulesF natFib` and
+-- the two convolutions below never consult it.
+natPoint : LaxPoint natFib
+natPoint .op zeroOp _ = 0
+natPoint .op addOp f  = f true + f false
+natPoint .op oneOp _  = 1
+natPoint .op mulOp f  = f true · f false
+natPoint .split zeroOp f = tt
+natPoint .split addOp f  = f true , f false , splitAllAdd (f true) (f false)
+natPoint .split oneOp f  = tt
+natPoint .split mulOp f  = f true , f false , Eq.refl
+natPoint .parts-split zeroOp f = funExt λ ()
+natPoint .parts-split addOp f  = funExt λ { true → refl ; false → refl }
+natPoint .parts-split oneOp f  = funExt λ ()
+natPoint .parts-split mulOp f  = funExt λ { true → refl ; false → refl }
+
+open RulesF natFib public
 
 Gr : Type₁
 Gr = TheoryTy ℓ-zero tt

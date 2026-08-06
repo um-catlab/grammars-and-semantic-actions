@@ -16,9 +16,9 @@
   type of a group does not shrink as the element shrinks, because
   nothing shrinks.
 
-  Consequently `GroupLike ℤSub addOp true` is witnessed by `refl`:
+  Consequently `GroupLike ℤFib addOp true` is witnessed by `refl`:
   slot `true` of the splitting `i` IS `i`, so it ranges over all of ℤ.
-  `NoGrading.GroupObstruction` then gives, for EVERY grading of `ℤSub`:
+  `NoGrading.GroupObstruction` then gives, for EVERY grading of `ℤFib`:
 
       deg is constant,
       no splitting has a proper slot,
@@ -28,7 +28,7 @@
   This is stated below as `ℤ-deg-const` / `ℤ-no-proper` /
   `ℤ-no-inductive`, quantified over an ARBITRARY grading supplied as
   its four components (`deg`, `Proper`, `deg≤`, `deg<`) -- i.e. over an
-  arbitrary `GradedSubstrate` whose `sub` is `ℤSub`.  Note again that
+  arbitrary `GradedFib` whose `fib` is `ℤFib`.  Note again that
   the degenerate grading (`deg = const 0`, `Proper = ⊥`) does exist; the
   theorem is that it is the only one.
 
@@ -61,10 +61,10 @@ open import Cubical.Data.Int
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
-open import TheoryGrammar.RulesSub
+open import TheoryGrammar.RulesFib
 
 open import TheoryGrammar.Instances.Group.NoGrading
 
@@ -86,7 +86,7 @@ grpSig .sortOf _ _   = tt
 grpSig .resultSort _ = tt
 
 -- ==================================================================
--- The substrate.  THE WHOLE CONTENT IS IN `GrpSplit addOp`.
+-- The promodel.  THE WHOLE CONTENT IS IN `GrpSplit addOp`.
 --
 -- For a monoid the splittings of `n` are the ways of writing n = i + j.
 -- For a GROUP that is a free choice of `i`, with `j = n - i` forced --
@@ -103,23 +103,29 @@ GrpParts zeroOp n sp ()
 GrpParts addOp  n i b = if b then i else (n - i)
 
 private
-  -- (a + b) - a ≡ b : the group law, as the substrate's `parts-split`.
+  -- (a + b) - a ≡ b : the group law, as the promodel's `parts-split`.
   +-cancelˡ : (a b : ℤ) → (a + b) - a ≡ b
   +-cancelˡ a b = cong (_- a) (+Comm a b) ∙ plusMinus a b
 
-ℤSub : Substrate grpSig ℓ-zero ℓ-zero
-ℤSub .carrier _     = ℤ
-ℤSub .op zeroOp _   = pos 0
-ℤSub .op addOp f    = f true + f false
-ℤSub .Split         = GrpSplit
-ℤSub .parts         = GrpParts
-ℤSub .split zeroOp f = Eq.refl
-ℤSub .split addOp f  = f true
-ℤSub .parts-split zeroOp f = funExt λ ()
-ℤSub .parts-split addOp f  =
+ℤFib : Fibered grpSig ℓ-zero ℓ-zero
+ℤFib .carrier _     = ℤ
+ℤFib .Split         = GrpSplit
+ℤFib .parts         = GrpParts
+
+-- The total point, separately: ℤ is total under addition, so the split
+-- costs this instance nothing.  What it buys is that `RulesF ℤFib` --
+-- and hence `GroupLike`/`GradedFib` below -- never consults it, so the
+-- obstruction is a statement about the SPLITTINGS alone.
+ℤPoint : LaxPoint ℤFib
+ℤPoint .op zeroOp _   = pos 0
+ℤPoint .op addOp f    = f true + f false
+ℤPoint .split zeroOp f = Eq.refl
+ℤPoint .split addOp f  = f true
+ℤPoint .parts-split zeroOp f = funExt λ ()
+ℤPoint .parts-split addOp f  =
   funExt λ { true → refl ; false → +-cancelˡ (f true) (f false) }
 
-open RulesS ℤSub public
+open RulesF ℤFib public
 
 Gr : Type₁
 Gr = TheoryTy ℓ-zero tt
@@ -135,44 +141,35 @@ infixr 20 _⊗'_
 -- obstruction, and it is `refl`: the splitting IS the left summand.
 -- ==================================================================
 
-ℤGroupLike : GroupLike ℤSub addOp true
+ℤGroupLike : GroupLike ℤFib addOp true
 ℤGroupLike n h = h , refl
 
 -- ==================================================================
--- THE THEOREM, over an arbitrary grading of `ℤSub`.
+-- THE THEOREM, over an arbitrary grading of `ℤFib`.
 --
--- The four module parameters are exactly the fields of
--- `GradedSubstrate` other than `sub`; `ℤGraded` below reassembles them,
--- so this really does quantify over every graded substrate whose
--- underlying substrate is `ℤSub`.
+-- This used to take the four fields of `GradedFib` as separate module
+-- parameters and reassemble the record by hand, because the bundled
+-- record could not express "a grading OF `ℤFib`".  `Grading` now can, so
+-- the quantification is a single parameter and `graded` does the
+-- reassembly.  The statement is unchanged: `G` ranges over EVERY graded
+-- promodel whose underlying promodel is `ℤFib`.
 -- ==================================================================
 
-module AnyGrading
-  (deg    : ℤ → ℕ)
-  (Proper : (o : GrpOp) (n : ℤ) → GrpSplit o n → GrpAr o → Type₀)
-  (deg≤   : (o : GrpOp) (n : ℤ) (sp : GrpSplit o n) (a : GrpAr o)
-          → deg (GrpParts o n sp a) ≤ deg n)
-  (deg<   : (o : GrpOp) (n : ℤ) (sp : GrpSplit o n) (a : GrpAr o)
-          → Proper o n sp a → deg (GrpParts o n sp a) < deg n)
-  where
+module AnyGrading (G : Grading ℤFib) where
 
-  ℤGraded : GradedSubstrate grpSig ℓ-zero ℓ-zero
-  ℤGraded .GradedSubstrate.sub    = ℤSub
-  ℤGraded .GradedSubstrate.deg _  = deg
-  ℤGraded .GradedSubstrate.Proper = Proper
-  ℤGraded .GradedSubstrate.deg≤   = deg≤
-  ℤGraded .GradedSubstrate.deg<   = deg<
+  ℤGraded : GradedFib grpSig ℓ-zero ℓ-zero
+  ℤGraded = graded ℤFib G
 
   open GroupObstruction ℤGraded addOp true ℤGroupLike public
 
   -- THEOREM 1.  ℤ carries no information: the degree cannot see it.
-  ℤ-deg-const : (m n : ℤ) → deg m ≡ deg n
+  ℤ-deg-const : (m n : ℤ) → G .deg tt m ≡ G .deg tt n
   ℤ-deg-const = deg-const
 
   -- THEOREM 2.  No slot of any splitting is proper.  So the ONLY legal
   -- choice of `Proper` is the empty one -- the grading is degenerate.
   ℤ-no-proper : (o : GrpOp) (n : ℤ) (sp : GrpSplit o n) (a : GrpAr o)
-              → Proper o n sp a → ⊥
+              → G .Proper o n sp a → ⊥
   ℤ-no-proper = no-proper
 
   -- THEOREM 3.  No description over ℤ is guarded once it has a single

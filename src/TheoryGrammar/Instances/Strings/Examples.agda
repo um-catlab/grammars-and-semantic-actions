@@ -12,7 +12,11 @@ open import Cubical.Data.Sigma
 open import Cubical.Data.List
 import Cubical.Data.Equality as Eq
 
+open import Cubical.Data.Maybe using (Maybe; just; nothing)
+
 open import TheoryGrammar.Enumerable
+open import TheoryGrammar.SemanticAction
+open import TheoryGrammar.SemanticAction using (passes; _↦_; _at_)
 open import TheoryGrammar.Instances.Strings.CYK Bool
 
 -- the grammar `a b` over the two-letter alphabet
@@ -105,20 +109,23 @@ matchLit c = probe→maybe ⌈ c ∷ [] ⌉ (litProbe c)
 
 open Search allRules matchLit
 
--- Observing the parser: `MaybeG-E` into a constant grammar, via
--- `TheoryGrammar.View.maybe→Bool`.  Matching `inl`/`inr` here was a
--- phase violation -- the eliminator exists.
-succeeded : (A : Gr) → Cover (MaybeG A) → Cover (λ _ → Bool)
-succeeded = maybe→Bool
+-- Observing the parser.  `okA` (TheoryGrammar.SemanticAction) is the
+-- generic observer: it reads a `Result E A` at ANY error grammar, so
+-- the very same combinator observes `parse` here (error `⊤G`) and
+-- `derives?` below (error `¬G _`).  The result is a TERM `⊤G ⊢ Δ Bool`;
+-- `run` appears only in the `refl` line, and cases are batched with
+-- `passes … at …` so the term under test is written once.
 
--- "ab" parses from S, "ba" does not, and "a" parses from A
-_ : succeeded (Deriv ntS) (parse ntS) (true ∷ false ∷ []) tt ≡ true
+parses? : (P : NT) → ⊤G ⊢ Δ Bool
+parses? P = okA (Deriv P) ⊤G ∘g parse P
+
+_ : passes (run (parses? ntS) at
+             ( (true ∷ false ∷ []) ↦ true
+             ∷ (false ∷ true ∷ []) ↦ false
+             ∷ [] ))
 _ = refl
 
-_ : succeeded (Deriv ntS) (parse ntS) (false ∷ true ∷ []) tt ≡ false
-_ = refl
-
-_ : succeeded (Deriv ntA) (parse ntA) (true ∷ []) tt ≡ true
+_ : passes (run (parses? ntA) at ((true ∷ []) ↦ true ∷ []))
 _ = refl
 
 -- ==================================================================
@@ -142,18 +149,138 @@ allComplete ntB (inr (_ , _ , ()))
 
 open Decide allRules allComplete decEqS
 
--- ... and observing the DECISION: `⊕-E` into a constant grammar, via
--- `TheoryGrammar.View.probe→Bool`.  `DecG A` is `Dec⟨ A ⟩`, so
--- `decide P` is a `Probe`.
-isYes : (A : Gr) → Probe A → Cover (λ _ → Bool)
-isYes = probe→Bool
+-- ... and observing the DECISION with the SAME combinator, only at a
+-- different error grammar: `Dec⟨ A ⟩` is `Result (¬G A) A`, so
+-- `derives? P` and `parse P` have one shape between them.
+
+derives! : (P : NT) → ⊤G ⊢ Δ Bool
+derives! P = okA (Deriv P) (¬G Deriv P) ∘g derives? P
 
 -- "ab" is derivable from S; "ba" is REFUTED, not merely unfound
-_ : isYes (Deriv ntS) (decide ntS) (true ∷ false ∷ []) tt ≡ true
+_ : passes (run (derives! ntS) at
+             ( (true ∷ false ∷ []) ↦ true
+             ∷ (false ∷ true ∷ []) ↦ false
+             ∷ [] ))
 _ = refl
 
-_ : isYes (Deriv ntS) (decide ntS) (false ∷ true ∷ []) tt ≡ false
+_ : passes (run (derives! ntA) at ((true ∷ []) ↦ true ∷ []))
 _ = refl
 
-_ : isYes (Deriv ntA) (decide ntA) (true ∷ []) tt ≡ true
+-- ==================================================================
+-- THE WITNESS, not just the decision.
+--
+-- A `Bool` throws away everything the parser proved.  What we actually
+-- want out is the parse TREE, and reading one out is a SEMANTIC ACTION
+-- `Deriv P ⊢ Δ Tree` -- the generic notion, from
+-- `TheoryGrammar.SemanticAction`.
+--
+-- The algebra below is written entirely in the connectives: the
+-- description's `⊕e` IS `⊕ᴰ`, its `⊗e` IS `⊗ˢ` and its `&e` IS `&ᴰ`, so
+-- the three branches are `⊕ᴰ-E`, `⊗A` and `&ᴰA` and there is not one
+-- match on a shape.  `Tree` cannot be fabricated: the action's source is
+-- the derivation, so a tree comes out only where a parse went in.
+-- ==================================================================
+
+data Tree : Type₀ where
+  leafT : Bool → Tree
+  nodeT : Tree → Tree → Tree
+
+module AI = ActInd strFib ℓ-zero NT (λ _ → tt)
+
+TreeMot : G.Ix → Type₀
+TreeMot i = Δ Tree (i .snd)
+
+cykAlg : AI.ActAlg CYKF (λ _ → Tree)
+cykAlg P = ⊕ᴰ-E branch
+  where
+    -- one branch per production; `ruleF` says what each one's payload is
+    branch : (r : Rule P) → G.⟦ ruleF P r ⟧c TreeMot ⊢ Δ Tree
+    branch (inl (c , pf))     = pureA Tree (leafT c)
+    branch (inr (Q , T , pf)) =
+      -- `⊗A` reads both slots of the splitting; `&ᴰA … true` picks the
+      -- recursive occurrence out of the (occurrence, non-triviality)
+      -- pair that guardedness put there, and `idA` is the subtree.
+      -- The `λ { true → … ; false → … }` matches on the ARITY, never on
+      -- a term: `binSlot Q T a` is stuck at a variable `a`, and this is
+      -- the same use of finiteness that `Readable.λ-decSlots` makes.
+      mapA (λ f → nodeT (f true) (f false))
+           (⊗A appop {A = λ a → G.⟦ binSlot Q T a ⟧c TreeMot} (λ _ → Tree)
+               (λ { true  → &ᴰA Bool true idA
+                  ; false → &ᴰA Bool true idA }))
+
+abstractify : (P : NT) → Deriv P ⊢ Δ Tree
+abstractify = AI.recA cykAlg
+
+-- The pipeline stays a TERM: `mapR` applies the action on the success
+-- branch and leaves the other alone.  ONE action reads the tree out of
+-- the incomplete parser ...
+parseT : (P : NT) → ⊤G ⊢ Result ⊤G (Δ Tree)
+parseT P = mapR ⊤G (Δ Tree) (abstractify P) ∘g parse P
+
+-- ... and out of the DECISION, with no change to the action at all
+derivT : (P : NT) → ⊤G ⊢ Result (¬G Deriv P) (Δ Tree)
+derivT P = mapR (¬G Deriv P) (Δ Tree) (abstractify P) ∘g derives? P
+
+_ : passes (runΔ Tree ⊤G (parseT ntS) at
+             ( (true ∷ false ∷ []) ↦ just (nodeT (leafT true) (leafT false))
+             ∷ (false ∷ true ∷ []) ↦ nothing
+             ∷ [] ))
+_ = refl
+
+_ : passes (runΔ Tree ⊤G (parseT ntA) at
+             ((true ∷ []) ↦ just (leafT true) ∷ []))
+_ = refl
+
+_ : passes (runΔ Tree _ (derivT ntS) at
+             ( (true ∷ false ∷ []) ↦ just (nodeT (leafT true) (leafT false))
+             ∷ (false ∷ true ∷ []) ↦ nothing
+             ∷ [] ))
+_ = refl
+
+-- ==================================================================
+-- The remaining maps out of `⊤` in this instance.  A VIEW is a
+-- `Cover (P ⊕ Q)`, which is a `Result Q P` -- so `accepts?` reads which
+-- branch it took, with no new combinator.
+-- ==================================================================
+
+-- ---- `charCase` / `decNT` : "is this word empty?", the decomposition
+-- ---- axiom and its swap.  They are each other's complement, and the
+-- ---- tests say so.
+empty? : ⊤G ⊢ Δ Bool
+empty? = okA ⌈ [] ⌉ NonTrivial ∘g charCase
+
+nonTrivial? : ⊤G ⊢ Δ Bool
+nonTrivial? = okA NonTrivial ⌈ [] ⌉ ∘g decNT
+
+_ : passes (run empty? at ([] ↦ true ∷ (true ∷ []) ↦ false ∷ []))
+_ = refl
+
+_ : passes (run nonTrivial? at
+             ( []                  ↦ false
+             ∷ (true ∷ [])         ↦ true
+             ∷ (true ∷ false ∷ []) ↦ true
+             ∷ [] ))
+_ = refl
+
+-- ---- `litProbe` / `matchLit` : the literal matcher, at BOTH shapes.
+-- ---- `matchLit` is `litProbe` weakened along `toMaybe`, so the two
+-- ---- must agree on acceptance -- which is what these check.
+lit? : (c : Bool) → ⊤G ⊢ Δ Bool
+lit? c = okA ⌈ c ∷ [] ⌉ (¬G ⌈ c ∷ [] ⌉) ∘g litProbe c
+
+litM? : (c : Bool) → ⊤G ⊢ Δ Bool
+litM? c = okA ⌈ c ∷ [] ⌉ ⊤G ∘g matchLit c
+
+_ : passes (run (lit? true) at
+             ( (true ∷ [])         ↦ true
+             ∷ (false ∷ [])        ↦ false
+             ∷ []                  ↦ false
+             ∷ (true ∷ true ∷ [])  ↦ false
+             ∷ [] ))
+_ = refl
+
+_ : passes (run (litM? true)  at ((true ∷ []) ↦ true ∷ (false ∷ []) ↦ false ∷ []))
+_ = refl
+
+_ : passes (run (litM? false) at ((false ∷ []) ↦ true ∷ []))
 _ = refl

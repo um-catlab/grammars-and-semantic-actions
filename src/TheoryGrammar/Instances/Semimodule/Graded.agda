@@ -24,7 +24,7 @@
 
   THE THIRD CASE IS THE INTERESTING ONE, because it shows exactly what
   the linearity condition is protecting.  The equation
-  `(r+s)·w = r·w ++ s·w` HOLDS in the substrate, so `⊗ᶠ-cong` still
+  `(r+s)·w = r·w ++ s·w` HOLDS in the promodel, so `⊗ᶠ-cong` still
   applies and still produces an isomorphism -- but the connective it
   produces is
 
@@ -52,7 +52,7 @@
   numeral -- and the law still fails, because
   `rep r (u ++ v) ≠ rep r u ++ rep r v`: (uv)² = uvuv while u²v² = uuvv.
   Duplicability of the grade is necessary and not sufficient; the
-  missing ingredient is EXCHANGE.  In a commutative substrate (the
+  missing ingredient is EXCHANGE.  In a commutative promodel (the
   `Bags` instance) the equation would hold and the law would go the way
   of case 3: not free, but true after a copying primitive.
 
@@ -74,7 +74,7 @@
   missing η would turn each round trip into a `PathP` over a `funExt`.
   That is the same "arities have no η" tax that `etaBool` pays at every
   `⊗ˢ`, one level up.  `⊗ᶠ-reassoc` removes it, by the same move
-  `Substrate.agda` makes for `⊗`: replace `Σ[ρ] Π v. A v (ρ v)` by
+  `Fibered.agda` makes for `⊗`: replace `Σ[ρ] Π v. A v (ρ v)` by
   `Π v. Σ[c] A v c`, which has both ηs.  With that one lemma the
   general form goes through as well, so the answer to "does the
   flattening bridge defeat `eqn→Iso`?" is NO -- but only after the
@@ -103,7 +103,7 @@ open import Cubical.Data.Empty using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Equations
 open import TheoryGrammar.Instances.Semimodule.Connectives Char public
 
@@ -112,7 +112,7 @@ open import TheoryGrammar.Instances.Semimodule.Connectives Char public
 -- ==================================================================
 
 M : Model semiSig ℓ-zero
-M = ⌊ smSub ⌋
+M = ⌊ smPoint ⌋
 
 V₁ : Type₀
 V₁ = Unit
@@ -316,7 +316,7 @@ addEqn r s A m =
 -- PRIMITIVE (phase 1).  THE COPY.  This is the whole of the non-linear
 -- content, isolated: `k tt` is used TWICE.  It can be written only
 -- because a POINT of `A w` may be duplicated in the metalanguage; no
--- combinator of `RulesS` produces `A ⊢ A ⊗ᵃ A`, and none could -- the
+-- combinator of `RulesF` produces `A ⊢ A ⊗ᵃ A`, and none could -- the
 -- index would have to be both `w` and `w ++ w`.  The flattening tells
 -- you exactly where the copy goes, and refuses to make it for you.
 diag→⊗ : (r s : ℕ) (A : Elt) → Diag r s A ⊢ ((!⟨ r ⟩ A) ⊗ᵃ (!⟨ s ⟩ A))
@@ -356,8 +356,8 @@ diag→⊗ r s A _ (ρ , Eq.refl , k) =
 --
 --     !-dist : (r : ℕ) (A B : Elt) → (!⟨ r ⟩ (A ⊗ᵃ B)) ⊢ ((!⟨ r ⟩ A) ⊗ᵃ (!⟨ r ⟩ B))
 --
--- because it is not a theorem of this substrate, and a hole would
--- claim that it is.  In a COMMUTATIVE substrate the equation holds and
+-- because it is not a theorem of this promodel, and a hole would
+-- claim that it is.  In a COMMUTATIVE promodel the equation holds and
 -- the law joins case 3: obtainable from `⊗ᶠ-cong` plus one copying
 -- primitive for the grade.
 -- ==================================================================
@@ -413,7 +413,7 @@ mulEqn₃ Aᵥ m = eqn→Iso M mulLHS mulRHS {A = Aᵥ} mulSat m
 -- equation component sitting over a `funExt`, i.e. a `PathP` over a
 -- family that Agda cannot see is constant.
 --
--- The cure is the one `Substrate.agda` applies to `⊗`: stop pairing a
+-- The cure is the one `Fibered.agda` applies to `⊗`: stop pairing a
 -- valuation with a separate payload and REASSOCIATE,
 --
 --     Σ[ ρ ∈ Π v. carrier (vs v) ] Π v. A v (ρ v)
@@ -424,20 +424,11 @@ mulEqn₃ Aᵥ m = eqn→Iso M mulLHS mulRHS {A = Aᵥ} mulSat m
 -- the payload, so `f (fst ∘ θ)` is definitionally constant along it
 -- and the equation component becomes `refl` again.
 --
--- BELONGS UPSTREAM: this is a fact about `⊗ᶠ`, not about semimodules,
--- and it is what `Equations.agda` should take as the primary form --
--- exactly as `Substrate.agda` argues for `Split` over the equational
--- presentation, and for the same reason.
-
-⊗ᶠ-reassoc : {V : Type₀} {vs : V → MSort} (f : Val M vs → String)
-             (Aᵥ : (v : V) → TheoryTy ℓ-zero (vs v)) (m : String)
-           → Iso (⊗ᶠ M {V = V} {vs = vs} f Aᵥ m)
-                 (Σ[ θ ∈ ((v : V) → Σ[ c ∈ MCarrier (vs v) ] Aᵥ v c) ]
-                    (f (λ v → θ v .fst) Eq.≡ m))
-⊗ᶠ-reassoc f Aᵥ m .Iso.fun (ρ , e , k) = (λ v → ρ v , k v) , e
-⊗ᶠ-reassoc f Aᵥ m .Iso.inv (θ , e) = (λ v → θ v .fst) , e , (λ v → θ v .snd)
-⊗ᶠ-reassoc f Aᵥ m .Iso.sec _ = refl
-⊗ᶠ-reassoc f Aᵥ m .Iso.ret _ = refl
+-- THIS NOW LIVES UPSTREAM, as `Equations.⊗ᶠ-reassoc`, with `⊗ᶠ'` for
+-- the reassociated form: it is a fact about `⊗ᶠ` and not about
+-- semimodules -- exactly as `Fibered.agda` argues for `Split` over the
+-- equational presentation, and for the same reason.  Applied at `M`
+-- below; nothing here needs a local copy.
 
 -- the payload family, NAMED (an extended lambda would be a different
 -- term in every file that wrote it out)
@@ -559,12 +550,12 @@ mul₃ R S A m .Iso.ret (θ , Eq.refl) =
 flat3Bridge : (R S : Scl) (A : Elt) (m : String)
             → Iso (⟪_⟫ M mulRHS (Aᵥ₃ R S A) m) (ActG R (ActG S A) m)
 flat3Bridge R S A m =
-  compIso (⊗ᶠ-reassoc (λ ρ → eval M ρ mulRHS) (Aᵥ₃ R S A) m) (nest₃ R S A m)
+  compIso (⊗ᶠ-reassoc M (λ ρ → eval M ρ mulRHS) (Aᵥ₃ R S A) m) (nest₃ R S A m)
 
 flat3Bridge' : (R S : Scl) (A : Elt) (m : String)
              → Iso (⟪_⟫ M mulLHS (Aᵥ₃ R S A) m) (ActG (R ·ᵍ S) A m)
 flat3Bridge' R S A m =
-  compIso (⊗ᶠ-reassoc (λ ρ → eval M ρ mulLHS) (Aᵥ₃ R S A) m) (mul₃ R S A m)
+  compIso (⊗ᶠ-reassoc M (λ ρ → eval M ρ mulLHS) (Aᵥ₃ R S A) m) (mul₃ R S A m)
 
 -- THE COMULTIPLICATION, at ARBITRARY scalar grammars, straight from
 -- `eqn→Iso`.  `!-comp` above is this at `R = ⌈ r ⌉`, `S = ⌈ s ⌉`.

@@ -21,7 +21,6 @@ module TheoryGrammar.Instances.SimplyTyped.Dependent where
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
 open import Cubical.Data.Sigma
-open import Cubical.Data.Sum using (inl; inr)
 open import Cubical.Data.Unit
 open import Cubical.Relation.Nullary.Base using (Discrete)
 import Cubical.Data.Equality as Eq
@@ -29,7 +28,7 @@ import Cubical.Data.Equality as Eq
 open import TheoryGrammar.Base
 open import TheoryGrammar.Decidable
 open import TheoryGrammar.Instances.SimplyTyped.Signature
-open import TheoryGrammar.Instances.SimplyTyped.Substrate
+open import TheoryGrammar.Instances.SimplyTyped.Fibered
 open import TheoryGrammar.Instances.SimplyTyped.Base
 open import TheoryGrammar.Instances.SimplyTyped.Readable
 open import TheoryGrammar.Instances.SimplyTyped.Types
@@ -60,18 +59,22 @@ module StDependent (Name : Type₀) where
     decLam : (P : Name → TmG) (t : Raw) (sp : IsLam t)
            → Dec⟨ P (TParts lamOp t sp true) ⟩ (TParts lamOp t sp false)
            → Dec⟨ LamGᵈ P ⟩ t
-    decLam P t sp (inl a) = dec-yes (LamGᵈ P) t (sp , a)
-    decLam P t sp (inr k) = dec-no  (LamGᵈ P) t λ x →
-      k (subst (λ s → P (TParts lamOp t s true) (TParts lamOp t s false))
-               (Split-isProp lamOp t (x .fst) sp) (x .snd))
+    decLam P t sp =
+      dec-elim (P (TParts lamOp t sp true)) (TParts lamOp t sp false)
+        (λ a → dec-yes (LamGᵈ P) t (sp , a))
+        (λ k → dec-no (LamGᵈ P) t λ x →
+           k (subst (λ s → P (TParts lamOp t s true) (TParts lamOp t s false))
+                    (Split-isProp lamOp t (x .fst) sp) (x .snd)))
 
   dec-lamᵈ : (P : Name → TmG) (t : Raw)
            → ((sp : IsLam t)
               → Dec⟨ P (TParts lamOp t sp true) ⟩ (TParts lamOp t sp false))
            → Dec⟨ LamGᵈ P ⟩ t
-  dec-lamᵈ P t d with ⊗-decSplit lamOp t tt
-  ... | inl x = decLam P t (x .fst) (d (x .fst))
-  ... | inr k = dec-no (LamGᵈ P) t λ y → k (y .fst , λ _ → tt)
+  dec-lamᵈ P t d =
+    dec-elim (⊗ˢ lamOp (λ _ → ⊤G)) t
+      (λ x → decLam P t (x .fst) (d (x .fst)))
+      (λ k → dec-no (LamGᵈ P) t λ y → k (y .fst , λ _ → tt))
+      (⊗-decSplit lamOp t tt)
 
   -- ================================================================
   -- The annotation: the direction switch, and the one place a `ty`
@@ -96,15 +99,19 @@ module StDependent (Name : Type₀) where
     decAnn : (P : Ty → TmG) (t : Raw) (sp : IsAnn t)
            → Dec⟨ P (TParts annOp t sp false) ⟩ (TParts annOp t sp true)
            → Dec⟨ AnnGᵈ P ⟩ t
-    decAnn P t sp (inl a) = dec-yes (AnnGᵈ P) t (sp , a)
-    decAnn P t sp (inr k) = dec-no  (AnnGᵈ P) t λ x →
-      k (subst (λ s → P (TParts annOp t s false) (TParts annOp t s true))
-               (Split-isProp annOp t (x .fst) sp) (x .snd))
+    decAnn P t sp =
+      dec-elim (P (TParts annOp t sp false)) (TParts annOp t sp true)
+        (λ a → dec-yes (AnnGᵈ P) t (sp , a))
+        (λ k → dec-no (AnnGᵈ P) t λ x →
+           k (subst (λ s → P (TParts annOp t s false) (TParts annOp t s true))
+                    (Split-isProp annOp t (x .fst) sp) (x .snd)))
 
   dec-annᵈ : (P : Ty → TmG) (t : Raw)
            → ((sp : IsAnn t)
               → Dec⟨ P (TParts annOp t sp false) ⟩ (TParts annOp t sp true))
            → Dec⟨ AnnGᵈ P ⟩ t
-  dec-annᵈ P t d with ⊗-decSplit annOp t tt
-  ... | inl x = decAnn P t (x .fst) (d (x .fst))
-  ... | inr k = dec-no (AnnGᵈ P) t λ y → k (y .fst , λ _ → tt)
+  dec-annᵈ P t d =
+    dec-elim (⊗ˢ annOp (λ _ → ⊤G)) t
+      (λ x → decAnn P t (x .fst) (d (x .fst)))
+      (λ k → dec-no (AnnGᵈ P) t λ y → k (y .fst , λ _ → tt))
+      (⊗-decSplit annOp t tt)

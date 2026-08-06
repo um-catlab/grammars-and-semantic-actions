@@ -2,12 +2,17 @@
   LINEAR (and AFFINE) CONTEXTS: the free COMMUTATIVE monoid.  `Split` is
   interleaving -- exchange, but no weakening and no contraction.
 
-  The substrate is `Instances.Bags.Base` re-presented over `ctxSig`: the
+  The promodel is `Instances.Bags.Base` re-presented over `ctxSig`: the
   splitting relation, `Ilv`, is imported unchanged.  A context of length n
   interleaves in 2ⁿ ways; the tensor is still decidable, by induction on Γ
   with one recursive call per constructor of `Ilv`.
 
-  Affine reuses this substrate untouched -- it differs only in the leaf.
+  Affine reuses this promodel untouched -- it differs only in the leaf.
+
+  Splittings here are NOT unique, so `Precise` (hence `⊗-refute` and
+  `decSlots¹`/`decSlots²`) does not apply: a refutation has to walk the
+  whole enumeration.  What the instance does NOT do is match a sum --
+  every decision is consumed by the framework's `dec-elim`.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Modes.Interleave where
@@ -15,12 +20,11 @@ module TheoryGrammar.Instances.Lambda.Modes.Interleave where
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
 open import Cubical.Data.Sigma
-open import Cubical.Data.Sum using (inl; inr)
 open import Cubical.Data.Unit
 open import Cubical.Data.List using (List; []; _∷_; _++_)
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Decidable
 open import TheoryGrammar.Decidable.Splittings
 open import TheoryGrammar.Instances.Lambda.Modes.Ctx
@@ -41,28 +45,37 @@ module Interleave (Name : Type₀) where
   CParts : (o : CtxOp) (Γ : Ctx) → CSplit o Γ → CtxAr o → Ctx
   CParts mul Γ (u , v , _) b = if b then u else v
 
-  sub : Substrate ctxSig ℓ-zero ℓ-zero
-  sub .carrier _         = Ctx
-  sub .op mul f          = f true ++ f false
-  sub .Split             = CSplit
-  sub .parts             = CParts
-  sub .split mul f       = f true , f false , ilvApp (f true) (f false)
-  sub .parts-split mul f = funExt λ { true → refl ; false → refl }
+  fib : Fibered ctxSig ℓ-zero ℓ-zero
+  fib .carrier _         = Ctx
+  fib .Split             = CSplit
+  fib .parts             = CParts
 
-  open DecSub sub
+  -- The total point, separately.  Note the containment is STRICT here:
+  -- `Ilv u v w` does not imply `u ++ v ≡ w`, so this really is a lax
+  -- point, and the multiplicative layer below never consults it.
+  point : LaxPoint fib
+  point .op mul f          = f true ++ f false
+  point .split mul f       = f true , f false , ilvApp (f true) (f false)
+  point .parts-split mul f = funExt λ { true → refl ; false → refl }
 
-  -- PRIMITIVE (1 of 1 for this substrate).  Each name of Γ goes left or
+  open DecFib fib
+
+  -- PRIMITIVE (1 of 1 for this promodel).  Each name of Γ goes left or
   -- right; the two recursive calls are the two constructors of `Ilv`.
   decTen : (A : CtxAr mul → TheoryTy ℓ-zero tt) (Γ : Ctx)
          → ((sp : CSplit mul Γ) (b : CtxAr mul) → Dec⟨ A b ⟩ (CParts mul Γ sp b))
          → Dec⟨ ⊗ˢ mul A ⟩ Γ
-  decTen A [] d with d ([] , [] , nil) true | d ([] , [] , nil) false
-  ... | inl p | inl q = dec-yes (⊗ˢ mul A) []
-                          (([] , [] , nil) , λ { true → p ; false → q })
-  ... | inr k | _     = dec-no (⊗ˢ mul A) []
-                          λ { ((_ , _ , nil) , h) → k (h true) }
-  ... | inl _ | inr k = dec-no (⊗ˢ mul A) []
-                          λ { ((_ , _ , nil) , h) → k (h false) }
+  decTen A [] d =
+    dec-elim (A true) []
+      (λ p → dec-elim (A false) []
+               (λ q → dec-yes (⊗ˢ mul A) []
+                        (([] , [] , nil) , λ { true → p ; false → q }))
+               (λ k → dec-no (⊗ˢ mul A) []
+                        λ { ((_ , _ , nil) , h) → k (h false) })
+               (d ([] , [] , nil) false))
+      (λ k → dec-no (⊗ˢ mul A) []
+               λ { ((_ , _ , nil) , h) → k (h true) })
+      (d ([] , [] , nil) true)
   decTen A (x ∷ Γ) d = go decL decR
     where
     Ten : TheoryTy ℓ-zero tt
@@ -100,12 +113,19 @@ module Interleave (Name : Type₀) where
         → ⊗ˢ mul AR Γ
     toR u v r h = (u , v , r) , λ { true → h true ; false → h false }
 
+    -- one `dec-elim` per constructor of `Ilv`; only the last branch,
+    -- where every alternative was refuted, enumerates them again
     go : Dec⟨ ⊗ˢ mul AL ⟩ Γ → Dec⟨ ⊗ˢ mul AR ⟩ Γ → Dec⟨ Ten ⟩ (x ∷ Γ)
-    go (inl w) _       = dec-yes Ten (x ∷ Γ) (fromL w)
-    go (inr _) (inl w) = dec-yes Ten (x ∷ Γ) (fromR w)
-    go (inr kL) (inr kR) = dec-no Ten (x ∷ Γ)
-      λ { ((_ , _ , left r)  , h) → kL (toL _ _ r h)
-        ; ((_ , _ , right r) , h) → kR (toR _ _ r h) }
+    go dL dR =
+      dec-elim (⊗ˢ mul AL) Γ
+        (λ w → dec-yes Ten (x ∷ Γ) (fromL w))
+        (λ kL → dec-elim (⊗ˢ mul AR) Γ
+                  (λ w → dec-yes Ten (x ∷ Γ) (fromR w))
+                  (λ kR → dec-no Ten (x ∷ Γ)
+                            λ { ((_ , _ , left r)  , h) → kL (toL _ _ r h)
+                              ; ((_ , _ , right r) , h) → kR (toR _ _ r h) })
+                  dR)
+        dL
 
-  dec : DecSplittings sub ℓ-zero
+  dec : DecSplittings fib ℓ-zero
   dec .dec-⊗ˢ mul = decTen

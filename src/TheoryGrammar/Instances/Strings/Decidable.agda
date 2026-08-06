@@ -15,7 +15,7 @@ open import Cubical.Data.Unit
 open import Cubical.Data.List
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Enumerable
 open import TheoryGrammar.Decidable.Additive
 open import TheoryGrammar.Decidable.Tensor
@@ -24,10 +24,10 @@ open import TheoryGrammar.Decidable.Rule
 
 open import TheoryGrammar.Instances.Strings.Enumeration Char public
 
-open DecEnum strSub using (⊗at; Refutes)
-open DecSub  strSub using (Dec⟨_⟩)
+open DecEnum strFib using (⊗at; Refutes)
+open DecFib  strFib using (Dec⟨_⟩)
 
-strDecEnum : DecEnumerable strSub ℓ-zero
+strDecEnum : DecEnumerable strFib ℓ-zero
 strDecEnum .enumSplit    = enumSplit
 strDecEnum .enumComplete = enumComplete
 -- nullary: the empty product of slots is inhabited outright
@@ -36,5 +36,5 @@ strDecEnum .decAt nilop A m sp d = inl λ ()
 strDecEnum .decAt appop A m sp d = decΠBool (d true) (d false)
 
 -- ... and hence the rule, stated in the language
-strDecTensor : DecTensorRule strSub {ℓA = ℓ-zero}
+strDecTensor : DecTensorRule strFib {ℓA = ℓ-zero}
 strDecTensor = fromEnumerable strDecEnum

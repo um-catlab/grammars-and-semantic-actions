@@ -3,7 +3,7 @@
   need `funExt`.
 
   The pattern is uniform and has one cause, the one named in
-  `TheoryGrammar.Substrate`:
+  `TheoryGrammar.Fibered`:
 
     * `Σ`, `Π`, `Unit`, `Unit*` and `Lift` have definitional η, so any
       round trip that only reassociates or re-wraps is `refl`;
@@ -27,7 +27,7 @@ open import Cubical.Data.Unit
 open import Cubical.Relation.Nullary.Base using (Discrete)
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Instances.SimplyTyped
 
 module StLaws (Name : Type₀) (_≟_ : Discrete Name) where
@@ -36,7 +36,7 @@ module StLaws (Name : Type₀) (_≟_ : Discrete Name) where
 
   -- ================================================================
   -- REFL.  The multiplicative universal property, at every operation
-  -- including the empty one.  Inherited from the substrate: `Split` is
+  -- including the empty one.  Inherited from the promodel: `Split` is
   -- data, so there is no proof term to match.
   -- ================================================================
 

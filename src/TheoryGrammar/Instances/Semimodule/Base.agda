@@ -1,5 +1,5 @@
 {-
-  The substrate: scalars are ℕ under multiplication, elements are
+  The promodel: scalars are ℕ under multiplication, elements are
   strings, and the action is REPLICATION.
 
       carrier scl = ℕ,      op mulOp (r,s) = r · s,   op oneOp = 1
@@ -21,7 +21,7 @@
   The last line is not an oversight; it is the most informative thing
   in this instance.  Replication does not distribute over concatenation
   because strings do not commute: (uv)² = uvuv while u²v² = uuvv.  So
-  this substrate refutes one of the graded-modality laws outright,
+  this promodel refutes one of the graded-modality laws outright,
   which is a sharper statement than "the framework cannot derive it".
 
   SPLITTINGS.  Each is a one-constructor inductive family indexed by
@@ -48,8 +48,8 @@ open import Cubical.Data.Empty using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
-open import TheoryGrammar.RulesSub
+open import TheoryGrammar.Fibered
+open import TheoryGrammar.RulesFib
 open import TheoryGrammar.Instances.Semimodule.Signature public
 
 String : Type₀
@@ -101,7 +101,7 @@ data IsRep : String → Type₀ where
   mkRep : (r : ℕ) (w : String) → IsRep (rep r w)
 
 -- ==================================================================
--- The substrate.
+-- The promodel.
 -- ==================================================================
 
 MCarrier : MSort → Type₀
@@ -128,24 +128,29 @@ MParts catOp _ (u , v , _)  c     = if c then u else v
 MParts actOp _ (mkRep r w)  true  = r
 MParts actOp _ (mkRep r w)  false = w
 
-smSub : Substrate semiSig ℓ-zero ℓ-zero
-smSub .carrier = MCarrier
-smSub .op      = MOpFn
-smSub .Split   = MSplit
-smSub .parts   = MParts
-smSub .split oneOp f = mk1
-smSub .split mulOp f = mkFac (f true) (f false)
-smSub .split catOp f = f true , f false , splitAll (f true) (f false)
-smSub .split actOp f = mkRep (f true) (f false)
+smFib : Fibered semiSig ℓ-zero ℓ-zero
+smFib .carrier = MCarrier
+smFib .Split   = MSplit
+smFib .parts   = MParts
+
+-- The total point, separately: all four operations are total here, so
+-- the split loses nothing.  What it buys is that `RulesF smFib` never
+-- consults it; only `Graded` (which is Model-level) needs the point.
+smPoint : LaxPoint smFib
+smPoint .op      = MOpFn
+smPoint .split oneOp f = mk1
+smPoint .split mulOp f = mkFac (f true) (f false)
+smPoint .split catOp f = f true , f false , splitAll (f true) (f false)
+smPoint .split actOp f = mkRep (f true) (f false)
 -- MEASUREMENT, same as the lambda instance: `oneOp` needs `funExt λ ()`
 -- and the binary operations need `funExt` with `refl` at each slot,
 -- because `Bool` has no η.
-smSub .parts-split oneOp f = funExt λ ()
-smSub .parts-split mulOp f = funExt λ { true → refl ; false → refl }
-smSub .parts-split catOp f = funExt λ { true → refl ; false → refl }
-smSub .parts-split actOp f = funExt λ { true → refl ; false → refl }
+smPoint .parts-split oneOp f = funExt λ ()
+smPoint .parts-split mulOp f = funExt λ { true → refl ; false → refl }
+smPoint .parts-split catOp f = funExt λ { true → refl ; false → refl }
+smPoint .parts-split actOp f = funExt λ { true → refl ; false → refl }
 
-open RulesS smSub public
+open RulesF smFib public
 
 -- ==================================================================
 -- The two grammar sorts.

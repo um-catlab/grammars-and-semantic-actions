@@ -15,6 +15,7 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
+open import TheoryGrammar.Theories.Monoid public
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.RulesFib
 open import TheoryGrammar.SemanticAction
@@ -28,18 +29,6 @@ Bag = List A
 -- Signature.  Same as monoids -- commutativity is an EQUATION, and
 -- equations live in the model, not the signature.
 
-data MonOp : Type₀ where
-  nilop appop : MonOp
-
-MonAr : MonOp → Type₀
-MonAr nilop = ⊥
-MonAr appop = Bool
-
-cmSig : SortedSig Unit ℓ-zero ℓ-zero
-cmSig .ops          = MonOp
-cmSig .arities      = MonAr
-cmSig .sortOf _ _   = tt
-cmSig .resultSort _ = tt
 
 -- Interleaving: the commutative splitting.
 
@@ -66,7 +55,7 @@ MonParts : (o : MonOp) (w : Bag) → MonSplit o w → MonAr o → Bag
 MonParts nilop w sp ()
 MonParts appop w (u , v , _) b = if b then u else v
 
-bagFib : Fibered cmSig ℓ-zero ℓ-zero
+bagFib : Fibered monoidSig ℓ-zero ℓ-zero
 bagFib .carrier _   = Bag
 bagFib .Split       = MonSplit
 bagFib .parts       = MonParts

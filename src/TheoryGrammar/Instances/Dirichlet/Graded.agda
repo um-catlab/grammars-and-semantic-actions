@@ -10,13 +10,13 @@
   maintained by hand (`split3LenL`, `split3LenR`, ...).  Here the carrier
   already IS the order.  `deg n = n`, and the framework's Löb recursion
   over `_≺_` -- "strictly smaller degree" -- restricted along the
-  splittings of the substrate, is exactly
+  splittings of the promodel, is exactly
 
       strong induction on the DIVISORS of n.
 
-  So a `hyloC` at this substrate is precisely a recursion allowed to call
+  So a `hyloC` at this promodel is precisely a recursion allowed to call
   itself at any proper divisor, and nothing had to be invented to say so:
-  `GradedSubstrate` asks for `deg≤` and `deg<`, which unfold to the two
+  `GradedFib` asks for `deg≤` and `deg<`, which unfold to the two
   facts
 
       d · e = n , e ≥ 1  ⟹  d ≤ n
@@ -40,7 +40,7 @@
       NonUnit    n  =  ⊕ᴰ[ k : ℕ    ] ⌈ k + 2 ⌉ ⊗ ⊤     (n has a factor ≥ 2)
 
   Both are `⊕ᴰ`, `⌈_⌉`, `⊗` and `⊤` only, so both make sense at any
-  substrate with atoms; the index type is the type of atoms, which for
+  promodel with atoms; the index type is the type of atoms, which for
   strings is `Char` and here is "the numbers ≥ 2", presented proof-free
   as ℕ via `2+_`.  Exactly one primitive, `nuGe2`, bridges the internal
   predicate to the grading, and it is confined to this file.
@@ -48,8 +48,8 @@
   Observe what `NonUnit` does NOT say: nothing about primality.  Any
   factor ≥ 2 forces n ≥ 2, which is all a grading can want.  Primality is
   a property of a GRAMMAR -- it is what makes the factorisation grammar
-  in `Factorization.agda` unambiguous -- and not of the substrate.  The
-  substrate is happy with any well-founded notion of "proper divisor".
+  in `Factorization.agda` unambiguous -- and not of the promodel.  The
+  promodel is happy with any well-founded notion of "proper divisor".
 
   ------------------------------------------------------------------
   Downstream, `Guard` is opened at X = ℕ, i.e. nonterminals of the
@@ -70,7 +70,7 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
 
@@ -98,7 +98,7 @@ mulLtR d'' e'' = <SumLeft
 -- ==================================================================
 -- The same four, transported across `Times`.  `timesPath` is used here
 -- and nowhere else: this is the single crossing of the barrier between
--- the substrate's inductive splittings and ordinary arithmetic.
+-- the promodel's inductive splittings and ordinary arithmetic.
 -- ==================================================================
 
 degLeL : (d e n : ℕ₊) → Times (val d) (val e) (val n) → val d ≤ val n
@@ -148,15 +148,15 @@ ge2NU (suc zero , _)        ge = E.rec (¬m<m ge)
 ge2NU (suc (suc k) , _) _ = k , ⊗-mk (2+ k) one₊ (times1R (suc (suc k))) Eq.refl tt
 
 -- ==================================================================
--- The graded substrate.
+-- The graded promodel.
 -- ==================================================================
 
 DirProper : (o : DirOp) (n : ℕ₊) → DirSplit o n → DirAr o → Type₀
 DirProper oneop n sp ()
 DirProper mulop n (d , e , _) b = NonUnit (if b then e else d)
 
-dirGraded : GradedSubstrate dirSig ℓ-zero ℓ-zero
-dirGraded .sub    = dirSub
+dirGraded : GradedFib dirSig ℓ-zero ℓ-zero
+dirGraded .fib    = dirFib
 dirGraded .deg _  = val
 dirGraded .Proper = DirProper
 dirGraded .deg≤ oneop n sp ()

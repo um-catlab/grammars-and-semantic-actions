@@ -146,7 +146,7 @@ module Sort (le : A → A → Bool) where
   quicksortC : Cover SpecG
   quicksortC m _ = quicksortV m
 
-  qsortV : Bag → Bag
-  qsortV = observe quicksortC (tagA Bag)
+  qsortV : ⊤G ⊢ Δ Bag
+  qsortV = tagA Bag ∘g quicksortC
 
 -- It computes.

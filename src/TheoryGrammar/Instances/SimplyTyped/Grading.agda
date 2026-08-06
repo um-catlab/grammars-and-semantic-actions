@@ -1,5 +1,5 @@
 {-
-  Every splitting of this substrate is proper -- now at BOTH result
+  Every splitting of this promodel is proper -- now at BOTH result
   sorts at once.
 
   The grading is genuinely three-sorted: names weigh 0, terms weigh
@@ -22,7 +22,7 @@ open import Cubical.Data.Nat.Order
 open import Cubical.Data.Empty as E using (⊥)
 
 open import TheoryGrammar.Instances.SimplyTyped.Signature
-open import TheoryGrammar.Instances.SimplyTyped.Substrate
+open import TheoryGrammar.Instances.SimplyTyped.Fibered
 
 tysize : Ty → ℕ
 tysize base      = 1

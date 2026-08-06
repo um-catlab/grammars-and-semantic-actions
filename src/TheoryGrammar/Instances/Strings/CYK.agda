@@ -18,7 +18,7 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
 
@@ -26,7 +26,7 @@ open import TheoryGrammar.Enumerable
 open import TheoryGrammar.Instances.Strings.Enumeration Char public
 
 -- `¬G_` and `Dec⟨_⟩` are the generic ones (`Decidable.Additive`, via
--- `DecSub` in `Strings.Base`); this instance defines neither.
+-- `DecFib` in `Strings.Base`); this instance defines neither.
 
 module CYK (V : Type₀)
            (unitR : V → Char → Type₀)          -- P → c

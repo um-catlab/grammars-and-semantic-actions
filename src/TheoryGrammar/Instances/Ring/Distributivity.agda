@@ -91,8 +91,8 @@
   on splittings and on the carrier, and they are the primitives a
   phase-2 program would compose.  `distrib` cannot be a phase-2 term:
   building the splitting `i·p + i·q = n` of the result IS the ring
-  axiom, and no combinator of `RulesS` supplies it.  That is the honest
-  reading of "distributivity is extra structure on a substrate".
+  axiom, and no combinator of `RulesF` supplies it.  That is the honest
+  reading of "distributivity is extra structure on a promodel".
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Ring.Distributivity where
@@ -107,7 +107,7 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Equations
 
 open import TheoryGrammar.Instances.Ring.Base public
@@ -290,7 +290,7 @@ distrib-not-iso is = lhs-empty (is .Iso.inv rhs-pt)
 -- are isomorphic.  Contrast distributivity above, which needed a
 -- hand-built map and a precision hypothesis to invert.  Note these are
 -- the connectives of the EQUATIONAL presentation (`⟪_⟫` = `⊗ᶠ` over
--- the model `⌊ natSub ⌋`), not `⊗ˢ`; `⊗ᶠ≡⊗` relates the two.
+-- the model `⌊ natPoint ⌋`), not `⊗ˢ`; `⊗ᶠ≡⊗` relates the two.
 -- ==================================================================
 
 private
@@ -303,10 +303,10 @@ private
   mulTm' : Tm ringSig Two (λ _ → tt) tt
   mulTm' = node mulOp (λ b → var (not b))
 
-  comm-sat : (ρ : Val ⌊ natSub ⌋ {V = Two} (λ _ → tt))
-           → eval ⌊ natSub ⌋ ρ mulTm Eq.≡ eval ⌊ natSub ⌋ ρ mulTm'
+  comm-sat : (ρ : Val ⌊ natPoint ⌋ {V = Two} (λ _ → tt))
+           → eval ⌊ natPoint ⌋ ρ mulTm Eq.≡ eval ⌊ natPoint ⌋ ρ mulTm'
   comm-sat ρ = Eq.pathToEq (·-comm (ρ true) (ρ false))
 
   ⊗×-comm-Iso : (A : Two → Gr) (n : ℕ)
-              → Iso (⟪_⟫ ⌊ natSub ⌋ mulTm' A n) (⟪_⟫ ⌊ natSub ⌋ mulTm A n)
-  ⊗×-comm-Iso A = eqn→Iso ⌊ natSub ⌋ mulTm mulTm' comm-sat
+              → Iso (⟪_⟫ ⌊ natPoint ⌋ mulTm' A n) (⟪_⟫ ⌊ natPoint ⌋ mulTm A n)
+  ⊗×-comm-Iso A = eqn→Iso ⌊ natPoint ⌋ mulTm mulTm' comm-sat

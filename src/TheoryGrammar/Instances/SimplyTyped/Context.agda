@@ -21,14 +21,13 @@ open import Cubical.Foundations.Prelude
 open import Cubical.Data.Sigma using (_×_; _,_)
 open import Cubical.Data.List using (List; []; _∷_)
 open import Cubical.Data.Unit
-open import Cubical.Data.Empty as E using (⊥)
-open import Cubical.Relation.Nullary.Base using (yes; no; Discrete)
-import Cubical.Data.Equality as Eq
+open import Cubical.Relation.Nullary.Base using (Discrete)
 
 open import TheoryGrammar.Base
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Decidable
 open import TheoryGrammar.Instances.SimplyTyped.Signature
-open import TheoryGrammar.Instances.SimplyTyped.Substrate
+open import TheoryGrammar.Instances.SimplyTyped.Fibered
 open import TheoryGrammar.Instances.SimplyTyped.Base
 open import TheoryGrammar.Instances.SimplyTyped.Readable
 open import TheoryGrammar.Instances.SimplyTyped.Types
@@ -42,11 +41,13 @@ module StContext (Name : Type₀) (_≟_ : Discrete Name) where
   Ctx : Type₀
   Ctx = List (Name × Ty)
 
-  -- The ONE place `Discrete Name` is used, and it builds an internal map.
+  -- The ONE place `Discrete Name` is used, and it builds an internal
+  -- map.  The construction is generic (`Decidable.Representable`); this
+  -- is only its instantiation at the `nm` sort.
+  private module R = DecRep (stlcFib .carrier)
+
   dec-⌈⌉ⁿ : (m : Name) → ⊤G ⊢ Dec⟨ Nm m ⟩
-  dec-⌈⌉ⁿ m n _ with n ≟ m
-  ... | yes p = dec-yes (Nm m) n (Eq.pathToEq p)
-  ... | no ¬p = dec-no  (Nm m) n λ e → E.rec (¬p (Eq.eqToPath e))
+  dec-⌈⌉ⁿ = R.dec-⌈⌉ {s = nm} _≟_
 
   kty-refl : {s : TSort} (T : Ty) → ⊤G {s} ⊢ Kty T T
   kty-refl T _ _ = tyEq-refl T

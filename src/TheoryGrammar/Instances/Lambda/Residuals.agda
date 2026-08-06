@@ -17,7 +17,7 @@ open import Cubical.Data.Unit
 open import Cubical.Data.Empty using (⊥)
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Instances.Lambda.Signature
 open import TheoryGrammar.Instances.Lambda.Base
 
@@ -26,7 +26,7 @@ module Residuals (Name : Type₀) where
   open LamBase Name
 
   -- (a) the function position of an application: `C ⟜ B`
-  focFun : Focus λSub appOp true
+  focFun : Focus λFib appOp true
   focFun .SplitAt _    = Raw            -- the argument
   focFun .whole {u} v  = app u v
   focFun .Rest         = Unit
@@ -40,7 +40,7 @@ module Residuals (Name : Type₀) where
 
   -- (b) THE BINDER SLOT: a residual at sort `nm`, i.e. a predicate on
   --     names -- "what a name must satisfy for `λ-. body` to be a whole"
-  focBind : Focus λSub lamOp true
+  focBind : Focus λFib lamOp true
   focBind .SplitAt _    = Raw           -- the body
   focBind .whole {n} t  = lam n t
   focBind .Rest         = Unit
@@ -53,7 +53,7 @@ module Residuals (Name : Type₀) where
   Binds A C = B.⊸ᶠ (λ { true → ⊤G ; false → A }) C
 
   -- (c) the body slot: cross-sorted the other way, complement is a name
-  focBody : Focus λSub lamOp false
+  focBody : Focus λFib lamOp false
   focBody .SplitAt _    = Name
   focBody .whole {t} n  = lam n t
   focBody .Rest         = Unit
@@ -67,7 +67,7 @@ module Residuals (Name : Type₀) where
 
   -- (d) `varOp` has arity `Unit`, so its slot's complement is EMPTY --
   --     the best-behaved residual here
-  focVar : Focus λSub varOp tt
+  focVar : Focus λFib varOp tt
   focVar .SplitAt _   = Unit
   focVar .whole {n} _ = var n
   focVar .Rest        = ⊥

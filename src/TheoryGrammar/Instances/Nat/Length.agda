@@ -80,7 +80,7 @@
   their OWN `data MonOp` with the same two constructors.  They are
   definitionally distinct types, so `ModelHom strModel natModel` cannot
   even be STATED using `Nat/Base`'s signature.  This file therefore
-  builds the ℕ-model directly over the STRINGS `monSig`, duplicating four
+  builds the ℕ-model directly over the STRINGS `monoidSig`, duplicating four
   lines.  The monoid signature wants to be a shared module (say
   `TheoryGrammar.Signatures.Monoid`) that all three instances import.
   See the report accompanying this file.
@@ -101,7 +101,7 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.ChangeOfTheory
 
 -- The STRING instance, read-only.  Note this brings the string-side
@@ -113,13 +113,19 @@ open import TheoryGrammar.Instances.Strings.Connectives Char public
 -- THE TWO MODELS, at one and the same signature.
 -- ==================================================================
 
-strModel : Model monSig ℓ-zero
-strModel = ⌊ strSub ⌋
+strModel : Model monoidSig ℓ-zero
+strModel = ⌊ strPoint ⌋
+
+-- `⊗[_]` is the MODEL-level convolution (it mentions `op`), so since the
+-- `Fibered`/`LaxPoint` split it is no longer exported by `FibNotation` --
+-- which is the point: the substrate-level `⊗ˢ` needs only `Split`.  The
+-- bridges below relate the two, so they need the model-level one by name.
+open Notation strModel using (⊗[_])
 
 -- The ℕ-model of the monoid signature.  This is `Nat/Base.agda`'s
--- `⌊ natSub ⌋`, retyped at the strings' copy of `monSig`; see the defect
+-- `⌊ natFib ⌋`, retyped at the strings' copy of `monoidSig`; see the defect
 -- note in the header.
-natModel : Model monSig ℓ-zero
+natModel : Model monoidSig ℓ-zero
 natModel .carrier _  = ℕ
 natModel .op nilop _ = 0
 natModel .op appop f = f true + f false
@@ -255,7 +261,7 @@ cut-unique i j w u v euv lu lv e =
 -- `Reinterpret` is stated at the MODEL-level ⊗ (the one carrying an
 -- equation), while programs are written against the SUBSTRATE-level ⊗ˢ.
 -- These two primitives are the translation at strings; they are generic
--- in nothing and belong in `TheoryGrammar.Substrate` upstream, where the
+-- in nothing and belong in `TheoryGrammar.Fibered` upstream, where the
 -- general statement is `⊗ˢ o A ≅ ⊗[ o ] A whenever Split is the free
 -- choice` (`canonical`).
 -- ==================================================================

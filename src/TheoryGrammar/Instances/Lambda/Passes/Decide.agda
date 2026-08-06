@@ -19,7 +19,7 @@ open import Cubical.Relation.Nullary.Base using (Discrete)
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Instances.Lambda.Signature
-open import TheoryGrammar.Instances.Lambda.Substrate
+open import TheoryGrammar.Instances.Lambda.Fibered
 open import TheoryGrammar.Instances.Lambda.Base
 open import TheoryGrammar.Instances.Lambda.Readable
 open import TheoryGrammar.Instances.Lambda.Scoped

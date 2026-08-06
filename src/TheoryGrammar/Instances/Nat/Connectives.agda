@@ -43,7 +43,7 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 
 open import TheoryGrammar.Instances.Nat.Base public
 
@@ -102,7 +102,7 @@ x = ⌈ 1 ⌉
 ⊗-map f g n ((i , j , a) , h) = ⊗-mk a (f i (h true)) (g j (h false))
 
 -- ==================================================================
--- Additive combinators.  `RulesS` already supplies `idg`, `_∘g_`,
+-- Additive combinators.  `RulesF` already supplies `idg`, `_∘g_`,
 -- `⊕-E`, `⊕ᴰ-I`, `⊕ᴰ-E`, `&-I`, `⊤-I`, `⌈⌉-E`; these are the aliases
 -- the `Bags` instance uses, kept so the two read alike.
 -- ==================================================================
@@ -152,7 +152,7 @@ add3→+ (s a) = Eq.ap suc (add3→+ a)
 -- Strings/Connectives.  `C ⟜' A` is "C divided by A on the left".
 -- ==================================================================
 
-focR : Focus natSub appop false
+focR : Focus natFib appop false
 focR .SplitAt j  = Σ[ i ∈ ℕ ] Σ[ n ∈ ℕ ] Add3 i j n
 focR .whole (i , n , _) = n
 focR .Rest       = Unit

@@ -2,19 +2,24 @@
   The passes compute.
 
   Each `refl` needs the scope checker, the generic `μ`/`fold`, and the
-  pass's own `⊕-E` branches all to reduce.  The pipeline is stated
-  internally throughout: a pass is observed by `term`, a decision by
-  `⊕-E` into a constant grammar -- never by matching a `Dec`.
+  pass's own `⊕-E` branches all to reduce.  Every name below is a TERM
+  (`⊤G ⊢ Δ Bool`, `⊤G ⊢ Result _ (Δ Raw)`); `run` / `runΔ` appear only in
+  the `refl` lines -- externalising is the observation, not part of the
+  pipeline.  This file defines no reader and no constant grammar.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Passes.Tests where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Unit
+open import Cubical.Data.Bool using (Bool; true; false)
+open import Cubical.Data.List using ([]; _∷_)
+open import Cubical.Data.Maybe using (Maybe; just; nothing)
 open import Cubical.Data.List using ([])
 open import Cubical.Data.Nat using (ℕ; discreteℕ)
 open import Cubical.Data.FinData.Base renaming (zero to fzero; suc to fsuc)
 
+open import TheoryGrammar.SemanticAction using (passes; _↦_; _at_)
 open import TheoryGrammar.CarrierMap
 open import TheoryGrammar.Instances.Lambda
 open import TheoryGrammar.Instances.Lambda.Passes.Framework
@@ -22,6 +27,7 @@ open import TheoryGrammar.Instances.Lambda.Passes.Decide
 open import TheoryGrammar.Instances.Lambda.Passes.Eta
 open import TheoryGrammar.Instances.Lambda.Passes.Dead
 open import TheoryGrammar.Instances.Lambda.Passes.Rename
+open import TheoryGrammar.Instances.Lambda.Passes.Inline
 
 open Lambda ℕ discreteℕ
 open PassKit ℕ
@@ -31,73 +37,59 @@ open Dead    ℕ discreteℕ
 open Rename  ℕ
 
 -- ==================================================================
--- Observing a pass, internally.
+-- Observing a pass.  `runClosed` is the GENERIC `runResult`: `closed?`
+-- is a decision (a `Result (¬G _) _`) and a pass composed with `term`
+-- is an `Action (Scoped Γ) Raw`.  The `RawG` / `some` / `none` triple
+-- this replaces was `Result ⊤G` and `Maybe` written out by hand.
 -- ==================================================================
 
-RawG : TmG
-RawG _ = Raw
+DecCl : TmG
+DecCl = ¬G (Scoped [])
 
-some : (t : Raw) → Raw → (RawG ⊕ ⊤G) t
-some = ⊕-I₁ {A = RawG} {B = ⊤G}
+runClosed : ((Γ : Scope) → Scoped Γ ⊢ Out Γ) → ⊤G ⊢ Result DecCl (Δ Raw)
+runClosed p = mapR DecCl (Δ Raw) (term [] ∘g p []) ∘g closed?
 
-none : (t : Raw) → (RawG ⊕ ⊤G) t
-none t = ⊕-I₂ {B = ⊤G} {A = RawG} t tt
-
-runClosed : ((Γ : Scope) → Scoped Γ ⊢ Out Γ) → ⊤G ⊢ (RawG ⊕ ⊤G)
-runClosed p = ⊕-E (⊕-I₁ ∘g (term [] ∘g p [])) (⊕-I₂ ∘g ⊤-I) ∘g closed?
-
-runId runEta runDead : ⊤G ⊢ (RawG ⊕ ⊤G)
+runId runEta runDead : ⊤G ⊢ Result DecCl (Δ Raw)
 runId   = runClosed idPass
 runEta  = runClosed etaPass
 runDead = runClosed deadPass
 
 -- ==================================================================
--- The identity pass really is the identity.
+-- The passes compute.  Cases are batched: one `refl` per suite.
 -- ==================================================================
 
 bigger : Raw
 bigger = app (lam 0 (var 0)) (lam 1 (lam 2 (var 1)))
 
-_ : runId bigger tt ≡ some bigger bigger
+-- the identity pass really is the identity, and rejects the unscoped
+_ : passes (runΔ Raw DecCl runId at
+             (bigger ↦ just bigger ∷ (lam 0 (var 1)) ↦ nothing ∷ []))
 _ = refl
 
-_ : runId (lam 0 (var 1)) tt ≡ none (lam 0 (var 1))
-_ = refl
-
--- ==================================================================
--- η-contraction.
--- ==================================================================
-
+-- η-contraction: `e1` contracts (0 is free for it), the others do not
 e1 e2 e3 : Raw
-e1 = lam 0 (lam 1 (app (var 0) (var 1)))   -- contracts: 0 is free for it
+e1 = lam 0 (lam 1 (app (var 0) (var 1)))   -- contracts
 e2 = lam 0 (lam 1 (app (var 0) (var 0)))   -- argument is not the binder
 e3 = lam 0 (lam 1 (app (var 1) (var 1)))   -- function still uses the binder
 
-_ : runEta e1 tt ≡ some e1 (lam 0 (var 0))
+_ : passes (runΔ Raw DecCl runEta at
+             ( e1 ↦ just (lam 0 (var 0))
+             ∷ e2 ↦ just e2
+             ∷ e3 ↦ just e3
+             ∷ [] ))
 _ = refl
 
-_ : runEta e2 tt ≡ some e2 e2
-_ = refl
-
-_ : runEta e3 tt ≡ some e3 e3
-_ = refl
-
--- ==================================================================
--- Dead-binding elimination.
--- ==================================================================
-
+-- dead-binding elimination: only `d1`'s binder 0 is unused
 d1 d2 d3 : Raw
 d1 = lam 1 (app (lam 0 (var 1)) (lam 2 (var 2)))   -- binder 0 unused
 d2 = lam 1 (app (lam 0 (var 0)) (lam 2 (var 2)))   -- binder 0 used
 d3 = app (lam 0 (var 0)) (lam 1 (var 1))           -- binder 0 used
 
-_ : runDead d1 tt ≡ some d1 (lam 1 (var 1))
-_ = refl
-
-_ : runDead d2 tt ≡ some d2 d2
-_ = refl
-
-_ : runDead d3 tt ≡ some d3 d3
+_ : passes (runΔ Raw DecCl runDead at
+             ( d1 ↦ just (lam 1 (var 1))
+             ∷ d2 ↦ just d2
+             ∷ d3 ↦ just d3
+             ∷ [] ))
 _ = refl
 
 -- ==================================================================
@@ -105,19 +97,42 @@ _ = refl
 -- `mapμ` computes, and the transported derivation still elaborates.
 -- ==================================================================
 
-renDB : ⊤G ⊢ ((λ _ → DB 0) ⊕ ⊤G)
-renDB =
-  ⊕-E (⊕-I₁ ∘g (Along.pullTerm (renCM (λ n → n)) (toDB []) ∘g renId []))
-      (⊕-I₂ ∘g ⊤-I)
-  ∘g closed?
+renDB : ⊤G ⊢ Result DecCl (Δ (DB 0))
+renDB = mapR DecCl (Δ (DB 0))
+             (Along.pullTerm (renCM (λ n → n)) (toDB []) ∘g renId [])
+        ∘g closed?
 
-someDB : (t : Raw) → DB 0 → ((λ _ → DB 0) ⊕ ⊤G) t
-someDB = ⊕-I₁ {A = λ _ → DB 0} {B = ⊤G}
-
-_ : renDB (lam 0 (var 0)) tt ≡ someDB (lam 0 (var 0)) (dlam (dvar fzero))
+_ : passes (runΔ (DB 0) DecCl renDB at
+             ( (lam 0 (var 0)) ↦ just (dlam (dvar fzero))
+             ∷ bigger          ↦ just (dapp (dlam (dvar fzero))
+                                            (dlam (dlam (dvar (fsuc fzero)))))
+             ∷ [] ))
 _ = refl
 
-_ : renDB bigger tt
-      ≡ someDB bigger (dapp (dlam (dvar fzero))
-                            (dlam (dlam (dvar (fsuc fzero)))))
+-- ==================================================================
+-- `subScoped?` : the scope checker TRANSPORTED along substitution, by
+-- `CarrierMap.Along.pullTerm`.  It is still a map out of `⊤`, only at a
+-- reindexed world -- so the generic `accepts?` reads it unchanged, and
+-- what the test says is that transporting a decision commutes with
+-- deciding the transported thing.
+-- ==================================================================
+
+module Inl = Inline ℕ discreteℕ
+
+subScoped! : (n : ℕ) (u : Raw) (Γ : Scope) → ⊤G ⊢ Δ Bool
+subScoped! n u Γ =
+  okA (S.pull (Scoped Γ)) (S.pull (¬G (Scoped Γ)))
+  ∘g Inl.subScoped? n u Γ
+  where module S = Along (Inl.subCM n u)
+
+-- `t[y := x]`: `var 0` is not scoped in `[]`, but substituting a scoped
+-- term for it makes it so -- and substitution rescues nothing else.
+_ : passes (run (subScoped! 0 (var 1) []) at ((var 0) ↦ false ∷ []))
+_ = refl
+
+_ : passes (run (subScoped! 0 (var 1) (1 ∷ [])) at
+             ( (var 0)          ↦ true
+             ∷ (var 2)          ↦ false
+             ∷ (lam 2 (var 0))  ↦ true
+             ∷ [] ))
 _ = refl

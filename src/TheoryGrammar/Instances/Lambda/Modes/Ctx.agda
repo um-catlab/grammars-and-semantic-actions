@@ -1,7 +1,7 @@
 {-
   THE SIGNATURE OF CONTEXTS: one sort, one binary operation.
 
-  A substructural MODE is a substrate over this signature -- i.e. a choice
+  A substructural MODE is a promodel over this signature -- i.e. a choice
   of how a context splits when a node consumes it -- and nothing else.
   The four modes below share this signature and differ only in `Split`
   (and, for affine, in one leaf modality).

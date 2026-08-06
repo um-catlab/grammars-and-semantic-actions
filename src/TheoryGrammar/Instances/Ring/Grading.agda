@@ -11,7 +11,7 @@
   complement is nonzero (`splitAddL<`, `splitAddR<`).  This is the image
   under `length` of the string instance's `split3Len*`, and if the
   signature had only `{zeroOp, addOp}` we would be done: ℕ with the
-  Cauchy product is a graded substrate, and Cauchy-recursive grammars
+  Cauchy product is a graded promodel, and Cauchy-recursive grammars
   (generating functions) exist.
 
   ------------------------------------------------------------------
@@ -26,13 +26,13 @@
 
   It is worth being exact about WHY this cannot be patched by choosing a
   cleverer `deg`.  One might hope to forbid the offending splitting.  You
-  cannot: `Substrate` requires
+  cannot: `Fibered` requires
 
       split : (o) (m⃗) → Split o (op o m⃗)
 
   -- every tuple must split its own composite.  `5 · 0 = 0` is a
   composite, so `(5,0)` MUST be a splitting of `0`.  The zero
-  splittings are forced by the substrate axioms, not chosen.
+  splittings are forced by the promodel axioms, not chosen.
 
   ------------------------------------------------------------------
   3.  AND THE DAMAGE IS TOTAL, NOT LOCAL.
@@ -93,7 +93,7 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
 
@@ -139,36 +139,28 @@ mul-part-can-exceed-whole h = snotz (≤0→≡0 (h 0 (zeroSplit 5) false))
 -- 3.  ... and no other `deg` rescues it either: on ℕ with BOTH
 --     products, every grading is degenerate.
 --
--- The parameters are exactly the fields of `GradedSubstrate` other than
--- `sub`, so this quantifies over every graded substrate over `natSub`.
+-- The parameters are exactly the fields of `GradedFib` other than
+-- `fib`, so this quantifies over every graded promodel over `natFib`.
 -- ==================================================================
 
-module AnyGrading
-  (deg    : ℕ → ℕ)
-  (Proper : (o : RingOp) (n : ℕ) → RingSplit o n → RingAr o → Type₀)
-  (deg≤   : (o : RingOp) (n : ℕ) (sp : RingSplit o n) (a : RingAr o)
-          → deg (RingParts o n sp a) ≤ deg n)
-  (deg<   : (o : RingOp) (n : ℕ) (sp : RingSplit o n) (a : RingAr o)
-          → Proper o n sp a → deg (RingParts o n sp a) < deg n)
-  where
+-- One parameter, not four: `Grading natFib` is exactly "a grading of
+-- THIS promodel", which the bundled `GradedFib` could not say.  See the
+-- note on `Grading` in `TheoryGrammar.Graded`.
+module AnyGrading (G : Grading natFib) where
 
-  natGraded : GradedSubstrate ringSig ℓ-zero ℓ-zero
-  natGraded .GradedSubstrate.sub    = natSub
-  natGraded .GradedSubstrate.deg _  = deg
-  natGraded .GradedSubstrate.Proper = Proper
-  natGraded .GradedSubstrate.deg≤   = deg≤
-  natGraded .GradedSubstrate.deg<   = deg<
+  natGraded : GradedFib ringSig ℓ-zero ℓ-zero
+  natGraded = graded natFib G
 
   -- every k is a factor of 0 ...
-  deg≤0 : (k : ℕ) → deg k ≤ deg 0
-  deg≤0 k = deg≤ mulOp 0 (zeroSplit k) false
+  deg≤0 : (k : ℕ) → G .deg tt k ≤ G .deg tt 0
+  deg≤0 k = G .deg≤ mulOp 0 (zeroSplit k) false
 
   -- ... and 0 is a summand of every m ...
-  deg0≤ : (m : ℕ) → deg 0 ≤ deg m
-  deg0≤ m = deg≤ addOp m (0 , m , zl) true
+  deg0≤ : (m : ℕ) → G .deg tt 0 ≤ G .deg tt m
+  deg0≤ m = G .deg≤ addOp m (0 , m , zl) true
 
   -- ... so the degree cannot distinguish any two naturals.
-  deg-const : (k m : ℕ) → deg k ≡ deg m
+  deg-const : (k m : ℕ) → G .deg tt k ≡ G .deg tt m
   deg-const k m =
     ≤-antisym (≤-trans (deg≤0 k) (deg0≤ m)) (≤-trans (deg≤0 m) (deg0≤ k))
 
@@ -221,19 +213,23 @@ PosParts oneP n sp ()
 PosParts addP n (i , j , _) b = if b then i else j
 PosParts mulP n (i , j , _) b = if b then i else j
 
-posSub : Substrate posSig ℓ-zero ℓ-zero
-posSub .carrier _ = ℕ
-posSub .op oneP _ = 0                                     -- denotes 1
-posSub .op addP f = suc (f true + f false)                -- (a+1)+(b+1)
-posSub .op mulP f = f true · f false + f true + f false   -- (a+1)(b+1)
-posSub .Split     = PosSplit
-posSub .parts     = PosParts
-posSub .split oneP f = tt
-posSub .split addP f = f true , f false , Eq.refl
-posSub .split mulP f = f true , f false , Eq.refl
-posSub .parts-split oneP f = funExt λ ()
-posSub .parts-split addP f = funExt λ { true → refl ; false → refl }
-posSub .parts-split mulP f = funExt λ { true → refl ; false → refl }
+posFib : Fibered posSig ℓ-zero ℓ-zero
+posFib .carrier _ = ℕ
+posFib .Split     = PosSplit
+posFib .parts     = PosParts
+
+-- The total point, separately: ℕ₊ is total under both operations, so
+-- the split costs nothing; the grading below reads only `Split`/`parts`.
+posPoint : LaxPoint posFib
+posPoint .op oneP _ = 0                                     -- denotes 1
+posPoint .op addP f = suc (f true + f false)                -- (a+1)+(b+1)
+posPoint .op mulP f = f true · f false + f true + f false   -- (a+1)(b+1)
+posPoint .split oneP f = tt
+posPoint .split addP f = f true , f false , Eq.refl
+posPoint .split mulP f = f true , f false , Eq.refl
+posPoint .parts-split oneP f = funExt λ ()
+posPoint .parts-split addP f = funExt λ { true → refl ; false → refl }
+posPoint .parts-split mulP f = funExt λ { true → refl ; false → refl }
 
 -- ------------------------------------------------------------------
 -- Arithmetic, in the two shapes the degree proofs need.
@@ -275,11 +271,11 @@ PosProper addP n sp b = Unit
 PosProper mulP n (i , j , _) b = IsPos (if b then j else i)
 
 -- ------------------------------------------------------------------
--- THEOREM.  ℕ₊ with BOTH convolutions is a graded substrate.
+-- THEOREM.  ℕ₊ with BOTH convolutions is a graded promodel.
 -- ------------------------------------------------------------------
 
-posGraded : GradedSubstrate posSig ℓ-zero ℓ-zero
-posGraded .sub     = posSub
+posGraded : GradedFib posSig ℓ-zero ℓ-zero
+posGraded .fib     = posFib
 posGraded .deg _ n = n
 posGraded .Proper  = PosProper
 posGraded .deg≤ oneP n sp ()

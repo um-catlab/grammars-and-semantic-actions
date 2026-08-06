@@ -2,7 +2,7 @@
   What this instance owes the generic layers: a `DecReadable`, and the
   `unsplit` law the representables need.
 
-  Three substrate facts -- at most one splitting, decidably so, and
+  Three promodel facts -- at most one splitting, decidably so, and
   slotwise decisions combine -- give `dec-⊗`; `Split-isProp` alone gives
   `⊗-refute` and `⊗-merge`; `unsplit` alone gives `⌈⌉-into`/`⌈⌉-from`,
   and with `Split-isProp` also `op-inj`.
@@ -17,17 +17,16 @@ module TheoryGrammar.Instances.SimplyTyped.Readable where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
-open import Cubical.Data.Sum using (inl; inr)
+import Cubical.Data.Bool.Properties as B
 open import Cubical.Data.Unit
 open import Cubical.Data.Empty as E using (⊥; ⊥*)
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Decidable
 open import TheoryGrammar.Representable
-open import TheoryGrammar.Separating
 open import TheoryGrammar.Instances.SimplyTyped.Signature
-open import TheoryGrammar.Instances.SimplyTyped.Substrate
+open import TheoryGrammar.Instances.SimplyTyped.Fibered
 open import TheoryGrammar.Instances.SimplyTyped.Base
 
 module StReadable (Name : Type₀) where
@@ -43,9 +42,10 @@ module StReadable (Name : Type₀) where
   Split-isProp baseOp _ mkBase      mkBase      = refl
   Split-isProp arrOp  _ (mkArr _ _) (mkArr _ _) = refl
 
+  -- `⊗-refute` AND `⊗-merge` now both come from `Precise` -- same
+  -- hypothesis, opposite sign.
   open Precise Split-isProp public
-  open Sep stlcSub Split-isProp public using (⊗-merge)
-  open Repr stlcSub unsplit public using (⌈⌉-into; ⌈⌉-from; op-inj)
+  open Repr stlcFib stlcPoint unsplit public using (⌈⌉-into; ⌈⌉-from; op-inj)
 
   -- Merge two tensors at the same operation and eliminate, in one step:
   -- `⊗-merge` (from unique readability) followed by the tensor's own
@@ -80,35 +80,33 @@ module StReadable (Name : Type₀) where
   ⊗-decSplit arrOp  base      _ = dec-no  (⊗ˢ arrOp  (λ _ → ⊤G)) _ λ { (() , _) }
   ⊗-decSplit arrOp  (A ⇒ᵗ B)  _ = dec-yes (⊗ˢ arrOp  (λ _ → ⊤G)) _ (mkArr A B , λ _ → tt)
 
-  -- PRIMITIVE.  Slotwise decisions combine.  Matches on the OPERATION,
-  -- never on a term; `baseOp` is the degenerate case -- an empty arity
-  -- has nothing to combine, so the answer is always yes.
+  -- `Bool`'s own dependent eliminator, under the name it earns here:
+  -- assemble a two-slot family from its two slots.  Not a decision.
+  private
+    mkSlots : {P : Bool → Type₀} → P true → P false → (b : Bool) → P b
+    mkSlots = B.elim
+
+  -- Slotwise decisions combine.  Matches on the OPERATION, never on a
+  -- term and never on a sum: each alternative names its slots and hands
+  -- them to `Precise`'s `decSlots¹`/`decSlots²`.  `baseOp` is the
+  -- degenerate case -- an empty arity has nothing to combine, so the
+  -- answer is always yes.
   stDecSlots : (o : TOp) (A : (a : TAr o) → TheoryTy ℓ-zero (TSortOf o a))
                (m : Carrier (TResult o)) (sp : TSplit o m)
              → ((a : TAr o) → Dec⟨ A a ⟩ (TParts o m sp a))
              → Dec⟨ ⊗ˢ o A ⟩ m
-  stDecSlots varOp A m sp h with h tt
-  ... | inl x = dec-yes (⊗ˢ varOp A) m (sp , λ _ → x)
-  ... | inr k = dec-no  (⊗ˢ varOp A) m (⊗-refute varOp tt A m sp k)
-  stDecSlots appOp A m sp h with h true | h false
-  ... | inr k | _     = dec-no  (⊗ˢ appOp A) m (⊗-refute appOp true  A m sp k)
-  ... | inl x | inr k = dec-no  (⊗ˢ appOp A) m (⊗-refute appOp false A m sp k)
-  ... | inl x | inl y = dec-yes (⊗ˢ appOp A) m (sp , λ { true → x ; false → y })
-  stDecSlots lamOp A m sp h with h true | h false
-  ... | inr k | _     = dec-no  (⊗ˢ lamOp A) m (⊗-refute lamOp true  A m sp k)
-  ... | inl x | inr k = dec-no  (⊗ˢ lamOp A) m (⊗-refute lamOp false A m sp k)
-  ... | inl x | inl y = dec-yes (⊗ˢ lamOp A) m (sp , λ { true → x ; false → y })
-  stDecSlots annOp A m sp h with h true | h false
-  ... | inr k | _     = dec-no  (⊗ˢ annOp A) m (⊗-refute annOp true  A m sp k)
-  ... | inl x | inr k = dec-no  (⊗ˢ annOp A) m (⊗-refute annOp false A m sp k)
-  ... | inl x | inl y = dec-yes (⊗ˢ annOp A) m (sp , λ { true → x ; false → y })
+  stDecSlots varOp  A m sp h = decSlots¹ varOp A m sp tt (λ x _ → x) (h tt)
   stDecSlots baseOp A m sp h = dec-yes (⊗ˢ baseOp A) m (sp , λ ())
-  stDecSlots arrOp A m sp h with h true | h false
-  ... | inr k | _     = dec-no  (⊗ˢ arrOp A) m (⊗-refute arrOp true  A m sp k)
-  ... | inl x | inr k = dec-no  (⊗ˢ arrOp A) m (⊗-refute arrOp false A m sp k)
-  ... | inl x | inl y = dec-yes (⊗ˢ arrOp A) m (sp , λ { true → x ; false → y })
+  stDecSlots appOp  A m sp h =
+    decSlots² appOp A m sp true false mkSlots (h true) (h false)
+  stDecSlots lamOp  A m sp h =
+    decSlots² lamOp A m sp true false mkSlots (h true) (h false)
+  stDecSlots annOp  A m sp h =
+    decSlots² annOp A m sp true false mkSlots (h true) (h false)
+  stDecSlots arrOp  A m sp h =
+    decSlots² arrOp A m sp true false mkSlots (h true) (h false)
 
-  stDR : DecReadable stlcSub ℓ-zero
+  stDR : DecReadable stlcFib ℓ-zero
   stDR .splitProp = Split-isProp
   stDR .decSplit  = ⊗-decSplit
   stDR .decSlots  = stDecSlots

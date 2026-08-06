@@ -5,7 +5,7 @@
   `Instances/SimplyTyped/`.
 
     Signature   three sorts, six operations, two result sorts
-    Substrate   raw annotated terms and simple types; splittings, and
+    Fibered   raw annotated terms and simple types; splittings, and
                 the `unsplit` law the representables need
     Base        the connectives, and the generic combinator layer
     Grading     every splitting is proper -- at BOTH result sorts
@@ -28,7 +28,7 @@ open import Cubical.Foundations.Prelude
 open import Cubical.Relation.Nullary.Base using (Discrete)
 
 open import TheoryGrammar.Instances.SimplyTyped.Signature  public
-open import TheoryGrammar.Instances.SimplyTyped.Substrate  public
+open import TheoryGrammar.Instances.SimplyTyped.Fibered  public
 open import TheoryGrammar.Instances.SimplyTyped.Base
 open import TheoryGrammar.Instances.SimplyTyped.Grading
 open import TheoryGrammar.Instances.SimplyTyped.Readable

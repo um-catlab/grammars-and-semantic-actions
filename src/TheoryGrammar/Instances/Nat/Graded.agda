@@ -4,7 +4,7 @@
 
   For strings the degree is `length`, and one has to prove that a
   splitting does not increase it.  Here the degree IS the carrier, so the
-  three obligations of `GradedSubstrate` degenerate to arithmetic on
+  three obligations of `GradedFib` degenerate to arithmetic on
   `Add3`:
 
       deg n   =  n
@@ -41,7 +41,7 @@ open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
 
@@ -94,8 +94,8 @@ NatProper : (o : MonOp) (n : ℕ) → MonSplit o n → MonAr o → Type₀
 NatProper nilop n sp ()
 NatProper appop n (i , j , _) b = NonTrivial (if b then j else i)
 
-natGraded : GradedSubstrate monSig ℓ-zero ℓ-zero
-natGraded .sub    = natSub
+natGraded : GradedFib monoidSig ℓ-zero ℓ-zero
+natGraded .fib    = natFib
 natGraded .deg _  = λ n → n
 natGraded .Proper = NatProper
 natGraded .deg≤ nilop n sp ()

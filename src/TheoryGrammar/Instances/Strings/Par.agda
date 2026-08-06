@@ -15,8 +15,8 @@ open import Cubical.Data.Unit
 open import Cubical.Data.List
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
-open import TheoryGrammar.RulesSub
+open import TheoryGrammar.Fibered
+open import TheoryGrammar.RulesFib
 
 open import TheoryGrammar.Instances.Strings.Laws Char public
 

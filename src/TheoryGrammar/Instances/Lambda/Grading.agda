@@ -1,11 +1,11 @@
 {-
-  Every splitting of this substrate is proper.
+  Every splitting of this promodel is proper.
 
   Grade a name 0 and a term by its node count; then every slot of every
   splitting is strictly smaller than the whole -- for `nm` slots
   trivially, since a term has at least one node.  So the guardedness
-  side condition that a general substrate must discharge per description
-  is discharged here ONCE, for the substrate.
+  side condition that a general promodel must discharge per description
+  is discharged here ONCE, for the promodel.
 
   `recSize` is the recursor that buys: it recurses on FUEL, not on an
   accessibility proof, which is what makes closed terms reduce.
@@ -22,7 +22,7 @@ open import Cubical.Data.Nat.Order
 open import Cubical.Data.Empty as E using (⊥)
 
 open import TheoryGrammar.Instances.Lambda.Signature
-open import TheoryGrammar.Instances.Lambda.Substrate
+open import TheoryGrammar.Instances.Lambda.Fibered
 
 module Grading (Name : Type₀) where
 

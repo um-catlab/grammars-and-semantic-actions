@@ -29,13 +29,14 @@ open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool using (true; false; if_then_else_)
 open import Cubical.Data.Sigma
 open import Cubical.Data.Empty as E using (⊥)
-open import Cubical.Relation.Nullary.Base using (Discrete; yes; no)
+open import Cubical.Relation.Nullary.Base using (Discrete; yes; decRec)
+open import Cubical.Relation.Nullary.Properties using (isPropDec; Discrete→isSet)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.CarrierMap
 open import TheoryGrammar.Instances.Lambda.Signature
-open import TheoryGrammar.Instances.Lambda.Substrate
+open import TheoryGrammar.Instances.Lambda.Fibered
 open import TheoryGrammar.Instances.Lambda.Base
 open import TheoryGrammar.Instances.Lambda.Scoped
 open import TheoryGrammar.Instances.Lambda.Passes.Decide
@@ -46,23 +47,26 @@ module Inline (Name : Type₀) (_≟_ : Discrete Name) where
   open Wellscoped Name
   open Decide Name _≟_
 
-  -- PRIMITIVE (carrier map): single substitution.
+  -- PRIMITIVE (carrier map): single substitution.  The metalanguage
+  -- `Dec` is consumed by its OWN elimination rule, `decRec`, exactly as
+  -- an internal `Dec⟨_⟩` is consumed by `dec-elim`: no `with`, no
+  -- `yes`/`no` pattern.
   sub : Name → Raw → Raw → Raw
-  sub n u (var m) with m ≟ n
-  ... | yes _ = u
-  ... | no  _ = var m
+  sub n u (var m)   = decRec (λ _ → u) (λ _ → var m) (m ≟ n)
   sub n u (app x y) = app (sub n u x) (sub n u y)
   sub n u (lam m t) = lam m (sub n u t)
 
-  subCM : Name → Raw → CarrierMap λSub
+  subCM : Name → Raw → CarrierMap λFib
   subCM n u .hom nm m = m
   subCM n u .hom tm   = sub n u
 
-  -- the defining equation at the substituted variable
+  -- the defining equation at the substituted variable.  `n ≟ n` IS
+  -- `yes refl`, because a `Dec` of a proposition is itself one -- so
+  -- this too is a `cong`, not a match.
   subHit : (n : Name) (u : Raw) → sub n u (var n) ≡ u
-  subHit n u with n ≟ n
-  ... | yes _ = refl
-  ... | no ¬p = E.rec (¬p refl)
+  subHit n u =
+    cong (decRec (λ _ → u) (λ _ → var n))
+         (isPropDec (Discrete→isSet _≟_ n n) (n ≟ n) (yes refl))
 
   -- ================================================================
   -- POSITIVE, additively: no hypothesis at all.

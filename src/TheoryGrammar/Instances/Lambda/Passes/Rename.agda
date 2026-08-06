@@ -36,7 +36,7 @@ open import TheoryGrammar.Base
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.CarrierMap
 open import TheoryGrammar.Instances.Lambda.Signature
-open import TheoryGrammar.Instances.Lambda.Substrate
+open import TheoryGrammar.Instances.Lambda.Fibered
 open import TheoryGrammar.Instances.Lambda.Base
 open import TheoryGrammar.Instances.Lambda.Scoped
 
@@ -51,7 +51,7 @@ module Rename (Name : Type₀) where
   rename ρ (app u v) = app (rename ρ u) (rename ρ v)
   rename ρ (lam m t) = lam (ρ m) (rename ρ t)
 
-  renCM : (Name → Name) → CarrierMap λSub
+  renCM : (Name → Name) → CarrierMap λFib
   renCM ρ .hom nm = ρ
   renCM ρ .hom tm = rename ρ
 
@@ -70,7 +70,7 @@ module Rename (Name : Type₀) where
   -- ... and conversely: split preservation IS the homomorphism law.
   -- ================================================================
 
-  module _ (h : CarrierMap λSub) where
+  module _ (h : CarrierMap λFib) where
 
     private
       vLem : (k : Name) (w : Raw) (sp : IsVar w)

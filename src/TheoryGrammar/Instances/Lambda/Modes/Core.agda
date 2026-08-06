@@ -6,7 +6,7 @@
       Uses (lam n t) =  Uses t ⟜ᶜ ⌈ n ⌉       -- ITS residual
 
   `Uses t Γ` reads "t is well-used in Γ".  `var`/`app`/`lam` are fixed
-  once and for all here; a MODE is the pair (context substrate, leaf).
+  once and for all here; a MODE is the pair (context promodel, leaf).
   The binder is not a bump of a nonterminal index -- it is `⊸ᶠ` at the
   canonical focus, so `Γ ⊢ λn.t iff Γ·n ⊢ t` is the residual adjunction
   and not a definition.
@@ -22,27 +22,31 @@ open import Cubical.Data.Unit
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.CanonicalFocus
 open import TheoryGrammar.Decidable
 open import TheoryGrammar.Decidable.Splittings
 open import TheoryGrammar.Instances.Lambda.Signature using (tm)
-open import TheoryGrammar.Instances.Lambda.Substrate using (module Terms)
+open import TheoryGrammar.Instances.Lambda.Fibered using (module Terms)
 open import TheoryGrammar.Instances.Lambda.Modes.Ctx
 open import TheoryGrammar.Instances.Lambda.Modes.Fold
 
+-- The context promodel comes with a total point: `_·_` and the canonical
+-- focus are the two places a MODE needs the operation itself.  Everything
+-- else below -- `⊗ᶜ`, `check`, the decision layer -- sees only `CFib`.
 module Core (Name : Type₀)
-            (CSub : Substrate ctxSig ℓ-zero ℓ-zero)
-            (CDec : DecSplittings CSub ℓ-zero)
-            (sing : Name → CSub .carrier tt)
+            (CFib : Fibered ctxSig ℓ-zero ℓ-zero)
+            (CPoint : LaxPoint CFib)
+            (CDec : DecSplittings CFib ℓ-zero)
+            (sing : Name → CFib .carrier tt)
   where
 
-  open Terms Name using (Raw; var; app; lam; λSub)
+  open Terms Name using (Raw; var; app; lam; λFib)
   open Fold Name using (indRaw)
-  open DecSub CSub public
+  open DecFib CFib public
 
   Ctx : Type₀
-  Ctx = CSub .carrier tt
+  Ctx = CFib .carrier tt
 
   CtxG : Type₁
   CtxG = TheoryTy ℓ-zero tt
@@ -50,7 +54,7 @@ module Core (Name : Type₀)
   -- the operation, and the tensor it convolves
   infixl 20 _·_
   _·_ : Ctx → Ctx → Ctx
-  Γ · Δ = CSub .op mul λ b → if b then Γ else Δ
+  Γ · Δ = CPoint .op mul λ b → if b then Γ else Δ
 
   infixr 21 _⊗ᶜ_
   _⊗ᶜ_ : CtxG → CtxG → CtxG
@@ -60,12 +64,12 @@ module Core (Name : Type₀)
   -- The residual, at the LEFT slot: "extend the context on the right".
   -- ================================================================
 
-  asm : Assembly CSub mul true
+  asm : Assembly CFib mul true
   asm .Rest       = Unit
   asm .restOf _   = false
   asm .tuple Γ f b = if b then Γ else f tt
 
-  open Canon CSub mul true asm public using (⊸ᶠ; ⊸ᶠ-lam; ⊸ᶠ-app; ⊸ᶠ-β; ⊸ᶠ-η)
+  open Canon CFib CPoint mul true asm public using (⊸ᶠ; ⊸ᶠ-lam; ⊸ᶠ-app; ⊸ᶠ-β; ⊸ᶠ-η)
 
   _⟜ᶜ_ : CtxG → Ctx → CtxG
   B ⟜ᶜ Δ = ⊸ᶠ (λ _ → ⌈ Δ ⌉) B
@@ -76,7 +80,7 @@ module Core (Name : Type₀)
 
   -- ⊸-ELIM at the representable: `Canon.plug` with the point `Eq.refl`.
   ⟜-app : (B : CtxG) (Δ : Ctx) → (B ⟜ᶜ Δ) ⊢ shift B Δ
-  ⟜-app B Δ = Canon.plug CSub mul true asm {A = λ _ → ⌈ Δ ⌉} {B = B}
+  ⟜-app B Δ = Canon.plug CFib CPoint mul true asm {A = λ _ → ⌈ Δ ⌉} {B = B}
                          (λ _ → Δ) (λ _ → Eq.refl)
 
   -- ⊸-INTRO at the representable.
@@ -124,7 +128,7 @@ module Core (Name : Type₀)
     --     ⊤ ⊢ &ᴰ Ctx (λ Γ → Dec⟨ Scoped Γ ⟩)
     -- exactly as `Lambda.ScopeCheck.check`.  `Dec⟨_⟩` is pointwise, so
     -- which of the two indices is bound is a matter of reading.
-    private module AST = DecSub λSub
+    private module AST = DecFib λFib
 
     Scoped : Ctx → AST.TheoryTy ℓ-zero tm
     Scoped Γ t = Uses t Γ
@@ -132,8 +136,12 @@ module Core (Name : Type₀)
     checkAST : AST._⊢_ AST.⊤G (AST.&ᴰ Ctx (λ Γ → AST.Dec⟨ Scoped Γ ⟩))
     checkAST t _ Γ = check t Γ tt
 
-    -- observing a decision: `⊕-E` into a constant grammar, never a match
-    accepts : (t : Raw) → ⊤G ⊢ (λ _ → Bool)
-    accepts t = ⊕-E {A = Uses t} {C = λ _ → Bool} {B = ¬G (Uses t)}
-                    (λ _ _ → true) (λ _ _ → false)
-                ∘g check t
+    -- Observing a decision.  `okA` (TheoryGrammar.SemanticAction) is
+    -- the generic observer -- it reads a `Result E A` at ANY error
+    -- grammar, and a decision is `Result (¬G A) A`.  The result is a
+    -- TERM `⊤G ⊢ Δ Bool`; `run` is the exit from the calculus and
+    -- belongs at the test site, not here.  The `⊕-E` into a
+    -- hand-written constant grammar this replaces was the same term
+    -- every other test suite in the development wrote for itself.
+    accepts : (t : Raw) → ⊤G ⊢ Δ Bool
+    accepts t = okA (Uses t) (¬G (Uses t)) ∘g check t
