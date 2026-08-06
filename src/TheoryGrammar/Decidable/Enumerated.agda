@@ -28,6 +28,7 @@ open import TheoryGrammar.Substrate
 open import TheoryGrammar.Rules
 open import TheoryGrammar.RulesSub
 open import TheoryGrammar.Enumerable
+open import TheoryGrammar.Par
 open import TheoryGrammar.Decidable.Additive
 open import TheoryGrammar.Decidable.Tensor
 
@@ -138,3 +139,23 @@ module DecTensorEnum {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
 -- (Σ over splittings) and `dec-⊕ᴰ` (Σ over the tag type) are instances,
 -- because `⊗ˢ o A m` and `⊕ᴰ Y A m` are both Σs.
 -- ==================================================================
+
+-- ==================================================================
+-- The enumeration is a WITNESS for the internal statement, not the
+-- statement.  `⊗-EM` (TheoryGrammar.Par) says the multiplicative
+-- satisfies excluded middle -- ⊗ and its De Morgan dual ⅋ are
+-- complementary.  A complete list is one way to establish that.
+-- ==================================================================
+
+module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
+         {Sub : Substrate σ ℓX ℓP} (DE : DecEnumerable Sub ℓA) where
+
+  open ParS Sub using (⊗-EM)
+  open DecTensorEnum DE
+
+  enum→⊗EM : (o : σ .ops)
+             (A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
+           → ((m : Sub .carrier (σ .resultSort o)) (sp : Sub .Split o m)
+              (a : σ .arities o) → Dec⟨ A a ⟩ (Sub .parts o m sp a))
+           → ⊗-EM o A
+  enum→⊗EM o A d m _ = dec-⊗-enum o A m (d m)
