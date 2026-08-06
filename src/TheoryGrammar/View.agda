@@ -70,7 +70,132 @@ private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓB ℓC ℓM ℓY ℓV : Level
 -- The view layer.  Deliberately NOT re-exporting `RulesF` -- instances
 -- already open it themselves, and a second copy would make every
 -- combinator ambiguous at the use site.
+
 -- ==================================================================
+-- COMPLETENESS, ADDITIVELY.
+--
+-- Nothing below mentions the operations -- `total` is a map out of `⊤`
+-- and `exclusive` uses only `&` and `⊥G` -- so it needs a CARRIER, not
+-- a substrate, exactly as `Decidable.Additive` does.  `Views` re-exports
+-- it at the substrate level, where the instances use it.
+-- ==================================================================
+
+module CompleteViews {S : Type ℓS} (Car : S → Type ℓX) where
+
+  open CarrierNotation Car
+  open RulesCarrier Car
+  open DecAdd Car using (¬G_; Dec⟨_⟩; dec-yes; dec-no; Decision; decide; exclude)
+
+  private variable s : S
+
+  Cover : TheoryTy ℓA s → Type (ℓ-max ℓX ℓA)
+  Cover P = ⊤G ⊢ P
+
+  Probe : TheoryTy ℓA s → Type (ℓ-max ℓX ℓA)
+  Probe P = ⊤G ⊢ Dec⟨ P ⟩
+
+-- ================================================================
+-- COMPLETE views: a total map into a disjunction of DISJOINT
+-- grammars.
+--
+--     total     : ⊤G ⊢ ⊕ᴰ Y P
+--     exclusive : distinct branches are jointly empty
+--
+-- `Cover P` alone says the branches EXHAUST; this adds that they
+-- EXCLUDE.  `Decidable.Additive.Decision` is the binary case, and
+-- `Dec⟨ A ⟩` is ALREADY an instance of it: `¬G A` is a grammar like
+-- any other and `contra` is its exclusion.  So completeness is not
+-- what a positive complement buys.
+--
+-- What it buys is a better DESCRIPTION of the same fact.  `largest`
+-- says every complement embeds into `¬G A`, so choosing a positive
+-- one -- `NonTrivial` rather than `¬G ⌈ [] ⌉`, or the other two
+-- operations rather than `¬G (⊗ˢ appOp ⊤)` -- refines what the
+-- rejecting branch tells you without changing what it proves.  The
+-- n-ary form is here because a syntax's operations partition its
+-- terms, and that is the shape those refinements take.
+-- ================================================================
+
+record Complete (Y : Type ℓY) (P : Y → TheoryTy ℓA s)
+  : Type (ℓ-max ℓX (ℓ-max ℓY ℓA)) where
+  field
+    total     : Cover (⊕ᴰ Y P)
+    exclusive : (y z : Y) → (y ≡ z → ⊥) → (P y & P z) ⊢ ⊥G
+
+open Complete public
+
+-- THE USUAL WAY TO BUILD ONE.  Exclusivity is a mouthful stated
+-- pairwise, but it always comes from the same fact: the branch is a
+-- FUNCTION OF THE WORLD.  Give that, and the pairwise statement is one
+-- line -- which is what makes the record cheap to instantiate.
+fromUnique : {Y : Type ℓY} {P : Y → TheoryTy ℓA s}
+           → Cover (⊕ᴰ Y P)
+           → ((y z : Y) (m : Fib .carrier s) → P y m → P z m → y ≡ z)
+           → Complete Y P
+fromUnique t u .total = t
+fromUnique t u .exclusive y z d m (py , pz) = ⊥rec (d (u y z m py pz))
+
+-- reading one off is `⊕ᴰ`'s own rule
+completeCase : {C : TheoryTy ℓC s} {Y : Type ℓY} {P : Y → TheoryTy ℓA s}
+             → Complete Y P → ((y : Y) → P y ⊢ C) → Cover C
+completeCase K f = ⊕ᴰ-E f ∘g K .total
+
+-- ... and the CERTIFICATE: landing in branch `y` refutes every other
+-- branch.  This is `largest` applied branchwise -- the positive
+-- description mapping back to the negative one it refines.
+certifies : {Y : Type ℓY} {P : Y → TheoryTy ℓA s}
+            (K : Complete Y P) (y z : Y) → (y ≡ z → ⊥)
+          → P y ⊢ ¬G (P z)
+certifies K y z d = ⇒-I (K .exclusive y z d)
+
+-- A COMPLETE VIEW DECIDES ITS OWN BRANCHES.
+--
+-- Given the partition, deciding `P y` needs no work: land in some
+-- branch `z`, and either it IS `y` -- so its payload already is a
+-- `P y` -- or it is not, and `certifies` refutes.  So the per-branch
+-- decision procedures an instance writes by hand (`⊗-decSplit`, one
+-- clause per pair of operations) are consequences of the ONE
+-- partition, not independent facts.
+--
+-- WHY THE HYPOTHESIS IS `P z ⊢ P y` AND NOT `Discrete Y`.  With
+-- `Discrete Y` the diagonal case has to move a `P z` to a `P y` along
+-- `z ≡ y`, i.e. by `subst` -- and `subst` at a family over a VARIABLE
+-- world does not reduce.  Every consumer of this that is generic in
+-- the world (the scope checker is) would then stop computing, and the
+-- instances' `refl` tests with it.  Asking instead for the coercion
+-- itself costs nothing at a concrete index -- it is `idg` on the
+-- diagonal -- and keeps the derivation transport-free.
+decBranch : {Y : Type ℓY} {P : Y → TheoryTy ℓA s}
+          → ((y z : Y) → (P z ⊢ P y) ⊎ (y ≡ z → ⊥))
+          → Complete Y P → (y : Y) → Probe (P y)
+decBranch {P = P} cmp K y =
+  completeCase K λ z →
+    Sum.rec (λ f   → dec-yes (P y) ∘g f)
+            (λ ¬eq → dec-no  (P y) ∘g certifies K z y (λ p → ¬eq (sym p)))
+            (cmp y z)
+
+
+  -- THE BINARY CASE IS `Decision`.  Not a separate notion: a two-branch
+  -- partition and a decision-with-its-exclusion are the same data, and
+  -- these two maps say so.  `Dec⟨ A ⟩` is this at `A' = ¬G A`.
+  binary : {A : TheoryTy ℓA s} {A' : TheoryTy ℓA s}
+         → Decision A A' → Complete Bool (λ b → if b then A else A')
+  binary {A = A} {A' = A'} D .total =
+    ⊕-E (⊕ᴰ-I Bool {A = λ b → if b then A else A'} true)
+        (⊕ᴰ-I Bool {A = λ b → if b then A else A'} false)
+    ∘g D .decide
+  binary D .exclusive true  true  d = λ _ _ → ⊥rec (d refl)
+  binary D .exclusive false false d = λ _ _ → ⊥rec (d refl)
+  binary D .exclusive true  false _ = D .exclude
+  binary D .exclusive false true  _ = D .exclude ∘g &-swap-
+
+  unbinary : {A : TheoryTy ℓA s} {A' : TheoryTy ℓA s}
+           → Complete Bool (λ b → if b then A else A') → Decision A A'
+  unbinary {A = A} {A' = A'} K .decide =
+    ⊕ᴰ-E (λ { true  → ⊕-I₁ {A = A} {B = A'}
+            ; false → ⊕-I₂ {B = A'} {A = A} }) ∘g K .total
+  unbinary K .exclude = K .exclusive true false (λ p → true≢false p)
+
 
 module Views {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP) where
 
@@ -94,86 +219,6 @@ module Views {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX 
   P ⇛ Q = P ⊢ Q
 
   infix 1 _⇛_
-
-  -- ================================================================
-  -- COMPLETE views: a total map into a disjunction of DISJOINT
-  -- grammars.
-  --
-  --     total     : ⊤G ⊢ ⊕ᴰ Y P
-  --     exclusive : distinct branches are jointly empty
-  --
-  -- `Cover P` alone says the branches EXHAUST; this adds that they
-  -- EXCLUDE.  `Decidable.Additive.Decision` is the binary case, and
-  -- `Dec⟨ A ⟩` is ALREADY an instance of it: `¬G A` is a grammar like
-  -- any other and `contra` is its exclusion.  So completeness is not
-  -- what a positive complement buys.
-  --
-  -- What it buys is a better DESCRIPTION of the same fact.  `largest`
-  -- says every complement embeds into `¬G A`, so choosing a positive
-  -- one -- `NonTrivial` rather than `¬G ⌈ [] ⌉`, or the other two
-  -- operations rather than `¬G (⊗ˢ appOp ⊤)` -- refines what the
-  -- rejecting branch tells you without changing what it proves.  The
-  -- n-ary form is here because a syntax's operations partition its
-  -- terms, and that is the shape those refinements take.
-  -- ================================================================
-
-  record Complete (Y : Type ℓY) (P : Y → TheoryTy ℓA s)
-    : Type (ℓ-max ℓX (ℓ-max ℓY ℓA)) where
-    field
-      total     : Cover (⊕ᴰ Y P)
-      exclusive : (y z : Y) → (y ≡ z → ⊥) → (P y & P z) ⊢ ⊥G
-
-  open Complete public
-
-  -- THE USUAL WAY TO BUILD ONE.  Exclusivity is a mouthful stated
-  -- pairwise, but it always comes from the same fact: the branch is a
-  -- FUNCTION OF THE WORLD.  Give that, and the pairwise statement is one
-  -- line -- which is what makes the record cheap to instantiate.
-  fromUnique : {Y : Type ℓY} {P : Y → TheoryTy ℓA s}
-             → Cover (⊕ᴰ Y P)
-             → ((y z : Y) (m : Fib .carrier s) → P y m → P z m → y ≡ z)
-             → Complete Y P
-  fromUnique t u .total = t
-  fromUnique t u .exclusive y z d m (py , pz) = ⊥rec (d (u y z m py pz))
-
-  -- reading one off is `⊕ᴰ`'s own rule
-  completeCase : {C : TheoryTy ℓC s} {Y : Type ℓY} {P : Y → TheoryTy ℓA s}
-               → Complete Y P → ((y : Y) → P y ⊢ C) → Cover C
-  completeCase K f = ⊕ᴰ-E f ∘g K .total
-
-  -- ... and the CERTIFICATE: landing in branch `y` refutes every other
-  -- branch.  This is `largest` applied branchwise -- the positive
-  -- description mapping back to the negative one it refines.
-  certifies : {Y : Type ℓY} {P : Y → TheoryTy ℓA s}
-              (K : Complete Y P) (y z : Y) → (y ≡ z → ⊥)
-            → P y ⊢ ¬G (P z)
-  certifies K y z d = ⇒-I (K .exclusive y z d)
-
-  -- A COMPLETE VIEW DECIDES ITS OWN BRANCHES.
-  --
-  -- Given the partition, deciding `P y` needs no work: land in some
-  -- branch `z`, and either it IS `y` -- so its payload already is a
-  -- `P y` -- or it is not, and `certifies` refutes.  So the per-branch
-  -- decision procedures an instance writes by hand (`⊗-decSplit`, one
-  -- clause per pair of operations) are consequences of the ONE
-  -- partition, not independent facts.
-  --
-  -- WHY THE HYPOTHESIS IS `P z ⊢ P y` AND NOT `Discrete Y`.  With
-  -- `Discrete Y` the diagonal case has to move a `P z` to a `P y` along
-  -- `z ≡ y`, i.e. by `subst` -- and `subst` at a family over a VARIABLE
-  -- world does not reduce.  Every consumer of this that is generic in
-  -- the world (the scope checker is) would then stop computing, and the
-  -- instances' `refl` tests with it.  Asking instead for the coercion
-  -- itself costs nothing at a concrete index -- it is `idg` on the
-  -- diagonal -- and keeps the derivation transport-free.
-  decBranch : {Y : Type ℓY} {P : Y → TheoryTy ℓA s}
-            → ((y z : Y) → (P z ⊢ P y) ⊎ (y ≡ z → ⊥))
-            → Complete Y P → (y : Y) → Probe (P y)
-  decBranch {P = P} cmp K y =
-    completeCase K λ z →
-      Sum.rec (λ f   → dec-yes (P y) ∘g f)
-              (λ ¬eq → dec-no  (P y) ∘g certifies K z y (λ p → ¬eq (sym p)))
-              (cmp y z)
 
   -- ================================================================
   -- `with`, internally.

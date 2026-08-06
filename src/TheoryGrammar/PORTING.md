@@ -139,7 +139,7 @@ Not a plan — a measurement against the 21 modules currently in
 | SemanticAction | 2 | `SemanticAction` | **done** |
 | Yoneda | 2 | `Representable` (`⌈⌉-UP`) | **done** |
 | Later | 7 | `Graded` (`▷`, `löb`, `hyloC`) | **partial** — `Box`, `Infix` not ported |
-| Subgrammar | 2 | — | **not started**, but additive; should be easy |
+| Subgrammar | 2 | `Subgrammar` (`Compr`) | **done** |
 | Derivative | 3 | `Derivative` (`δ`, `DerivTensor`) | **done** |
 | SequentialUnambiguity | 5 | `Instances/Strings/SeqUnambig` | **core done** |
 | **Greedy** | 2 | — | **not started**; needs Levi |
@@ -148,7 +148,7 @@ Not a plan — a measurement against the 21 modules currently in
 | String, External | 12 | — | *replaced*, not ported |
 
 So the additive half is done, the multiplicative core is done, and what
-remains is **13 files in four groups**, each blocked on one identifiable
+remains is **6 files in two groups**, plus `Later/{Box,Infix}`,, each blocked on one identifiable
 hypothesis rather than on volume.
 
 ## The remaining work, in dependency order
@@ -234,7 +234,23 @@ hypothesis rather than on volume.
    would have to keep it.
 4. **`Coinductive` (4 files).** Needs a greatest-fixed-point counterpart
    to `Inductive`'s `μ`. Not blocked on anything but volume.
-5. **`Subgrammar` (2 files).** Additive; nothing in the way.
+5. ~~**`Subgrammar`**~~ — **done**, and it confirms the classification:
+   it needs *no signature at all*. `Compr` lives at `CarrierNotation`,
+   the same level as `&` and `⊕`, because comprehension is pointwise in
+   the index like every additive connective. `Grammar/Subgrammar/`
+   imports the whole of `Grammar` and uses nothing multiplicative.
+
+   One design change, and it is the same lesson as `DerivTensor`:
+   **state the side condition as the predicate, not as an equation.**
+   Upstream writes it as `p ∘g f ≡ true ∘g ⊤-intro` and then pays —
+   `insert-pf` builds that equation out of the predicate via
+   `hPropExt`, `extract-pf` transports back out, and both are `opaque`
+   with an `unfolding` discipline. Writing `Holds f = ∀ w x → ⟨ p w (f w x) ⟩`
+   deletes all of it: the UP is an `Iso` with **both round trips
+   `refl`**, no `Σ≡Prop`, no `hPropExt`, no `transport`, no `opaque`.
+   β was already `refl` upstream; η was not, and is here by Σ's η. The
+   equational phrasing is still available (`toEqn`/`ofEqn`) — it just
+   costs `hPropExt` once, in one place, instead of at every use site.
 6. **`Later/{Box,Infix}`.** `Infix` is the two-sided order — the CYK
    shape — and is the one worth having, since it is what the bag
    instance would want.
