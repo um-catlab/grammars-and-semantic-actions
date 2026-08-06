@@ -143,12 +143,12 @@ Not a plan — a measurement against the 21 modules currently in
 | Derivative | 3 | `Derivative` (`δ`, `DerivTensor`) | **done** |
 | **SequentialUnambiguity** | 5 | — | **not started**; needs Levi |
 | **Greedy** | 2 | — | **not started**; needs Levi |
-| **RegularExpression** | 2 | — | **not started**; needs Derivative first |
+| RegularExpression | 2 | `Instances/Strings/RegExp` | **done** |
 | **Coinductive** | 4 | — | **not started**; no `ν` in the generic layer |
 | String, External | 12 | — | *replaced*, not ported |
 
 So the additive half is done, the multiplicative core is done, and what
-remains is **18 files in five groups**, each blocked on one identifiable
+remains is **13 files in four groups**, each blocked on one identifiable
 hypothesis rather than on volume.
 
 ## The remaining work, in dependency order
@@ -181,10 +181,32 @@ hypothesis rather than on volume.
    equidivisibility (Levi's lemma), which is a genuine property of the
    theory — true for free monoids, false for commutative ones. It should
    be a named hypothesis on the promodel, not ambient.
-3. **`Coinductive` (4 files).** Needs a greatest-fixed-point counterpart
+3. ~~**`RegularExpression`**~~ — **done**, and bucket 3's classification
+   of it as *string-specific* was right: the derivative-based matcher
+   recurses on the carrier, which is not something `Fibered` provides.
+   It lives at `Instances/Strings/RegExp.agda`.
+
+   The design point worth reusing: **the syntax is indexed by its
+   nullability**. That index is not bookkeeping. `KleeneStar` already
+   needed `NonNullable A` for `A *` to be guarded, and non-nullability
+   is *also* exactly what makes `δ_c (r ⋆) = δ_c r · r ⋆` correct — one
+   hypothesis doing two jobs, so it belongs in the type. `_⋆` takes a
+   `RegExp false` and nothing further is checked; in the whole
+   correctness proof the index is consumed in exactly one place, the
+   `nil` case of the star's completeness.
+
+   The matcher `decRE` **decides the denotation**, so there is no
+   correctness theorem about the matcher at all — only about `δᵣ`.
+   That correctness is a logical equivalence rather than an Iso, and
+   deliberately: at `r · s` with `r` nullable the classical law
+   replaces `r` by `ε`, forgetting *which* ε-parse `r` had. For an
+   unambiguous regex that is no loss; for an ambiguous one it is
+   precisely the ambiguity, and a parser (as opposed to a matcher)
+   would have to keep it.
+4. **`Coinductive` (4 files).** Needs a greatest-fixed-point counterpart
    to `Inductive`'s `μ`. Not blocked on anything but volume.
-4. **`Subgrammar` (2 files).** Additive; nothing in the way.
-5. **`Later/{Box,Infix}`.** `Infix` is the two-sided order — the CYK
+5. **`Subgrammar` (2 files).** Additive; nothing in the way.
+6. **`Later/{Box,Infix}`.** `Infix` is the two-sided order — the CYK
    shape — and is the one worth having, since it is what the bag
    instance would want.
 

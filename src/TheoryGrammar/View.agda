@@ -54,7 +54,8 @@ module TheoryGrammar.View where
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool using (Bool; true; false)
 open import Cubical.Data.Unit
-open import Cubical.Data.Empty using (⊥)
+open import Cubical.Relation.Nullary.Base using (Discrete; decRec)
+open import Cubical.Data.Empty using (⊥) renaming (rec to ⊥rec)
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
@@ -124,6 +125,17 @@ module Views {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX 
 
   open Complete public
 
+  -- THE USUAL WAY TO BUILD ONE.  Exclusivity is a mouthful stated
+  -- pairwise, but it always comes from the same fact: the branch is a
+  -- FUNCTION OF THE WORLD.  Give that, and the pairwise statement is one
+  -- line -- which is what makes the record cheap to instantiate.
+  fromUnique : {Y : Type ℓY} {P : Y → TheoryTy ℓA s}
+             → Cover (⊕ᴰ Y P)
+             → ((y z : Y) (m : Fib .carrier s) → P y m → P z m → y ≡ z)
+             → Complete Y P
+  fromUnique t u .total = t
+  fromUnique t u .exclusive y z d m (py , pz) = ⊥rec (d (u y z m py pz))
+
   -- reading one off is `⊕ᴰ`'s own rule
   completeCase : {C : TheoryTy ℓC s} {Y : Type ℓY} {P : Y → TheoryTy ℓA s}
                → Complete Y P → ((y : Y) → P y ⊢ C) → Cover C
@@ -136,6 +148,24 @@ module Views {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX 
               (K : Complete Y P) (y z : Y) → (y ≡ z → ⊥)
             → P y ⊢ ¬G (P z)
   certifies K y z d = ⇒-I (K .exclusive y z d)
+
+  -- A COMPLETE VIEW DECIDES ITS OWN BRANCHES.
+  --
+  -- Given the partition and a discrete index, deciding `P y` needs no
+  -- work at all: land in some branch `z`, and either `z ≡ y` -- transport
+  -- -- or it does not, and `certifies` refutes.  So the per-branch
+  -- decision procedures an instance writes by hand (`Lambda.Readable`'s
+  -- and `SimplyTyped.Readable`'s `⊗-decSplit`, one clause per pair of
+  -- operations) are consequences of the ONE partition, not independent
+  -- facts.  This is the payoff of the positive complement: the negative
+  -- statements follow from it.
+  decBranch : {Y : Type ℓY} {P : Y → TheoryTy ℓA s}
+            → Discrete Y → Complete Y P → (y : Y) → Probe (P y)
+  decBranch {P = P} _≟_ K y =
+    completeCase K λ z →
+      decRec (λ eq  → dec-yes (P y) ∘g (λ m pz → subst (λ w → P w m) eq pz))
+             (λ ¬eq → dec-no  (P y) ∘g certifies K z y ¬eq)
+             (z ≟ y)
 
   -- ================================================================
   -- `with`, internally.

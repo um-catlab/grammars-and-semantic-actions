@@ -24,7 +24,7 @@ open import TheoryGrammar.SemanticAction
 
 open import TheoryGrammar.Instances.Bags.QuicksortFunctor A public
 
-open Views bagFib
+open Views bagFib using (Cover; Complete; total; exclusive; completeCase; certifies; fromUnique; caseOf; caseOfᴰ; refine; withView; viewCase; viewCaseᴰ; cover→probe; Probe; _⇛_)
 -- (the semantic actions now arrive via `DecFib` in Base)
 
 -- element and a rest.  This is the bag instance of "⊤ is the initial
@@ -105,6 +105,29 @@ module Sort (le : A → A → Bool)
              ⊗I {P = λ a → ⟦ QG' x a ⟧c (λ _ → Unit)} e2 (lift pf)
                (λ { true → tt ; false → lift (bb .snd) }))
           (h false))
+
+  -- ... and `bagCase` is COMPLETE, with a positive complement on both
+  -- sides: a bag is empty, or it has an element and a rest.  The
+  -- exclusion is the only thing that was missing, and it is the same
+  -- fact the sorters' termination already rests on -- `[]` admits no
+  -- one-element splitting.
+  BagCase : Bool → TheoryTy ℓ-zero tt
+  BagCase b = if b then ⌈ [] ⌉ else ⊕ᴰ A (λ x → ⌈ x ∷ [] ⌉ ⊗' ⊤G)
+
+  nil-empty : (⊕ᴰ A (λ x → ⌈ x ∷ [] ⌉ ⊗' ⊤G)) [] → E.⊥
+  nil-empty (x , (u , v , s) , h) = go (h true) s
+    where go : u Eq.≡ x ∷ [] → Ilv u v [] → E.⊥
+          go Eq.refl ()
+
+  bagComplete : Complete Bool BagCase
+  bagComplete .total =
+    ⊕-E (⊕ᴰ-I Bool {A = BagCase} true) (⊕ᴰ-I Bool {A = BagCase} false) ∘g bagCase
+  bagComplete .exclusive true  true  d = λ _ _ → E.rec (d refl)
+  bagComplete .exclusive false false d = λ _ _ → E.rec (d refl)
+  bagComplete .exclusive true  false _ =
+    λ { .([]) (Eq.refl , ne) → E.rec (nil-empty ne) }
+  bagComplete .exclusive false true  _ =
+    λ { .([]) (ne , Eq.refl) → E.rec (nil-empty ne) }
 
   -- THE COALGEBRA, point-free: decompose, then for each pivot
   -- partition around it and inject.  No list pattern is matched here.

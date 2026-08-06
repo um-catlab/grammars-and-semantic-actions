@@ -18,13 +18,15 @@ open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
 open import Cubical.Data.List using ([]; _∷_)
 open import Cubical.Data.Sigma using (_×_; _,_)
-open import Cubical.Data.Nat using (ℕ; discreteℕ)
+open import Cubical.Data.Nat using (ℕ; discreteℕ; snotz; znots; injSuc)
 open import Cubical.Data.Unit
 open import Cubical.Data.Maybe using (Maybe; just; nothing)
 
 open import TheoryGrammar.SemanticAction using (passes; _↦_; _at_)
 open import TheoryGrammar.Instances.SimplyTyped
+open import TheoryGrammar.View
 open SimplyTyped ℕ discreteℕ
+open Views stlcFib using (completeCase; certifies)
 
 -- ==================================================================
 -- Terms.  With no constants at `base`, every closed term is built from
@@ -283,3 +285,45 @@ no-chk-selfApp = noChk o selfApp refl
 -- ... and the well-typed side is a witness, not a report
 yes-syn-idAnn : Syn [] idAnn
 yes-syn-idAnn = witness (Syn []) (¬G (Syn [])) closed-infer? idAnn refl
+
+-- ==================================================================
+-- THE PARTITIONS, one per sort (SimplyTyped.Readable).
+--
+-- `⊗-decSplit o` decides each operation separately at `¬G (⊗ˢ o ⊤)`;
+-- `tmCase` / `tyCase` say the same thing positively -- every term is
+-- built by exactly one of `var`/`app`/`lam`/`ann`, every type by exactly
+-- one of `base`/`⇒ᵗ`.  Rejecting one operation hands back WHICH it was.
+--
+-- Two sorts, two partitions: `Complete` fixes a sort, so a multi-sorted
+-- syntax partitions each of its carriers separately.
+-- ==================================================================
+
+tmName : ⊤G ⊢ Δ ℕ
+tmName = completeCase tmCase λ { oVar → pureA ℕ 0 ; oApp → pureA ℕ 1
+                               ; oLam → pureA ℕ 2 ; oAnn → pureA ℕ 3 }
+
+tyName : ⊤G ⊢ Δ ℕ
+tyName = completeCase tyCase λ { oBase → pureA ℕ 0 ; oArr → pureA ℕ 1 }
+
+_ : passes (run tmName at
+             ( (var 0) ↦ 0 ∷ selfApp ↦ 1 ∷ bare ↦ 2 ∷ idAnn ↦ 3 ∷ [] ))
+_ = refl
+
+_ : passes (run tyName at (o ↦ 0 ∷ (o ⇒ᵗ o) ↦ 1 ∷ []))
+_ = refl
+
+-- the certificate: an annotation is not a lambda, positively
+ann-not-lam : tmB oAnn ⊢ ¬G (tmB oLam)
+ann-not-lam = certifies tmCase oAnn oLam λ p → snotz (injSuc (injSuc (cong tag p)))
+  where tag : TmOp → ℕ
+        tag oVar = 0
+        tag oApp = 1
+        tag oLam = 2
+        tag oAnn = 3
+
+-- an arrow type is not a base type
+arr-not-base : tyB oArr ⊢ ¬G (tyB oBase)
+arr-not-base = certifies tyCase oArr oBase λ p → snotz (cong tag p)
+  where tag : TyOp → ℕ
+        tag oBase = 0
+        tag oArr  = 1

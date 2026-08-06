@@ -100,10 +100,10 @@ module Core (Name : Type₀)
   -- all four are `Canon.Residual` instantiated at `repJ`.  β is `refl`
   -- there and η is one `funExt`; neither is reproved here.
   ⟜-app : (B : CtxG) (Δ : Ctx) → (B ⟜ᶜ Δ) ⊢ shift B Δ
-  ⟜-app B Δ = Res.⊸-app Δ {B = B}
+  ⟜-app B Δ = Res.plug-at Δ {B = B}
 
   ⟜-lam : (B : CtxG) (Δ : Ctx) → shift B Δ ⊢ (B ⟜ᶜ Δ)
-  ⟜-lam B Δ = Res.⊸-lam Δ {B = B}
+  ⟜-lam B Δ = Res.unplug Δ {B = B}
 
   ⟜-β : (B : CtxG) (Δ : Ctx) (Γ : Ctx) (b : shift B Δ Γ)
       → ⟜-app B Δ Γ (⟜-lam B Δ Γ b) ≡ b

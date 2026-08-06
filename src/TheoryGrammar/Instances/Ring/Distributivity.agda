@@ -210,12 +210,117 @@ distribInv A B C pr n ((u , v , t) , g) =
 -- report.
 -- ==================================================================
 
+-- The three propositional components, and Bool's missing η.  Every
+-- splitting in this file is DATA plus a proof, and it is only the proof
+-- components that have to be identified -- which is the `Fibered` design
+-- paying off: had `Split` carried its equation, these would be paths in
+-- the data as well.
+private
+  -- `isProp (SplitAdd i j n)` CANNOT be matched out directly: the `zl`
+  -- clause needs to eliminate the reflexive equation `j = j`, which is
+  -- K.  Route it through the equation instead -- `SplitAdd i j n` is the
+  -- graph of `+`, hence equivalent to `i + j ≡ n`, which is a prop
+  -- because ℕ is a set.  The canonical splitting transports to any other
+  -- along its own witness:
+  splitAddCanon : {p q w : ℕ} (s : SplitAdd p q w)
+                → PathP (λ κ → SplitAdd p q (splitAdd≡ s κ)) (splitAllAdd p q) s
+  splitAddCanon zl     = refl
+  splitAddCanon (sl s) = λ κ → sl (splitAddCanon s κ)
+
+  fromEq : {i j n : ℕ} → i + j ≡ n → SplitAdd i j n
+  fromEq {i} {j} p = subst (SplitAdd i j) p (splitAllAdd i j)
+
+  fromToEq : {i j n : ℕ} (s : SplitAdd i j n) → fromEq (splitAdd≡ s) ≡ s
+  fromToEq s = fromPathP (splitAddCanon s)
+
+  isPropSplitAdd : {i j n : ℕ} → isProp (SplitAdd i j n)
+  isPropSplitAdd s t =
+      sym (fromToEq s)
+    ∙ cong fromEq (isSetℕ _ _ (splitAdd≡ s) (splitAdd≡ t))
+    ∙ fromToEq t
+
+  isPropEqℕ : {x y : ℕ} → isProp (x Eq.≡ y)
+  isPropEqℕ {x} {y} = subst isProp (Eq.PathPathEq {x = x} {y = y}) (isSetℕ x y)
+
+  -- The PathP analogue of `funExt`.  This is what makes the round trips
+  -- writable at all: an extended lambda cannot be compared with another
+  -- extended lambda at a VARIABLE, but checking a clause-list against an
+  -- expected type of the form `(b : Bool) → PathP … (f b) (g b)` splits
+  -- on the constructors, where both endpoints DO reduce.  Its own
+  -- endpoints are fine because `p i0 = x` holds definitionally for
+  -- `p : PathP A x y`.
+  funExtP : {X : Bool → I → Type₀}
+            {f : (b : Bool) → X b i0} {g : (b : Bool) → X b i1}
+          → ((b : Bool) → PathP (λ κ → X b κ) (f b) (g b))
+          → PathP (λ κ → (b : Bool) → X b κ) f g
+  funExtP h κ b = h b κ
+
+  -- `Bool` has no η, so a payload rebuilt slotwise is only
+  -- PROPOSITIONALLY the one it came from -- the tax CLAUDE.md records,
+  -- and the only reason these round trips are not `refl`.  Note it must
+  -- be spelled INLINE at each use: extended lambdas are identified
+  -- NOMINALLY, so a general `boolη` lemma produces a different term from
+  -- the one `⊗×-mk` built, and the two do not reduce against each other
+  -- at a variable.  `funExt` only ever needs the two constructor cases,
+  -- where both sides do reduce.
+
 distrib-Iso : (A B C : Gr) (pr : Precise A) (n : ℕ)
             → Iso ((A ⊗× (B ⊗₊ C)) n) (((A ⊗× B) ⊗₊ (A ⊗× C)) n)
 distrib-Iso A B C pr n .Iso.fun = distrib A B C n
 distrib-Iso A B C pr n .Iso.inv = distribInv A B C pr n
-distrib-Iso A B C pr n .Iso.sec = {!!}
-distrib-Iso A B C pr n .Iso.ret = {!!}
+
+-- distrib ∘ distribInv ≡ id.  The index moves in three places: the two
+-- outer factors (`i₁·p ≡ u`, `i₁·q ≡ v`) and, in the second slot, the
+-- A-index itself (`i₁ ≡ i₂`) -- which is exactly where `Precise` is
+-- consumed, once for the index (`pin`) and once for the payload
+-- (`single`).
+distrib-Iso A B C pr n .Iso.sec ((u , v , t) , gg) =
+  ΣPathP ( ΣPathP (up , ΣPathP (vp , isProp→PathP (λ _ → isPropSplitAdd) _ t))
+         , funExtP (λ { true → trueP ; false → falseP }) )
+  where
+    i₁ = gg true .fst .fst   ; p = gg true .fst .snd .fst
+    e₁ = gg true .fst .snd .snd
+    a₁ = gg true .snd true   ; b = gg true .snd false
+    i₂ = gg false .fst .fst  ; q = gg false .fst .snd .fst
+    e₂ = gg false .fst .snd .snd
+    a₂ = gg false .snd true  ; c = gg false .snd false
+
+    same : i₁ ≡ i₂
+    same = pin pr a₁ a₂
+
+    up : i₁ · p ≡ u
+    up = Eq.eqToPath e₁
+
+    vp : i₁ · q ≡ v
+    vp = cong (_· q) same ∙ Eq.eqToPath e₂
+
+    trueP : PathP (λ κ → (A ⊗× B) (up κ)) (⊗×-mk Eq.refl a₁ b) (gg true)
+    trueP = ΣPathP ( ΣPathP (refl , ΣPathP (refl , isProp→PathP (λ _ → isPropEqℕ) _ e₁))
+                   , funExt (λ { true → refl ; false → refl }) )
+
+    falseP : PathP (λ κ → (A ⊗× C) (vp κ)) (⊗×-mk Eq.refl a₁ c) (gg false)
+    falseP = ΣPathP ( ΣPathP (same , ΣPathP (refl , isProp→PathP (λ _ → isPropEqℕ) _ e₂))
+                    , funExtP (λ { true  → isProp→PathP (λ κ → single pr (same κ)) a₁ a₂
+                                 ; false → refl }) )
+
+-- distribInv ∘ distrib ≡ id.  Only ONE index moves here -- `p + q ≡ j`,
+-- the cofactor -- because the diagonal `distrib` introduces is undone by
+-- reading both copies off the same slot.
+distrib-Iso A B C pr n .Iso.ret ((i , j , e) , h) =
+  ΣPathP ( ΣPathP (refl , ΣPathP (jp , isProp→PathP (λ _ → isPropEqℕ) _ e))
+         , funExtP (λ { true → refl ; false → falseP }) )
+  where
+    p = h false .fst .fst  ; q = h false .fst .snd .fst
+    s = h false .fst .snd .snd
+
+    jp : p + q ≡ j
+    jp = splitAdd≡ s
+
+    falseP : PathP (λ κ → (B ⊗₊ C) (jp κ))
+                   (⊗₊-mk (splitAllAdd p q) (h false .snd true) (h false .snd false))
+                   (h false)
+    falseP = ΣPathP ( ΣPathP (refl , ΣPathP (refl , isProp→PathP (λ _ → isPropSplitAdd) _ s))
+                    , funExt (λ { true → refl ; false → refl }) )
 
 -- ==================================================================
 -- THE REPRESENTABLE CASE.  `⌈ r ⌉` is precise, so distributivity is an

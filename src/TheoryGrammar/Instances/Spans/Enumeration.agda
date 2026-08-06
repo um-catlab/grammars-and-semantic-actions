@@ -21,6 +21,15 @@
   Everything downstream sees only `probe-⊗ᶜ`, which is a term.  This is
   the same discipline as `Strings.Examples.decEqS`: external decidability
   may enter to BUILD an internal map, once, at a named place.
+
+  `probe-⊗ᶜ` is the UNIFORM route, and it is not the one a recursion can
+  take: `decAt` decides the two slots independently, and a guarded call
+  is available at a slot only once the SIBLING has certified that slot to
+  be a proper part.  `Spans.CYK` therefore goes through
+  `DecEnum.dec-⊗-cuts`, which asks instead for a decision of each cut AS
+  A WHOLE -- weaker, because refuting one slot refutes the cut whatever
+  the other slot does.  Both consume the same `allCuts` /
+  `allCutsComplete`; only the strength of the per-cut hypothesis differs.
 -}
 module TheoryGrammar.Instances.Spans.Enumeration where
 

@@ -21,6 +21,7 @@ open import Cubical.Data.Unit
 open import Cubical.Data.List using ([]; _∷_; length)
 open import Cubical.Data.Nat using (ℕ; discreteℕ; snotz; injSuc)
 open import Cubical.Data.Empty as E using ()
+open import Cubical.Relation.Nullary.Base using (Dec; yes; no)
 open import Cubical.Data.FinData.Base renaming (zero to fzero; suc to fsuc)
 
 open import TheoryGrammar.SemanticAction using (passes; _↦_; _at_)
@@ -30,7 +31,7 @@ open import TheoryGrammar.View
 open import TheoryGrammar.Instances.Lambda.Initial
 open Lambda ℕ discreteℕ
 open Decide ℕ discreteℕ
-open Views λFib using (completeCase; certifies)
+open Views λFib using (completeCase; certifies; decBranch)
 open Initial ℕ using (size!)
 
 idT open' bigger shadow : Raw
@@ -266,3 +267,43 @@ lam-not-app = certifies opCase lamOp appOp lam≢app
 -- ... and it agrees with the decision, on the term `⊗-decSplit` refuted
 same-refutation : (¬G (⊗ˢ appOp (λ _ → ⊤G))) idT
 same-refutation = lam-not-app idT (mkLam 0 (var 0) , λ _ → tt)
+
+-- `⊗-decSplit` is now a CONSEQUENCE, not an independent fact: a complete
+-- partition with a discrete index decides each of its branches
+-- (`View.decBranch`).  The hand-written nine-clause procedure and the
+-- derived one agree, which is what these check.
+discreteLOp : (o o' : LOp) → Dec (o ≡ o')
+discreteLOp varOp varOp = yes refl
+discreteLOp appOp appOp = yes refl
+discreteLOp lamOp lamOp = yes refl
+discreteLOp varOp appOp = no λ p → snotz (cong opTag p)
+  where opTag : LOp → ℕ
+        opTag varOp = 1 ; opTag appOp = 0 ; opTag lamOp = 0
+discreteLOp varOp lamOp = no λ p → snotz (cong opTag p)
+  where opTag : LOp → ℕ
+        opTag varOp = 1 ; opTag appOp = 0 ; opTag lamOp = 0
+discreteLOp appOp varOp = no λ p → snotz (cong opTag p)
+  where opTag : LOp → ℕ
+        opTag varOp = 0 ; opTag appOp = 1 ; opTag lamOp = 0
+discreteLOp appOp lamOp = no λ p → snotz (cong opTag p)
+  where opTag : LOp → ℕ
+        opTag varOp = 0 ; opTag appOp = 1 ; opTag lamOp = 0
+discreteLOp lamOp varOp = no λ p → snotz (cong opTag p)
+  where opTag : LOp → ℕ
+        opTag varOp = 0 ; opTag appOp = 0 ; opTag lamOp = 1
+discreteLOp lamOp appOp = no λ p → snotz (cong opTag p)
+  where opTag : LOp → ℕ
+        opTag varOp = 0 ; opTag appOp = 0 ; opTag lamOp = 1
+
+isOp!' : (o : LOp) → ⊤G ⊢ Δ Bool
+isOp!' o = okA (⊗ˢ o (λ _ → ⊤G)) (¬G (⊗ˢ o (λ _ → ⊤G)))
+           ∘g decBranch discreteLOp opCase o
+
+_ : passes (run (isOp!' varOp) at ((var 0) ↦ true  ∷ idT ↦ false ∷ []))
+_ = refl
+
+_ : passes (run (isOp!' lamOp) at (idT ↦ true ∷ (app idT idT) ↦ false ∷ []))
+_ = refl
+
+_ : passes (run (isOp!' appOp) at ((app idT idT) ↦ true ∷ (var 0) ↦ false ∷ []))
+_ = refl

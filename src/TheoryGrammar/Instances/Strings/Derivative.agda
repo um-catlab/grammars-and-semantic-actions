@@ -33,7 +33,7 @@ open import TheoryGrammar.Derivative
 open import TheoryGrammar.Enumerable
 open import TheoryGrammar.Decidable.Rule
 
-open import TheoryGrammar.Instances.Strings.Base Char public
+open import TheoryGrammar.Instances.Strings.Decidable Char public
 
 private variable ℓA : Level
 

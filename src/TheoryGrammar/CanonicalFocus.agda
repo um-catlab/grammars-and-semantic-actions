@@ -7,16 +7,15 @@
 
       (A ⊸ B) x  =  (rest) → A(rest) → B (op o (tuple x rest)).
 
-  WITH NO HYPOTHESIS: `focus`, and `plug` -- ⊸-elim at a chosen
-  rest-tuple.  UNDER ONE HYPOTHESIS (`restJ`/`restJ-pt`: the rest
-  argument is singleton-inductive at `(a⃗ , pt)` -- holding one names its
-  own tuple): `unplug`, `⊸-β` (`refl`), `⊸-η` (funExt, which any equation
-  between two functions costs), and the `Iso`.  Freeness, `unsplit` and
-  `Fib .Split` itself are UNUSED: `Canon` builds its splittings from
-  `Assembly` and `op`, so the laws hold over a quotient substrate too.
+  NO HYPOTHESIS: `focus`, `plug` (⊸-elim at a chosen rest-tuple).  ONE
+  HYPOTHESIS -- `restJ`/`restJ-pt`, the rest argument is singleton-
+  inductive at `(a⃗ , pt)`, i.e. holding one NAMES its own tuple --
+  gives `unplug`, `⊸-β` (refl), `⊸-η` (funExt, the cost of equating two
+  functions) and the `Iso`.  Freeness, `unsplit` and `Fib .Split` itself
+  are UNUSED, so the laws hold over a quotient substrate as well.
 
-  NOT proved, and stated precisely as `CONJECTURE` at the end of the
-  file: that this focus computes the residual of `⊗ˢ`.
+  NOT proved: that this focus computes the residual of `⊗ˢ`.  Stated
+  precisely, with its refuted hypothesis, as `CONJECTURE` below.
 -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.CanonicalFocus where
@@ -127,27 +126,28 @@ module Canon {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
 
     module _ {B : TheoryTy ℓB (σ .resultSort o)} where
 
-      ⊸-app : ⊸ᶠ A B ⊢ Shift B
-      ⊸-app = plug a⃗ pt
+      -- `plug` at this rest-tuple, named for symmetry with its inverse
+      plug-at : ⊸ᶠ A B ⊢ Shift B
+      plug-at = plug a⃗ pt
 
       -- No transport is written here: the hypothesis IS the eliminator,
       -- so abstracting the hole is one appeal to it.
-      ⊸-lam : Shift B ⊢ ⊸ᶠ A B
-      ⊸-lam x b = restJ (λ f _ → B (P .op o (As .tuple x f))) b
+      unplug : Shift B ⊢ ⊸ᶠ A B
+      unplug x b = restJ (λ f _ → B (P .op o (As .tuple x f))) b
 
       ⊸-β : (x : Fib .carrier (σ .sortOf o i)) (b : Shift B x)
-          → ⊸-app x (⊸-lam x b) ≡ b
+          → plug-at x (unplug x b) ≡ b
       ⊸-β x b = restJ-pt _ b
 
       ⊸-η : (x : Fib .carrier (σ .sortOf o i)) (h : ⊸ᶠ A B x)
-          → ⊸-lam x (⊸-app x h) ≡ h
+          → unplug x (plug-at x h) ≡ h
       ⊸-η x h = funExt λ f → funExt λ q →
-        restJ (λ f' q' → ⊸-lam x (⊸-app x h) f' q' ≡ h f' q')
+        restJ (λ f' q' → unplug x (plug-at x h) f' q' ≡ h f' q')
               (restJ-pt _ (h a⃗ pt)) f q
 
       ⊸-UP : (x : Fib .carrier (σ .sortOf o i)) → Iso (⊸ᶠ A B x) (Shift B x)
-      ⊸-UP x .Iso.fun = ⊸-app x
-      ⊸-UP x .Iso.inv = ⊸-lam x
+      ⊸-UP x .Iso.fun = plug-at x
+      ⊸-UP x .Iso.inv = unplug x
       ⊸-UP x .Iso.sec = ⊸-β x
       ⊸-UP x .Iso.ret = ⊸-η x
 

@@ -29,7 +29,7 @@ open import TheoryGrammar.Instances.Lambda.Base
 module Readable (Name : Type₀) where
 
   open LamBase Name
-  open Views λFib using (Cover; Complete; total; exclusive; completeCase; certifies)
+  open Views λFib using (Cover; Complete; total; exclusive; completeCase; certifies; fromUnique)
 
   -- PRIMITIVE.  At most one splitting: unique readability.
   Split-isProp : (o : LOp) (t : Raw) (p q : LSplit o t) → p ≡ q
@@ -97,19 +97,23 @@ module Readable (Name : Type₀) where
   -- which is unique readability in its positive form.
   -- ================================================================
 
+  -- The operation a term is built by, as a function of the term.  The
+  -- SPLIT CONSTRUCTOR pins the term, so each clause is `refl`.
+  opOf : Raw → LOp
+  opOf (var _)   = varOp
+  opOf (app _ _) = appOp
+  opOf (lam _ _) = lamOp
+
+  opOf-split : (o : LOp) (t : Raw) → ⊗ˢ o (λ _ → ⊤G) t → o ≡ opOf t
+  opOf-split varOp .(var _)   (mkVar _   , _) = refl
+  opOf-split appOp .(app _ _) (mkApp _ _ , _) = refl
+  opOf-split lamOp .(lam _ _) (mkLam _ _ , _) = refl
+
   opCase : Complete LOp (λ o → ⊗ˢ o (λ _ → ⊤G))
-  opCase .total = discrim
+  opCase = fromUnique discrim
+             (λ y z t py pz → opOf-split y t py ∙ sym (opOf-split z t pz))
     where
       discrim : Cover (⊕ᴰ LOp (λ o → ⊗ˢ o (λ _ → ⊤G)))
       discrim (var n)   _ = varOp , (mkVar n   , λ _ → tt)
       discrim (app u v) _ = appOp , (mkApp u v , λ _ → tt)
       discrim (lam n t) _ = lamOp , (mkLam n t , λ _ → tt)
-  opCase .exclusive varOp varOp d = λ _ _ → ⊥rec (d refl)
-  opCase .exclusive appOp appOp d = λ _ _ → ⊥rec (d refl)
-  opCase .exclusive lamOp lamOp d = λ _ _ → ⊥rec (d refl)
-  opCase .exclusive varOp appOp _ _ ((mkVar _ , _) , (() , _))
-  opCase .exclusive varOp lamOp _ _ ((mkVar _ , _) , (() , _))
-  opCase .exclusive appOp varOp _ _ ((mkApp _ _ , _) , (() , _))
-  opCase .exclusive appOp lamOp _ _ ((mkApp _ _ , _) , (() , _))
-  opCase .exclusive lamOp varOp _ _ ((mkLam _ _ , _) , (() , _))
-  opCase .exclusive lamOp appOp _ _ ((mkLam _ _ , _) , (() , _))
