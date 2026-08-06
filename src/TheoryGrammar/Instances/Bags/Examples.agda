@@ -7,9 +7,10 @@ open import Cubical.Data.Sigma
 open import Cubical.Data.Bool
 open import Cubical.Data.Nat
 open import Cubical.Data.List
+import Cubical.Data.Equality as Eq
 open import Cubical.Data.Maybe using (Maybe; just; nothing)
 
-open import TheoryGrammar.Instances.Bags.Mergesort ℕ
+open import TheoryGrammar.Instances.Bags.Sorted ℕ
 
 leℕ : ℕ → ℕ → Bool
 leℕ zero    _       = true
@@ -77,4 +78,28 @@ _ : someElem []          ≡ nothing
 _ = refl
 
 _ : someElem (3 ∷ 1 ∷ []) ≡ just 3
+_ = refl
+
+-- ==================================================================
+-- Fully intrinsic mergesort: a SORTED PERMUTATION by type.
+-- ==================================================================
+
+leTotalℕ : (x y : ℕ) → leℕ x y Eq.≡ false → leℕ y x Eq.≡ true
+leTotalℕ zero    y       ()
+leTotalℕ (suc m) zero    e = Eq.refl
+leTotalℕ (suc m) (suc n) e = leTotalℕ m n e
+
+leTransℕ : (x y z : ℕ) → leℕ x y Eq.≡ true → leℕ y z Eq.≡ true
+         → leℕ x z Eq.≡ true
+leTransℕ zero    y       z       p q = Eq.refl
+leTransℕ (suc m) zero    z       () q
+leTransℕ (suc m) (suc n) zero    p ()
+leTransℕ (suc m) (suc n) (suc k) p q = leTransℕ m n k p q
+
+module S = Sortedness leℕ leTotalℕ leTransℕ
+
+_ : S.mergesortS (5 ∷ 3 ∷ 4 ∷ 1 ∷ 2 ∷ []) tt .fst ≡ (1 ∷ 2 ∷ 3 ∷ 4 ∷ 5 ∷ [])
+_ = refl
+
+_ : S.mergesortS (2 ∷ 2 ∷ 1 ∷ []) tt .fst ≡ (1 ∷ 2 ∷ 2 ∷ [])
 _ = refl
