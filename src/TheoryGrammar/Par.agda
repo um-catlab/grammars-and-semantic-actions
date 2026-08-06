@@ -1,8 +1,13 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- The par: the product over decompositions (AUW's `G`), the De Morgan
-   dual of `⊗`.  Refuting a tensor IS a par of refutations, and that
-   holds unconditionally -- which is what lets enumerability be stated
-   internally, as excluded middle for the multiplicative. -}
+{- The product over decompositions -- AUW's `G` -- and the currying law
+   that lets enumerability be stated internally.
+
+   NOT the linear-logic par.  The LL par is DISJUNCTIVE,
+   `∀ (u,v). uv=w → (A u ⊎ B v)`, and it is not associative
+   intuitionistically, because `⊎` does not commute with `∀`:
+   `(∀i. P i) ⊎ Q` does not follow from `∀i. (P i ⊎ Q)`.  What is
+   defined here is the CONJUNCTIVE product, `∀ (sp). ∏ slots`, which has
+   no `⊎` in it at all. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Par where
@@ -32,12 +37,13 @@ module ParS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ ℓX
 
   infix 32 ¬G_
 
-  -- THE PAR: a product over decompositions where ⊗ is a sum.  This is
-  -- AUW's `G` at an arbitrary theory, and it needs no hypotheses.
-  ⅋ˢ : (o : σ .ops)
+  -- The product over decompositions, where ⊗ is the sum.  AUW's `G` at
+  -- an arbitrary theory; needs no hypotheses.  See the header for why
+  -- this is not called `⅋`.
+  Allˢ : (o : σ .ops)
      → ((a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
      → TheoryTy (ℓ-max ℓP (ℓ-max ℓ' ℓA)) (σ .resultSort o)
-  ⅋ˢ o A m = (sp : Sub .Split o m)
+  Allˢ o A m = (sp : Sub .Split o m)
            → ((a : σ .arities o) → A a (Sub .parts o m sp a))
 
   module _ (o : σ .ops)
@@ -49,23 +55,29 @@ module ParS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ ℓX
            → ((a : σ .arities o) → A a (Sub .parts o m sp a)) → ⊥* {ℓ-zero}
 
     -- ================================================================
-    -- DE MORGAN.  Refuting a tensor IS a par of refutations.  No
-    -- hypotheses, and both round trips are `refl` -- it is currying,
-    -- `(Σ x, B x) → C  ≅  (x : _) → B x → C`.
+    -- Refuting a tensor is a PRODUCT of refutations, one per
+    -- decomposition.  No hypotheses; both round trips `refl`.
+    --
+    -- This is currying, `(Σ x, B x) → C ≅ (x : _) → B x → C`, NOT the
+    -- classical De Morgan `¬(A ⊗ B) = ¬A ⅋ ¬B` -- that would need the
+    -- disjunctive par and is intuitionistically false.  `Miss` is
+    -- `∀sp. ¬(P × Q)`, never `∀sp. (¬P ⊎ ¬Q)`.
     -- ================================================================
 
-    deMorgan⊗ : (m : Sub .carrier (σ .resultSort o)) → Iso ((¬G (⊗ˢ o A)) m) (Miss m)
-    deMorgan⊗ m .Iso.fun f sp h = f (sp , h)
-    deMorgan⊗ m .Iso.inv g (sp , h) = g sp h
-    deMorgan⊗ m .Iso.sec _ = refl
-    deMorgan⊗ m .Iso.ret _ = refl
+    ¬⊗-curry : (m : Sub .carrier (σ .resultSort o)) → Iso ((¬G (⊗ˢ o A)) m) (Miss m)
+    ¬⊗-curry m .Iso.fun f sp h = f (sp , h)
+    ¬⊗-curry m .Iso.inv g (sp , h) = g sp h
+    ¬⊗-curry m .Iso.sec _ = refl
+    ¬⊗-curry m .Iso.ret _ = refl
 
   -- ================================================================
-  -- ENUMERABILITY, STATED INTERNALLY.
+  -- ENUMERABILITY, STATED INTERNALLY.  Note this does NOT depend on the
+  -- product above being well behaved: the refuting side is
+  -- `∀sp. ¬(∏ slots)`, which is fine whatever happens to associativity.
   --
   -- The list-and-completeness formulation is external: a metalanguage
   -- `List` and a metalanguage membership proof.  But by `deMorgan⊗`,
-  -- what a refutation of `⊗` IS, is a par of refutations -- and THAT
+  -- what a refutation of `⊗` IS, is a product of refutations -- and THAT
   -- needs no finiteness.  Finiteness is not what the statement says; it
   -- is one way to CONSTRUCT the refuting side.
   --
@@ -73,7 +85,7 @@ module ParS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ ℓX
   -- excluded middle for the multiplicative:
   --
   --     ⊤ ⊢ (⊗ˢ o A) ⊕ ¬G (⊗ˢ o A)
-  --          witness      par of refutations
+  --          witness      product of refutations
   --
   -- i.e. ⊗ and ⅋ are complementary.  A `List` with a completeness proof
   -- is one witness for this; `splitProp` (unique readability) is
@@ -86,7 +98,7 @@ module ParS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ ℓX
        → Type (ℓ-max ℓX (ℓ-max ℓP (ℓ-max ℓ' ℓA)))
   ⊗-EM o A = ⊤G ⊢ ((⊗ˢ o A) ⊕ (¬G (⊗ˢ o A)))
 
-  -- and the same statement with the refuting side displayed as a par
+  -- the same, with the refuting side displayed as the product
   ⊗-EM' : (o : σ .ops)
         → ((a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
         → Type (ℓ-max ℓX (ℓ-max ℓP (ℓ-max ℓ' ℓA)))
@@ -98,11 +110,11 @@ module ParS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ ℓX
   EM→EM' o A e m t = shift (e m t)
     where shift : ((⊗ˢ o A) ⊕ (¬G (⊗ˢ o A))) m → ((⊗ˢ o A) ⊕ Miss o A) m
           shift (inl x) = inl x
-          shift (inr k) = inr (deMorgan⊗ o A m .Iso.fun k)
+          shift (inr k) = inr (¬⊗-curry o A m .Iso.fun k)
 
   EM'→EM : (o : σ .ops) (A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
          → ⊗-EM' o A → ⊗-EM o A
   EM'→EM o A e m t = shift (e m t)
     where shift : ((⊗ˢ o A) ⊕ Miss o A) m → ((⊗ˢ o A) ⊕ (¬G (⊗ˢ o A))) m
           shift (inl x) = inl x
-          shift (inr g) = inr (deMorgan⊗ o A m .Iso.inv g)
+          shift (inr g) = inr (¬⊗-curry o A m .Iso.inv g)
