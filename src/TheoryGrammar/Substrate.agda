@@ -1,0 +1,244 @@
+{-
+  DEFINITIONAL β AND η FOR THE MULTIPLICATIVES.
+
+  In TheoryGrammar.Base the convolution is defined by an equation,
+
+      ⊗[ o ] A m = Σ[ m⃗ ] (op o m⃗ Eq.≡ m) × (∀ a → A a (m⃗ a)),
+
+  and the currying isomorphism gets β definitionally (`sec = refl`) but
+  NOT η: `ret` has to pattern-match `Eq.refl`.  The obstruction is
+  precise and is worth naming, because it is one component:
+
+      Σ has definitional η.  Eq._≡_ is `data`, so it does not.
+
+  So the η-failure is not about ⊗ being a positive connective -- ⊕ᴰ is
+  also a Σ and it DOES get definitional η.  It is caused solely by
+  carrying a proof term that has no η.
+
+  The fix is to stop carrying the proof.  Index the splitting by the
+  OUTPUT and expose the components as projections:
+
+      Split : (o) → carrier (resultSort o) → Type
+      parts : (o) (m) → Split o m → (a : arities o) → carrier (sortOf o a)
+
+  Then
+
+      ⊗[ o ] A m = Σ[ sp ∈ Split o m ] (∀ a → A a (parts o m sp a))
+
+  is a Σ of two components neither of which needs matching to eliminate,
+  and BOTH β and η become `refl`.  Proved below as `⊗-UP-β` / `⊗-UP-η`.
+
+  This is the same change that removes the green slime (an equation whose
+  left side is a defined function applied to a bound variable) -- the two
+  problems have one cause and one fix.  `canonical` shows the equational
+  presentation is the special case where `Split o m` is the type of
+  tuples together with a proof, i.e. it is `Split` chosen freely.
+-}
+{-# OPTIONS --lossy-unification #-}
+module TheoryGrammar.Substrate where
+
+open import Cubical.Foundations.Prelude
+open import Cubical.Foundations.Isomorphism
+open import Cubical.Data.Sigma
+open import Cubical.Data.Sum
+open import Cubical.Data.Unit
+open import Cubical.Data.Empty using (⊥*)
+import Cubical.Data.Equality as Eq
+
+open import TheoryGrammar.Base
+
+private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓB ℓC ℓY : Level
+
+-- ==================================================================
+-- A substrate: a model presented with its splittings as DATA rather
+-- than as an equation.
+-- ==================================================================
+
+record Substrate {S : Type ℓS} (σ : SortedSig S ℓ ℓ') ℓX ℓP
+  : Type (ℓ-max ℓS (ℓ-max ℓ (ℓ-max ℓ' (ℓ-max (ℓ-suc ℓX) (ℓ-suc ℓP))))) where
+  field
+    carrier : S → Type ℓX
+    -- the algebra structure
+    op      : (o : σ .ops)
+            → ((a : σ .arities o) → carrier (σ .sortOf o a))
+            → carrier (σ .resultSort o)
+    -- ways of seeing m as an o-composite, indexed BY THE OUTPUT
+    Split   : (o : σ .ops) → carrier (σ .resultSort o) → Type ℓP
+    parts   : (o : σ .ops) (m : carrier (σ .resultSort o))
+            → Split o m → (a : σ .arities o) → carrier (σ .sortOf o a)
+    -- every tuple splits its own composite ...
+    split   : (o : σ .ops)
+              (m⃗ : (a : σ .arities o) → carrier (σ .sortOf o a))
+            → Split o (op o m⃗)
+    -- ... and does so at the tuple you started with
+    parts-split : (o : σ .ops)
+                  (m⃗ : (a : σ .arities o) → carrier (σ .sortOf o a))
+                → parts o (op o m⃗) (split o m⃗) ≡ m⃗
+
+open Substrate public
+
+-- the underlying model
+⌊_⌋ : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} → Substrate σ ℓX ℓP → Model σ ℓX
+⌊ Sub ⌋ .Model.carrier = Sub .carrier
+⌊ Sub ⌋ .Model.op = Sub .op
+
+-- ==================================================================
+-- The connectives over a substrate.
+-- ==================================================================
+
+module SubNotation {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Sub : Substrate σ ℓX ℓP) where
+
+  open Notation ⌊ Sub ⌋ public
+
+  -- the convolution, with NO proof component
+  ⊗ˢ : (o : σ .ops)
+     → ((a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
+     → TheoryTy (ℓ-max ℓP (ℓ-max ℓ' ℓA)) (σ .resultSort o)
+  ⊗ˢ o A m = Σ[ sp ∈ Sub .Split o m ] ((a : σ .arities o) → A a (Sub .parts o m sp a))
+
+  MultiHomˢ : (o : σ .ops)
+            → ((a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
+            → TheoryTy ℓB (σ .resultSort o)
+            → Type (ℓ-max ℓX (ℓ-max ℓP (ℓ-max ℓ' (ℓ-max ℓA ℓB))))
+  MultiHomˢ o A B =
+    (m : Sub .carrier (σ .resultSort o)) (sp : Sub .Split o m)
+    → ((a : σ .arities o) → A a (Sub .parts o m sp a))
+    → B m
+
+  module _ (o : σ .ops)
+           {A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a)}
+           {B : TheoryTy ℓB (σ .resultSort o)} where
+
+    curryˢ : (⊗ˢ o A ⊢ B) → MultiHomˢ o A B
+    curryˢ f m sp h = f m (sp , h)
+
+    uncurryˢ : MultiHomˢ o A B → (⊗ˢ o A ⊢ B)
+    uncurryˢ g m (sp , h) = g m sp h
+
+    -- ==============================================================
+    -- THEOREM.  Both directions of the multiplicative universal
+    -- property hold DEFINITIONALLY.
+    -- ==============================================================
+
+    ⊗-UP-β : (g : MultiHomˢ o A B) → curryˢ (uncurryˢ g) ≡ g
+    ⊗-UP-β g = refl
+
+    ⊗-UP-η : (f : ⊗ˢ o A ⊢ B) → uncurryˢ (curryˢ f) ≡ f
+    ⊗-UP-η f = refl                              -- <-- was a pattern match
+
+    ⊗ˢ-UP : Iso (⊗ˢ o A ⊢ B) (MultiHomˢ o A B)
+    ⊗ˢ-UP .Iso.fun = curryˢ
+    ⊗ˢ-UP .Iso.inv = uncurryˢ
+    ⊗ˢ-UP .Iso.sec = ⊗-UP-β
+    ⊗ˢ-UP .Iso.ret = ⊗-UP-η
+
+  -- ================================================================
+  -- The residual at a slot, likewise proof-free.  Its elimination rule
+  -- needs no pattern match either.
+  -- ================================================================
+
+  ⊸ˢ : (o : σ .ops) (i : σ .arities o)
+     → ((a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
+     → TheoryTy ℓB (σ .resultSort o)
+     → TheoryTy (ℓ-max ℓX (ℓ-max ℓP (ℓ-max ℓ' (ℓ-max ℓA ℓB)))) (σ .sortOf o i)
+  ⊸ˢ o i A B x =
+    (m : Sub .carrier (σ .resultSort o)) (sp : Sub .Split o m)
+    → (Sub .parts o m sp i ≡ x)
+    → ((a : σ .arities o) → A a (Sub .parts o m sp a))
+    → B m
+
+  module _ (o : σ .ops) (i : σ .arities o)
+           {A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a)}
+           {B : TheoryTy ℓB (σ .resultSort o)} where
+
+    -- generic ⊸-app / ⟜-app: no transport, no match
+    ⊸ˢ-app : (A i ⊢ ⊸ˢ o i A B) → (⊗ˢ o A ⊢ B)
+    ⊸ˢ-app g m (sp , h) = g (Sub .parts o m sp i) (h i) m sp refl h
+
+-- ==================================================================
+-- The equational presentation is the FREE choice of Split.
+-- ==================================================================
+
+canonical : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} → Model σ ℓX → Substrate σ ℓX (ℓ-max ℓ' ℓX)
+canonical {σ = σ} M .carrier = M .Model.carrier
+canonical {σ = σ} M .op = M .Model.op
+canonical {σ = σ} M .Split o m =
+  Σ[ m⃗ ∈ ((a : σ .arities o) → M .Model.carrier (σ .sortOf o a)) ] (M .Model.op o m⃗ Eq.≡ m)
+canonical {σ = σ} M .parts o m sp = sp .fst
+canonical {σ = σ} M .split o m⃗ = m⃗ , Eq.refl
+canonical {σ = σ} M .parts-split o m⃗ = refl
+
+-- ==================================================================
+-- DEFINITIONAL β/η FOR THE RESIDUAL.
+--
+-- `⊸ˢ` above still carries a `parts o m sp i ≡ x` component, so it has
+-- the same disease one level down: a Path is not a record, so the
+-- residual's η needs a match.  The same cure applies -- have the
+-- substrate supply the FOCUSED splittings (the zipper view: a splitting
+-- seen from slot i, with slot i's content as the index) rather than
+-- reconstructing them with an equation.  Then the residual is a plain Π
+-- and BOTH laws are refl.
+-- ==================================================================
+
+record Focus {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
+             (Sub : Substrate σ ℓX ℓP) (o : σ .ops) (i : σ .arities o)
+  : Type (ℓ-max ℓS (ℓ-max ℓ (ℓ-max (ℓ-suc ℓ') (ℓ-max ℓX (ℓ-suc ℓP))))) where
+  field
+    -- splittings viewed from slot i, indexed by what sits in slot i:
+    -- the generic one-hole context / zipper.
+    SplitAt  : Sub .carrier (σ .sortOf o i) → Type ℓP
+    whole    : {x : Sub .carrier (σ .sortOf o i)} → SplitAt x
+             → Sub .carrier (σ .resultSort o)
+    -- THE COMPLEMENT OF SLOT i, supplied as data.  This is what lets the
+    -- residual omit the focused argument without needing `Discrete
+    -- (arities o)` to compute "every slot except i".
+    Rest     : Type ℓ'
+    restOf   : Rest → σ .arities o
+    restSlot : {x : Sub .carrier (σ .sortOf o i)} → SplitAt x
+             → (r : Rest) → Sub .carrier (σ .sortOf o (restOf r))
+
+open Focus public
+
+module FocusNotation {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
+                     {Sub : Substrate σ ℓX ℓP}
+                     {o : σ .ops} {i : σ .arities o} (Φ : Focus Sub o i) where
+
+  open SubNotation Sub
+
+  -- The residual.  Note A is used only at `restOf r` -- the focused slot
+  -- is genuinely absent, which is what makes this a residual and not a
+  -- reassociated hom.
+  ⊸ᶠ : ((a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
+     → TheoryTy ℓB (σ .resultSort o)
+     → TheoryTy (ℓ-max ℓP (ℓ-max ℓ' (ℓ-max ℓA ℓB))) (σ .sortOf o i)
+  ⊸ᶠ A B x = (sa : Φ .SplitAt x)
+           → ((r : Φ .Rest) → A (Φ .restOf r) (Φ .restSlot sa r))
+           → B (Φ .whole sa)
+
+  module _ {A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a)}
+           {B : TheoryTy ℓB (σ .resultSort o)} where
+
+    -- the hom-set it classifies: focused argument supplied ONCE
+    FocusedHom : Type (ℓ-max ℓX (ℓ-max ℓP (ℓ-max ℓ' (ℓ-max ℓA ℓB))))
+    FocusedHom = (x : Sub .carrier (σ .sortOf o i)) (sa : Φ .SplitAt x)
+               → A i x
+               → ((r : Φ .Rest) → A (Φ .restOf r) (Φ .restSlot sa r))
+               → B (Φ .whole sa)
+
+    ⊸ᶠ-lam : FocusedHom → (A i ⊢ ⊸ᶠ A B)
+    ⊸ᶠ-lam f x ai sa h = f x sa ai h
+
+    ⊸ᶠ-app : (A i ⊢ ⊸ᶠ A B) → FocusedHom
+    ⊸ᶠ-app g x sa ai h = g x ai sa h
+
+    ⊸ᶠ-β : (f : FocusedHom) → ⊸ᶠ-app (⊸ᶠ-lam f) ≡ f
+    ⊸ᶠ-β f = refl
+
+    ⊸ᶠ-η : (g : A i ⊢ ⊸ᶠ A B) → ⊸ᶠ-lam (⊸ᶠ-app g) ≡ g
+    ⊸ᶠ-η g = refl
+
+    ⊸ᶠ-UP : Iso (A i ⊢ ⊸ᶠ A B) FocusedHom
+    ⊸ᶠ-UP .Iso.fun = ⊸ᶠ-app
+    ⊸ᶠ-UP .Iso.inv = ⊸ᶠ-lam
+    ⊸ᶠ-UP .Iso.sec = ⊸ᶠ-β
+    ⊸ᶠ-UP .Iso.ret = ⊸ᶠ-η
