@@ -16,6 +16,7 @@ import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Substrate
+open import TheoryGrammar.RulesSub
 
 String : Type₀
 String = List Char
@@ -69,7 +70,7 @@ strSub .split appop f = f true , f false , splitAll (f true) (f false)
 strSub .parts-split nilop f = funExt λ ()
 strSub .parts-split appop f = funExt λ { false → refl ; true → refl }
 
-open SubNotation strSub public
+open RulesS strSub public
 
 Gr : Type₁
 Gr = TheoryTy ℓ-zero tt

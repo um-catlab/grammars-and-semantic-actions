@@ -43,7 +43,7 @@ binR : NT → NT → NT → Type₀
 binR ntS ntA ntB = Unit
 binR _   _   _   = ⊥
 
-open CYK NT unitR binR
+open Parser NT unitR binR
 
 -- the two leaves ...
 leafA : Deriv ntA (true ∷ [])
@@ -64,3 +64,33 @@ parseAB = G.sup
     ; (false , (true  , _)) → leafB
     ; (true  , (false , ()))
     ; (false , (false , ())) }
+
+-- ==================================================================
+-- ... and the parser, as a term.
+-- ==================================================================
+
+allRules : (P : NT) → List (Rule P)
+allRules ntS = inr (ntA , ntB , tt) ∷ []
+allRules ntA = inl (true  , Eq.refl) ∷ []
+allRules ntB = inl (false , Eq.refl) ∷ []
+
+matchLit : (c : Bool) → ⊤G ⊢ MaybeG ⌈ c ∷ [] ⌉
+matchLit true  (true  ∷ []) _ = inl Eq.refl
+matchLit false (false ∷ []) _ = inl Eq.refl
+matchLit _     _            _ = inr tt*
+
+open Search allRules matchLit
+
+succeeded : (A : Gr) (w : String) → MaybeG A w → Bool
+succeeded A w (inl _) = true
+succeeded A w (inr _) = false
+
+-- "ab" parses from S, "ba" does not, and "a" parses from A
+_ : succeeded (Deriv ntS) _ (parse ntS (true ∷ false ∷ []) tt) ≡ true
+_ = refl
+
+_ : succeeded (Deriv ntS) _ (parse ntS (false ∷ true ∷ []) tt) ≡ false
+_ = refl
+
+_ : succeeded (Deriv ntA) _ (parse ntA (true ∷ []) tt) ≡ true
+_ = refl

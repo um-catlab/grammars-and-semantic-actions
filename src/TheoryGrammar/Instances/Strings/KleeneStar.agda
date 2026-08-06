@@ -86,6 +86,3 @@ module _ {A : Gr} where
 -- The star algebra, point-free: this is `roll` for the star.
 roll* : {A : Gr} → (ε' ⊕ (A ⊗' KL* A)) ⊢ KL* A
 roll* = ⊕-E nil* cons*
-  where ⊕-E : {P Q R : Gr} → P ⊢ R → Q ⊢ R → (P ⊕ Q) ⊢ R
-        ⊕-E f g w (inl x) = f w x
-        ⊕-E f g w (inr y) = g w y

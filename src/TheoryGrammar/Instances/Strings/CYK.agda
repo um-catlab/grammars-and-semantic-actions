@@ -89,3 +89,81 @@ module CYK (V : Type₀)
       alt (inl (c , _))     = G.<⌜⌝ ⌈ c ∷ [] ⌉
       alt (inr (Q , T , _)) =
         G.<⊗e appop (binSlot Q T) (≤binSlot Q T) (pr Q T)
+
+-- every word is empty or not, internally
+decNE : ⊤G ⊢ (NonEmpty ⊕ ⌈ [] ⌉)
+decNE []      _ = inr Eq.refl
+decNE (c ∷ w) _ = inl (suc-≤-suc zero-≤)
+
+module Parser (V : Type₀)
+              (unitR : V → Char → Type₀)
+              (binR  : V → V → V → Type₀) where
+
+  open CYK V unitR binR public
+
+  -- the two constructors of a parse tree, as terms
+  leaf : {P : V} {w : String} (c : Char) → unitR P c
+       → w Eq.≡ c ∷ [] → Deriv P w
+  leaf c pf q = G.sup (inl (c , pf) , lift q) λ ()
+
+  node : {P Q T : V} {w u v : String} → binR P Q T → Split3 u v w
+       → 0 < length u → 0 < length v → Deriv Q u → Deriv T v → Deriv P w
+  node {Q = Q} {T} {u = u} {v} pf s neu nev tq tT =
+    G.sup ( inr (Q , T , pf)
+          , ((u , v , s) , λ { true  → λ { true → tt* ; false → lift neu }
+                             ; false → λ { true → tt* ; false → lift nev } }) )
+          λ { (true  , (true  , _)) → tq
+            ; (false , (true  , _)) → tT
+            ; (true  , (false , ()))
+            ; (false , (false , ())) }
+
+  -- THE PARSER.  `allRules` says the grammar is finite; `matchLit` is
+  -- the literal matcher, itself a term of the calculus.
+  module Search (allRules : (P : V) → List (Rule P))
+                (matchLit : (c : Char) → ⊤G ⊢ MaybeG ⌈ c ∷ [] ⌉) where
+
+    Mot : G.Ix → Type₀
+    Mot i = MaybeG (Deriv (i .fst)) (i .snd)
+
+    -- the grammar must be NAMED: `MaybeG A w` unfolds to `A w ⊎ Unit*`,
+    -- and a grammar-valued implicit is not recoverable from that
+    orElse : (A : Gr) (w : String) → MaybeG A w → MaybeG A w → MaybeG A w
+    orElse A w (inl t) _ = inl t
+    orElse A w (inr _) y = y
+
+    module _ (P : V) (w : String) (rec : G.▷ Mot (P , w)) where
+
+      tryCut : (Q T : V) → binR P Q T → MonSplit appop w → Mot (P , w)
+      tryCut Q T pf (u , v , s) = go (decNE u tt) (decNE v tt)
+        where
+          go : (NonEmpty ⊕ ⌈ [] ⌉) u → (NonEmpty ⊕ ⌈ [] ⌉) v → Mot (P , w)
+          go (inl neu) (inl nev) =
+            join (rec (Q , u) (split3LenL< s nev))
+                 (rec (T , v) (split3LenR< s neu))
+            where join : Mot (Q , u) → Mot (T , v) → Mot (P , w)
+                  join (inl tq) (inl tT) = inl (node pf s neu nev tq tT)
+                  join _        _        = inr tt*
+          go _ _ = inr tt*
+
+      tryCuts : (Q T : V) → binR P Q T → List (MonSplit appop w) → Mot (P , w)
+      tryCuts Q T pf []       = inr tt*
+      tryCuts Q T pf (c ∷ cs) =
+        orElse (Deriv P) w (tryCut Q T pf c) (tryCuts Q T pf cs)
+
+      tryRule : Rule P → Mot (P , w)
+      tryRule (inl (c , pf))     = fromLit (matchLit c w tt)
+        where fromLit : MaybeG ⌈ c ∷ [] ⌉ w → Mot (P , w)
+              fromLit (inl q) = inl (leaf c pf q)
+              fromLit (inr _) = inr tt*
+      tryRule (inr (Q , T , pf)) = tryCuts Q T pf (cuts w)
+
+      tryRules : List (Rule P) → Mot (P , w)
+      tryRules []       = inr tt*
+      tryRules (r ∷ rs) = orElse (Deriv P) w (tryRule r) (tryRules rs)
+
+    parseIx : (i : G.Ix) → Mot i
+    parseIx = G.löb λ { (P , w) rec → tryRules P w rec (allRules P) }
+
+    -- the procedure, as a term of the calculus
+    parse : (P : V) → ⊤G ⊢ MaybeG (Deriv P)
+    parse P w _ = parseIx (P , w)
