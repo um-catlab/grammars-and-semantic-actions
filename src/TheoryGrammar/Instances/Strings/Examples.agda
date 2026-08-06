@@ -12,6 +12,7 @@ open import Cubical.Data.Sigma
 open import Cubical.Data.List
 import Cubical.Data.Equality as Eq
 
+open import TheoryGrammar.Enumerable
 open import TheoryGrammar.Instances.Strings.CYK Bool
 
 -- the grammar `a b` over the two-letter alphabet
@@ -93,4 +94,56 @@ _ : succeeded (Deriv ntS) _ (parse ntS (false ∷ true ∷ []) tt) ≡ false
 _ = refl
 
 _ : succeeded (Deriv ntA) _ (parse ntA (true ∷ []) tt) ≡ true
+_ = refl
+
+-- ==================================================================
+-- ... and the DECISION.  `decide` returns a parse or a proof that none
+-- exists -- not merely a failure to find one.
+-- ==================================================================
+
+allComplete : (P : NT) (r : Rule P) → r ∈L allRules P
+allComplete ntS (inl (c , ()))
+allComplete ntS (inr (ntS , _   , ()))
+allComplete ntS (inr (ntA , ntS , ()))
+allComplete ntS (inr (ntA , ntA , ()))
+allComplete ntS (inr (ntA , ntB , tt)) = here
+allComplete ntS (inr (ntB , _   , ()))
+allComplete ntA (inl (true  , Eq.refl)) = here
+allComplete ntA (inl (false , ()))
+allComplete ntA (inr (_ , _ , ()))
+allComplete ntB (inl (false , Eq.refl)) = here
+allComplete ntB (inl (true  , ()))
+allComplete ntB (inr (_ , _ , ()))
+
+decEqB : (a b : Bool) → (a Eq.≡ b) ⊎ No (a Eq.≡ b)
+decEqB true  true  = inl Eq.refl
+decEqB false false = inl Eq.refl
+decEqB true  false = inr λ ()
+decEqB false true  = inr λ ()
+
+decEqS : (u v : String) → (u Eq.≡ v) ⊎ No (u Eq.≡ v)
+decEqS []      []      = inl Eq.refl
+decEqS []      (_ ∷ _) = inr λ ()
+decEqS (_ ∷ _) []      = inr λ ()
+decEqS (a ∷ u) (b ∷ v) = both (decEqB a b) (decEqS u v)
+  where both : (a Eq.≡ b) ⊎ No (a Eq.≡ b) → (u Eq.≡ v) ⊎ No (u Eq.≡ v)
+             → ((a ∷ u) Eq.≡ (b ∷ v)) ⊎ No ((a ∷ u) Eq.≡ (b ∷ v))
+        both (inl Eq.refl) (inl Eq.refl) = inl Eq.refl
+        both (inr k)       _             = inr λ { Eq.refl → k Eq.refl }
+        both _             (inr k)       = inr λ { Eq.refl → k Eq.refl }
+
+open Decide allRules allComplete decEqS
+
+isYes : (A : Gr) (w : String) → DecG A w → Bool
+isYes A w (inl _) = true
+isYes A w (inr _) = false
+
+-- "ab" is derivable from S; "ba" is REFUTED, not merely unfound
+_ : isYes (Deriv ntS) _ (decide ntS (true ∷ false ∷ []) tt) ≡ true
+_ = refl
+
+_ : isYes (Deriv ntS) _ (decide ntS (false ∷ true ∷ []) tt) ≡ false
+_ = refl
+
+_ : isYes (Deriv ntA) _ (decide ntA (true ∷ []) tt) ≡ true
 _ = refl

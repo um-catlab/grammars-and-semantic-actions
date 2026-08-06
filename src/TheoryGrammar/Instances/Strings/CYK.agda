@@ -22,7 +22,15 @@ open import TheoryGrammar.Substrate
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
 
+open import TheoryGrammar.Enumerable
 open import TheoryGrammar.Instances.Strings.Enumeration Char public
+
+-- internal negation and decision, out of the connectives
+¬G_ : Gr → Gr
+¬G A = A ⇒ ⊥G
+
+DecG : Gr → Gr
+DecG A = A ⊕ (¬G A)
 
 module CYK (V : Type₀)
            (unitR : V → Char → Type₀)          -- P → c
@@ -190,3 +198,81 @@ module Parser (V : Type₀)
     -- the procedure, as a term of the calculus
     parse : (P : V) → ⊤G ⊢ MaybeG (Deriv P)
     parse P w _ = parseIx (P , w)
+
+  -- ================================================================
+  -- THE DECISION.  `DecG (Deriv P) = Deriv P ⊕ ¬G Deriv P`, decided by
+  -- `löb` whose step is a named `▷ … ⊢ᴵ …` term.  Both searches -- over
+  -- rules and over splittings -- are the SAME combinator, `decΣ`.
+  -- ================================================================
+
+  module Decide (allRules : (P : V) → List (Rule P))
+                (allComplete : (P : V) (r : Rule P) → r ∈L allRules P)
+                (decEq : (u v : String) → (u Eq.≡ v) ⊎ No (u Eq.≡ v)) where
+
+    Der : G.Ix → Type₀
+    Der = G.μ CYKF
+
+    DecMot : G.Ix → Type₀
+    DecMot i = DecG (Deriv (i .fst)) (i .snd)
+
+    -- PRIMITIVE (phase 1): the empty word is trivial
+    ¬NT[] : No (NonTrivial [])
+    ¬NT[] (c , (u , v , s) , h) = go (h true) s
+      where go : u Eq.≡ c ∷ [] → Split3 u v [] → E.⊥* {ℓ-zero}
+            go Eq.refl ()
+
+    decNTat : (u : String) → NonTrivial u ⊎ No (NonTrivial u)
+    decNTat u = out (decNT u tt)
+      where out : (NonTrivial ⊕ ⌈ [] ⌉) u → NonTrivial u ⊎ No (NonTrivial u)
+            out (inl nt)      = inl nt
+            out (inr Eq.refl) = inr ¬NT[]
+
+    module _ (P : V) (w : String)
+             (rec : (j : G.Ix) → G.degIx j < length w → DecMot j) where
+
+      Slots : (Q T : V) → MonSplit appop w → Type₀
+      Slots Q T sp = (a : Bool) → G.⟦ binSlot Q T a ⟧c Der (MonParts appop w sp a)
+
+      decCut : (Q T : V) (sp : MonSplit appop w)
+             → Slots Q T sp ⊎ No (Slots Q T sp)
+      decCut Q T (u , v , s) = go (decNTat u) (decNTat v)
+        where
+          go : NonTrivial u ⊎ No (NonTrivial u)
+             → NonTrivial v ⊎ No (NonTrivial v)
+             → Slots Q T (u , v , s) ⊎ No (Slots Q T (u , v , s))
+          go (inr ku) _        = inr λ f → ku (lower (f true false))
+          go _        (inr kv) = inr λ f → kv (lower (f false false))
+          go (inl nu) (inl nv) =
+            decΠBool (decΠBool (rec (Q , u) (split3LenL< s (ntLen nv)))
+                               (inl (lift nu)))
+                     (decΠBool (rec (T , v) (split3LenR< s (ntLen nu)))
+                               (inl (lift nv)))
+
+      decRule : (r : Rule P) → G.⟦ ruleF P r ⟧c Der w ⊎ No (G.⟦ ruleF P r ⟧c Der w)
+      decRule (inl (c , pf)) = lit (decEq w (c ∷ []))
+        where lit : (w Eq.≡ c ∷ []) ⊎ No (w Eq.≡ c ∷ [])
+                  → G.⟦ ruleF P (inl (c , pf)) ⟧c Der w
+                    ⊎ No (G.⟦ ruleF P (inl (c , pf)) ⟧c Der w)
+              lit (inl q) = inl (lift q)
+              lit (inr k) = inr λ x → k (lower x)
+      decRule (inr (Q , T , pf)) =
+        decΣ (cuts w) (enumComplete appop w) (decCut Q T)
+
+      decStep : DecMot (P , w)
+      decStep = shift (decΣ (allRules P) (allComplete P) decRule)
+        where
+          shift : G.⟦ CYKF P ⟧c Der w ⊎ No (G.⟦ CYKF P ⟧c Der w) → DecMot (P , w)
+          shift (inl t) = inl (G.roll (G.fromC (CYKF P) w t))
+          shift (inr k) = inr λ d → k (G.toC (CYKF P) w (G.unroll d))
+
+    -- the löb step, as a named term of the right type -- projections
+    -- only, no match on the index
+    step : G.▷ DecMot G.⊢ᴵ DecMot
+    step i r = decStep (i .fst) (i .snd) r
+
+    decIx : (i : G.Ix) → DecMot i
+    decIx = G.löb step
+
+    -- THE DECISION PROCEDURE, as a term of the calculus
+    decide : (P : V) → ⊤G ⊢ DecG (Deriv P)
+    decide P w _ = decIx (P , w)

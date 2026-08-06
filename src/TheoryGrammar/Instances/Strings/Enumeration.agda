@@ -18,6 +18,7 @@ open import TheoryGrammar.Base
 open import TheoryGrammar.Substrate
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
+open import TheoryGrammar.Enumerable
 open import Cubical.Foundations.Isomorphism
 
 open import TheoryGrammar.Instances.Strings.KleeneStar Char public
@@ -34,15 +35,6 @@ splitsIso w .Iso.ret (sp , h) =
 
 -- ENUMERATION OF SPLITTINGS.  Derivable, not assumed: the splittings
 -- of `w` are its `length w + 1` cuts.
-
-data _∈L_ {X : Type₀} (x : X) : List X → Type₀ where
-  here  : ∀ {xs} → x ∈L (x ∷ xs)
-  there : ∀ {y xs} → x ∈L xs → x ∈L (y ∷ xs)
-
-∈map : {X Y : Type₀} (f : X → Y) {x : X} {xs : List X}
-     → x ∈L xs → f x ∈L map f xs
-∈map f here      = here
-∈map f (there p) = there (∈map f p)
 
 cuts : (w : String) → List (MonSplit appop w)
 cuts []      = ([] , [] , nil) ∷ []

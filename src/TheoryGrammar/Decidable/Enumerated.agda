@@ -18,6 +18,7 @@ module TheoryGrammar.Decidable.Enumerated where
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Sigma
 open import Cubical.Data.Sum using (_⊎_; inl; inr)
+open import Cubical.Data.Bool
 open import Cubical.Data.Unit
 open import Cubical.Data.List
 open import Cubical.Data.Empty using (⊥*)
@@ -26,14 +27,11 @@ open import TheoryGrammar.Base
 open import TheoryGrammar.Substrate
 open import TheoryGrammar.Rules
 open import TheoryGrammar.RulesSub
+open import TheoryGrammar.Enumerable
 open import TheoryGrammar.Decidable.Additive
 open import TheoryGrammar.Decidable.Tensor
 
 private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓM : Level
-
-data _∈L_ {X : Type ℓM} (x : X) : List X → Type ℓM where
-  here  : {xs : List X} → x ∈L (x ∷ xs)
-  there : {y : X} {xs : List X} → x ∈L xs → x ∈L (y ∷ xs)
 
 module DecEnum {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                (Sub : Substrate σ ℓX ℓP) where
@@ -134,3 +132,9 @@ module DecTensorEnum {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
 
     dec-⊗-enum : Dec⟨ ⊗ˢ o A ⟩ m
     dec-⊗-enum = finish (search (DE .enumSplit o m))
+
+-- ==================================================================
+-- The pure core: decide a Σ over a listable index.  Both `dec-⊗-enum`
+-- (Σ over splittings) and `dec-⊕ᴰ` (Σ over the tag type) are instances,
+-- because `⊗ˢ o A m` and `⊕ᴰ Y A m` are both Σs.
+-- ==================================================================
