@@ -17,6 +17,8 @@ import Cubical.Data.Equality as Eq
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.RulesFib
+open import TheoryGrammar.SemanticAction
+open import TheoryGrammar.Decidable.Tensor
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
 
@@ -66,16 +68,22 @@ MonParts appop w (u , v , _) b = if b then u else v
 
 bagFib : Fibered cmSig ℓ-zero ℓ-zero
 bagFib .carrier _   = Bag
-bagFib .op nilop _  = []
-bagFib .op appop f  = f true ++ f false
 bagFib .Split       = MonSplit
 bagFib .parts       = MonParts
-bagFib .split nilop f = tt
-bagFib .split appop f = f true , f false , ilvApp (f true) (f false)
-bagFib .parts-split nilop f = funExt λ ()
-bagFib .parts-split appop f = funExt λ { false → refl ; true → refl }
 
-open RulesF bagFib public
+-- The total point, separately.  Bags have a total union, so the split
+-- costs this instance nothing; what it buys is that the connectives
+-- never consult it.  Note `Ilv` is NOT the fibre of `++` -- a splitting
+-- need not be a concatenation -- so the point really is only lax.
+bagPoint : LaxPoint bagFib
+bagPoint .op nilop _  = []
+bagPoint .op appop f  = f true ++ f false
+bagPoint .split nilop f = tt
+bagPoint .split appop f = f true , f false , ilvApp (f true) (f false)
+bagPoint .parts-split nilop f = funExt λ ()
+bagPoint .parts-split appop f = funExt λ { false → refl ; true → refl }
+
+open DecFib bagFib public
 
 Gr : Type₁
 Gr = TheoryTy ℓ-zero tt

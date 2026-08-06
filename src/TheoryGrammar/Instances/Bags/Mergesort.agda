@@ -103,32 +103,65 @@ module MSort (le : A → A → Bool) where
   mergesort m = hyloC mfGuarded mcoalg malg (tt , m) tt
 
 -- ==================================================================
--- MERGE IS NOT YET INTERNAL, and what it would take.
+-- MERGE AS AN INTERNAL TERM, and mergesort as a Cover.
 --
--- `merge : Bag → Bag → Bag` above is phase-1 code -- an Agda function
--- on carriers.  Internally it should be
+-- `Bagged m` is "a listing of the bag `m`".  Since `_⊢_` preserves the
+-- index and `⊗ˢ` splits it, a term
 --
---     mergeG : (Bagged ⊗ Bagged) ⊢ Bagged      Bagged m = Σ[out] Perm out m
+--     mergeG : (Bagged ⊗ Bagged) ⊢ Bagged
 --
--- and then permutation-correctness is FREE: `_⊢_` preserves the index
--- and `⊗ˢ` splits it, so a term of that type cannot invent or drop
--- elements.
---
--- The obstruction is not the type, it is the permutation theory.  The
--- term needs `Perm (merge a b) w` from `Perm a u`, `Perm b v`,
--- `Ilv u v w`, and `merge a b` is NOT `a ++ b` -- it is a reordering of
--- it.  So three lemmas are missing:
---
---   permTrans   : Perm p q → Perm q r → Perm p r
---   permInsert  : Ilv (x ∷ []) v w → Perm w c
---               → Σ[ v' ] (Perm v v' × Ilv (x ∷ []) v' c)
---   mergePerm   : (a b : Bag) → Perm (merge a b) (a ++ b)
---
--- `permInsert` is the load-bearing one and is the usual fiddly part of
--- any permutation development.  With it, `mergeG` is three lines.
---
--- Note the CONCATENATION version needs none of this:
---   appendG (…) = (a ++ b , permMerge pa pb s)
--- is immediate.  It is `merge`'s order-preservation, not its
--- bag-preservation, that costs.
+-- cannot invent or drop elements: permutation-correctness is carried by
+-- the type rather than proved afterwards.  What it costs is the three
+-- lemmas in `Permutation` -- `permRefl`, `permInsert`, `permTrans` --
+-- because `merge a b` REORDERS `a ++ b` rather than being it.
 -- ==================================================================
+
+Bagged : Gr
+Bagged m = Σ[ out ∈ Bag ] Perm out m
+
+BaggedIx : Ix → Type₀
+BaggedIx i = Bagged (i .snd)
+
+module MSortV (le : A → A → Bool) where
+
+  open MSort le
+
+  -- `merge` only reorders
+  mergePerm : (a b : Bag) → Perm (merge a b) (a ++ b)
+  mergePerm []      b  = permRefl b
+  mergePerm (x ∷ a) [] =
+    subst (Perm (x ∷ a)) (sym (++-unit-r (x ∷ a))) (permRefl (x ∷ a))
+  -- the branch is an ARGUMENT, not a `with`: `with` hides the
+  -- lexicographic descent from the termination checker
+  mergePerm (x ∷ a) (y ∷ b) =
+    go (le x y) (mergePerm a (y ∷ b)) (mergePerm (x ∷ a) b)
+    where
+      -- both recursive results are ARGUMENTS, exactly as `merge`'s own
+      -- `if` makes them; a `with` or a nullary `where` hides the
+      -- lexicographic descent from the termination checker
+      go : (bl : Bool)
+         → Perm (merge a (y ∷ b)) (a ++ (y ∷ b))
+         → Perm (merge (x ∷ a) b) ((x ∷ a) ++ b)
+         → Perm (if bl then x ∷ merge a (y ∷ b) else y ∷ merge (x ∷ a) b)
+                ((x ∷ a) ++ (y ∷ b))
+      go true  p q = cons p (left (ilvApp [] (a ++ (y ∷ b))))
+      go false p q = cons q (ilvAfter (x ∷ a) b y)
+
+  mergeAt : ∀ {u v w} → Ilv u v w → Bagged u → Bagged v → Bagged w
+  mergeAt s (a , pa) (b , pb) =
+    merge a b , permTrans (mergePerm a b) (permMerge pa pb s)
+
+  -- the internal term
+  mergeG : (Bagged ⊗' Bagged) ⊢ Bagged
+  mergeG w ((u , v , s) , h) = mergeAt s (h true) (h false)
+
+  malgV : AlgC MF BaggedIx
+  malgV tt =
+    ⊕ᴰ-E λ { true  → λ w _ → w , permRefl w
+           ; false → λ w t →
+               ⊗E {P = λ _ → ⟦ MHalf ⟧c BaggedIx} {w = w}
+                  (λ u v s l r → mergeAt s (l true) (r true)) t }
+
+  -- MERGESORT, as a term of the calculus, permutation-correct by type
+  mergesortV : ⊤G ⊢ Bagged
+  mergesortV m _ = hyloC mfGuarded mcoalg malgV (tt , m) tt

@@ -25,7 +25,7 @@ open import TheoryGrammar.SemanticAction
 open import TheoryGrammar.Instances.Bags.QuicksortFunctor A public
 
 open Views bagFib
-open ActFib bagFib public using (Δ; Action; tagA; observe; run; pureA; mapA; caseA; ⊕A; idA; accepts?; runResult; runEither; okA; maybeA)
+-- (the semantic actions now arrive via `DecFib` in Base)
 
 partition : (p : A → Bool) (xs : Bag)
           → Σ[ lo ∈ Bag ] Σ[ hi ∈ Bag ] Ilv lo hi xs
