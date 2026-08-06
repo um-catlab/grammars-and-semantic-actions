@@ -17,7 +17,7 @@
   datatype over them.
 
   Kleene star, list-like grammars, and every other recursive grammar are
-  instances -- see `TheoryGrammar.Instances.Strings`, where `KL*` is
+  instances -- see `TheoryGrammar.Instances.Strings.KleeneStar`, where `KL*` is
   `μ` of `ε ⊕ (A ⊗ Var)` and NOT a hand-written datatype.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
