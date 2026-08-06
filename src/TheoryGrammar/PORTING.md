@@ -141,7 +141,7 @@ Not a plan — a measurement against the 21 modules currently in
 | Later | 7 | `Graded` (`▷`, `löb`, `hyloC`) | **partial** — `Box`, `Infix` not ported |
 | Subgrammar | 2 | — | **not started**, but additive; should be easy |
 | Derivative | 3 | `Derivative` (`δ`, `DerivTensor`) | **done** |
-| **SequentialUnambiguity** | 5 | — | **not started**; needs Levi |
+| SequentialUnambiguity | 5 | `Instances/Strings/SeqUnambig` | **core done** |
 | **Greedy** | 2 | — | **not started**; needs Levi |
 | RegularExpression | 2 | `Instances/Strings/RegExp` | **done** |
 | **Coinductive** | 4 | — | **not started**; no `ν` in the generic layer |
@@ -177,10 +177,39 @@ hypothesis rather than on volume.
    carrier, and it re-indexes the slot family at each step, so it needs
    decisions at *every* element rather than at the parts of one
    splitting. `RegularExpression` is now unblocked.
-2. **`SequentialUnambiguity` + `Greedy` (7 files).** Both need
-   equidivisibility (Levi's lemma), which is a genuine property of the
-   theory — true for free monoids, false for commutative ones. It should
-   be a named hypothesis on the promodel, not ambient.
+2. **`SequentialUnambiguity` + `Greedy`.** The blocker is gone:
+   **Levi's lemma is five clauses** over the inductive `Split3` — a
+   double recursion with no arithmetic, no `split++`, no length
+   induction. Same payoff the derivative got, in a second place. It is
+   still a genuine property of the theory (false for bags), so it stays
+   instance-level.
+
+   On top of it, `First` and `FollowLast` are recast as **derivatives
+   rather than subsets of the alphabet**: `c ∉First A` *is* `δ_c A ⊢ ⊥`.
+   That deletes the `Powerset.More` and truncation machinery the
+   original carried — they are grammars, so they are compared with `⊢`
+   like everything else. `sameSplit` then proves that under `A ⊛ B` a
+   word has at most one splitting compatible with A and B.
+
+   Two findings to carry forward:
+
+   * **`⊛` does not give `DecReadable`.** `fromUnique` consumes
+     `splitProp` — "the *promodel* has at most one decomposition" —
+     which is flatly false for strings and no amount of sequential
+     unambiguity changes it. What `⊛` buys is uniqueness *relative to
+     the grammars*, and the existing interface has nowhere to say that.
+     The honest fix is a grammar-relative unique-readability
+     constructor in `Decidable/Tensor.agda`; it should be made
+     deliberately rather than by bending `DecReadable`.
+
+   * **K bites three times** once `Char` is not assumed discrete.
+     Matching two `Split3`s against each other, `cons` injectivity, and
+     inverting a literal's splitting all leave the unifier a reflexive
+     equation on `Char`. Each is fixed the same way — count, or `ap` a
+     projection, never unify two heads. `Greedy` will hit this
+     constantly, so it is worth knowing up front.
+
+   `Greedy` (2 files) is what remains of the group.
 3. ~~**`RegularExpression`**~~ — **done**, and bucket 3's classification
    of it as *string-specific* was right: the derivative-based matcher
    recurses on the carrier, which is not something `Fibered` provides.

@@ -285,10 +285,13 @@ module CYK (V : Type₀)
           missR : (¬G NonEmpty) sR → Refutes cat (binSlots Q T) s c
           missR k h = k (neOf T sR (h false))
 
-          -- neither side empty: both sides are STRICTLY shorter
-          -- (`cutL<` needs the right side non-empty, `cutR<` the left),
-          -- so the guarded call applies at both.  Each slot is a `&ᴰ`
-          -- of its nonterminal and its certificate, decided by `dec-&ᴰ`.
+          -- neither side empty: each side is then a PROPER part, and
+          -- `deg<` -- the grading's own field -- says a proper part is
+          -- strictly smaller, which is exactly what `▷` demands.  So
+          -- nothing here knows what a cut is; `cutL<` / `cutR<` / `neLen`
+          -- are used only to BUILD `spanGraded`, never to use it.  Each
+          -- slot is a `&ᴰ` of its nonterminal and its certificate,
+          -- decided by `dec-&ᴰ`.
           slotDec : (R : V) (t : Span) → G.degIx (R , t) < n → NonEmpty t
                   → Dec⟨ SlotG R ⟩ t
           slotDec R t shorter ne =
@@ -302,8 +305,8 @@ module CYK (V : Type₀)
           both : NonEmpty sL → NonEmpty sR → CutDec
           both neL neR =
             decΠBool {B = λ a → binSlots Q T a (SpanParts cat s c a)}
-              (slotDec Q sL (cutL< c (neLen neR)) neL)
-              (slotDec T sR (cutR< c (neLen neL)) neR)
+              (slotDec Q sL (spanGraded .deg< cat s c true  neR) neL)
+              (slotDec T sR (spanGraded .deg< cat s c false neL) neR)
 
         -- THE CUT, decided.  Two nested `dec-elim`s on the resource
         -- probe -- an instance never matches a sum, it eliminates one.

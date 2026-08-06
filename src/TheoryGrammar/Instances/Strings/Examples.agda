@@ -145,7 +145,10 @@ allComplete ntB (inl (false , Eq.refl)) = here
 allComplete ntB (inl (true  , ()))
 allComplete ntB (inr (_ , _ , ()))
 
-open Decide allRules allComplete decEqS
+-- `Decide` now takes the literal matcher as an internal PROBE, the same
+-- `litProbe` the parser's `matchLit` is built from -- not a metalanguage
+-- equality test.  One primitive (`decEqS`), two consumers.
+open Decide allRules allComplete litProbe
 
 -- ... and observing the DECISION with the SAME combinator, only at a
 -- different error grammar: `Dec⟨ A ⟩` is `Result (¬G A) A`, so

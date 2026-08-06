@@ -17,6 +17,8 @@ open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
 import Cubical.Data.Bool.Properties as B
 open import Cubical.Data.Unit
+open import Cubical.Data.Nat using (ℕ; snotz; znots; injSuc)
+open import Cubical.Data.Sum using (_⊎_; inl; inr)
 open import Cubical.Data.Empty as E using () renaming (rec to ⊥rec)
 
 open import TheoryGrammar.Base
@@ -29,7 +31,7 @@ open import TheoryGrammar.Instances.Lambda.Base
 module Readable (Name : Type₀) where
 
   open LamBase Name
-  open Views λFib using (Cover; Complete; total; exclusive; completeCase; certifies; fromUnique)
+  open Views λFib using (Cover; Complete; total; exclusive; completeCase; certifies; fromUnique; decBranch)
 
   -- PRIMITIVE.  At most one splitting: unique readability.
   Split-isProp : (o : LOp) (t : Raw) (p q : LSplit o t) → p ≡ q
@@ -42,16 +44,59 @@ module Readable (Name : Type₀) where
   open Precise Split-isProp public
 
   -- PRIMITIVE.  And it is decidable whether there is one, internally.
+  -- The operation a term is built by, as a function of the term.  The
+  -- SPLIT CONSTRUCTOR pins the term, so each clause is `refl`.
+  opOf : Raw → LOp
+  opOf (var _)   = varOp
+  opOf (app _ _) = appOp
+  opOf (lam _ _) = lamOp
+
+  opOf-split : (o : LOp) (t : Raw) → ⊗ˢ o (λ _ → ⊤G) t → o ≡ opOf t
+  opOf-split varOp .(var _)   (mkVar _   , _) = refl
+  opOf-split appOp .(app _ _) (mkApp _ _ , _) = refl
+  opOf-split lamOp .(lam _ _) (mkLam _ _ , _) = refl
+
+  opCase : Complete LOp (λ o → ⊗ˢ o (λ _ → ⊤G))
+  opCase = fromUnique discrim
+             (λ y z t py pz → opOf-split y t py ∙ sym (opOf-split z t pz))
+    where
+      discrim : Cover (⊕ᴰ LOp (λ o → ⊗ˢ o (λ _ → ⊤G)))
+      discrim (var n)   _ = varOp , (mkVar n   , λ _ → tt)
+      discrim (app u v) _ = appOp , (mkApp u v , λ _ → tt)
+      discrim (lam n t) _ = lamOp , (mkLam n t , λ _ → tt)
+
+  private
+    opTag : LOp → ℕ
+    opTag varOp = 0
+    opTag appOp = 1
+    opTag lamOp = 2
+
+  -- The comparison `decBranch` asks for.  On the diagonal it is `idg` --
+  -- no transport, which is what keeps the derived `⊗-decSplit`
+  -- computing; off it, the operations are distinct.
+  cmpLOp : (y z : LOp) → (⊗ˢ z (λ _ → ⊤G) ⊢ ⊗ˢ y (λ _ → ⊤G)) ⊎ (y ≡ z → E.⊥)
+  cmpLOp varOp varOp = inl idg
+  cmpLOp appOp appOp = inl idg
+  cmpLOp lamOp lamOp = inl idg
+  cmpLOp varOp appOp = inr λ p → znots (cong opTag p)
+  cmpLOp varOp lamOp = inr λ p → znots (cong opTag p)
+  cmpLOp appOp varOp = inr λ p → snotz (cong opTag p)
+  cmpLOp appOp lamOp = inr λ p → znots (injSuc (cong opTag p))
+  cmpLOp lamOp varOp = inr λ p → snotz (cong opTag p)
+  cmpLOp lamOp appOp = inr λ p → snotz (injSuc (cong opTag p))
+
+  -- DERIVED, not primitive.  `opCase` says the operations PARTITION the
+  -- terms; `View.decBranch` decides each branch of a partition.  So the
+  -- nine clauses this used to have -- one per (operation, shape) pair,
+  -- six of them absurd, each building its own witness or refutation --
+  -- were nine consequences of one fact, written out.
+  --
+  -- The dependency now runs the right way: the positive statement is
+  -- primitive and the negative ones follow.  It still COMPUTES, which
+  -- is why `decBranch` takes `cmpLOp` rather than `Discrete LOp` -- see
+  -- the note there.
   ⊗-decSplit : (o : LOp) → ⊤G ⊢ Dec⟨ ⊗ˢ o (λ _ → ⊤G) ⟩
-  ⊗-decSplit varOp (var n)   _ = dec-yes (⊗ˢ varOp (λ _ → ⊤G)) (var n)   (mkVar n , λ _ → tt)
-  ⊗-decSplit varOp (app u v) _ = dec-no  (⊗ˢ varOp (λ _ → ⊤G)) (app u v) λ { (() , _) }
-  ⊗-decSplit varOp (lam n b) _ = dec-no  (⊗ˢ varOp (λ _ → ⊤G)) (lam n b) λ { (() , _) }
-  ⊗-decSplit appOp (var n)   _ = dec-no  (⊗ˢ appOp (λ _ → ⊤G)) (var n)   λ { (() , _) }
-  ⊗-decSplit appOp (app u v) _ = dec-yes (⊗ˢ appOp (λ _ → ⊤G)) (app u v) (mkApp u v , λ _ → tt)
-  ⊗-decSplit appOp (lam n b) _ = dec-no  (⊗ˢ appOp (λ _ → ⊤G)) (lam n b) λ { (() , _) }
-  ⊗-decSplit lamOp (var n)   _ = dec-no  (⊗ˢ lamOp (λ _ → ⊤G)) (var n)   λ { (() , _) }
-  ⊗-decSplit lamOp (app u v) _ = dec-no  (⊗ˢ lamOp (λ _ → ⊤G)) (app u v) λ { (() , _) }
-  ⊗-decSplit lamOp (lam n b) _ = dec-yes (⊗ˢ lamOp (λ _ → ⊤G)) (lam n b) (mkLam n b , λ _ → tt)
+  ⊗-decSplit = decBranch cmpLOp opCase
 
   -- `Bool`'s own dependent eliminator, under the name it earns here:
   -- assemble a two-slot family from its two slots.  Not a decision.
@@ -96,24 +141,3 @@ module Readable (Name : Type₀) where
   -- exclusivity is by the emptiness of the other operations' splittings,
   -- which is unique readability in its positive form.
   -- ================================================================
-
-  -- The operation a term is built by, as a function of the term.  The
-  -- SPLIT CONSTRUCTOR pins the term, so each clause is `refl`.
-  opOf : Raw → LOp
-  opOf (var _)   = varOp
-  opOf (app _ _) = appOp
-  opOf (lam _ _) = lamOp
-
-  opOf-split : (o : LOp) (t : Raw) → ⊗ˢ o (λ _ → ⊤G) t → o ≡ opOf t
-  opOf-split varOp .(var _)   (mkVar _   , _) = refl
-  opOf-split appOp .(app _ _) (mkApp _ _ , _) = refl
-  opOf-split lamOp .(lam _ _) (mkLam _ _ , _) = refl
-
-  opCase : Complete LOp (λ o → ⊗ˢ o (λ _ → ⊤G))
-  opCase = fromUnique discrim
-             (λ y z t py pz → opOf-split y t py ∙ sym (opOf-split z t pz))
-    where
-      discrim : Cover (⊕ᴰ LOp (λ o → ⊗ˢ o (λ _ → ⊤G)))
-      discrim (var n)   _ = varOp , (mkVar n   , λ _ → tt)
-      discrim (app u v) _ = appOp , (mkApp u v , λ _ → tt)
-      discrim (lam n t) _ = lamOp , (mkLam n t , λ _ → tt)

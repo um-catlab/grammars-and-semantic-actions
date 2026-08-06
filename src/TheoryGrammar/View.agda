@@ -54,7 +54,7 @@ module TheoryGrammar.View where
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool using (Bool; true; false)
 open import Cubical.Data.Unit
-open import Cubical.Relation.Nullary.Base using (Discrete; decRec)
+open import Cubical.Data.Sum as Sum using (_⊎_; inl; inr)
 open import Cubical.Data.Empty using (⊥) renaming (rec to ⊥rec)
 
 open import TheoryGrammar.Base
@@ -151,21 +151,29 @@ module Views {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX 
 
   -- A COMPLETE VIEW DECIDES ITS OWN BRANCHES.
   --
-  -- Given the partition and a discrete index, deciding `P y` needs no
-  -- work at all: land in some branch `z`, and either `z ≡ y` -- transport
-  -- -- or it does not, and `certifies` refutes.  So the per-branch
-  -- decision procedures an instance writes by hand (`Lambda.Readable`'s
-  -- and `SimplyTyped.Readable`'s `⊗-decSplit`, one clause per pair of
-  -- operations) are consequences of the ONE partition, not independent
-  -- facts.  This is the payoff of the positive complement: the negative
-  -- statements follow from it.
+  -- Given the partition, deciding `P y` needs no work: land in some
+  -- branch `z`, and either it IS `y` -- so its payload already is a
+  -- `P y` -- or it is not, and `certifies` refutes.  So the per-branch
+  -- decision procedures an instance writes by hand (`⊗-decSplit`, one
+  -- clause per pair of operations) are consequences of the ONE
+  -- partition, not independent facts.
+  --
+  -- WHY THE HYPOTHESIS IS `P z ⊢ P y` AND NOT `Discrete Y`.  With
+  -- `Discrete Y` the diagonal case has to move a `P z` to a `P y` along
+  -- `z ≡ y`, i.e. by `subst` -- and `subst` at a family over a VARIABLE
+  -- world does not reduce.  Every consumer of this that is generic in
+  -- the world (the scope checker is) would then stop computing, and the
+  -- instances' `refl` tests with it.  Asking instead for the coercion
+  -- itself costs nothing at a concrete index -- it is `idg` on the
+  -- diagonal -- and keeps the derivation transport-free.
   decBranch : {Y : Type ℓY} {P : Y → TheoryTy ℓA s}
-            → Discrete Y → Complete Y P → (y : Y) → Probe (P y)
-  decBranch {P = P} _≟_ K y =
+            → ((y z : Y) → (P z ⊢ P y) ⊎ (y ≡ z → ⊥))
+            → Complete Y P → (y : Y) → Probe (P y)
+  decBranch {P = P} cmp K y =
     completeCase K λ z →
-      decRec (λ eq  → dec-yes (P y) ∘g (λ m pz → subst (λ w → P w m) eq pz))
-             (λ ¬eq → dec-no  (P y) ∘g certifies K z y ¬eq)
-             (z ≟ y)
+      Sum.rec (λ f   → dec-yes (P y) ∘g f)
+              (λ ¬eq → dec-no  (P y) ∘g certifies K z y (λ p → ¬eq (sym p)))
+              (cmp y z)
 
   -- ================================================================
   -- `with`, internally.

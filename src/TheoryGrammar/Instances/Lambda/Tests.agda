@@ -268,36 +268,14 @@ lam-not-app = certifies opCase lamOp appOp lam≢app
 same-refutation : (¬G (⊗ˢ appOp (λ _ → ⊤G))) idT
 same-refutation = lam-not-app idT (mkLam 0 (var 0) , λ _ → tt)
 
--- `⊗-decSplit` is now a CONSEQUENCE, not an independent fact: a complete
--- partition with a discrete index decides each of its branches
--- (`View.decBranch`).  The hand-written nine-clause procedure and the
--- derived one agree, which is what these check.
-discreteLOp : (o o' : LOp) → Dec (o ≡ o')
-discreteLOp varOp varOp = yes refl
-discreteLOp appOp appOp = yes refl
-discreteLOp lamOp lamOp = yes refl
-discreteLOp varOp appOp = no λ p → snotz (cong opTag p)
-  where opTag : LOp → ℕ
-        opTag varOp = 1 ; opTag appOp = 0 ; opTag lamOp = 0
-discreteLOp varOp lamOp = no λ p → snotz (cong opTag p)
-  where opTag : LOp → ℕ
-        opTag varOp = 1 ; opTag appOp = 0 ; opTag lamOp = 0
-discreteLOp appOp varOp = no λ p → snotz (cong opTag p)
-  where opTag : LOp → ℕ
-        opTag varOp = 0 ; opTag appOp = 1 ; opTag lamOp = 0
-discreteLOp appOp lamOp = no λ p → snotz (cong opTag p)
-  where opTag : LOp → ℕ
-        opTag varOp = 0 ; opTag appOp = 1 ; opTag lamOp = 0
-discreteLOp lamOp varOp = no λ p → snotz (cong opTag p)
-  where opTag : LOp → ℕ
-        opTag varOp = 0 ; opTag appOp = 0 ; opTag lamOp = 1
-discreteLOp lamOp appOp = no λ p → snotz (cong opTag p)
-  where opTag : LOp → ℕ
-        opTag varOp = 0 ; opTag appOp = 0 ; opTag lamOp = 1
-
+-- `⊗-decSplit` is now DERIVED, not primitive: a complete partition with
+-- a discrete index decides each of its branches (`View.decBranch`), so
+-- `Lambda.Readable.⊗-decSplit` is `decBranch discreteLOp opCase` and the
+-- nine hand-written clauses are gone.  These check that the derived
+-- procedure still COMPUTES -- which is the thing a derivation can
+-- silently cost.
 isOp!' : (o : LOp) → ⊤G ⊢ Δ Bool
-isOp!' o = okA (⊗ˢ o (λ _ → ⊤G)) (¬G (⊗ˢ o (λ _ → ⊤G)))
-           ∘g decBranch discreteLOp opCase o
+isOp!' o = okA (⊗ˢ o (λ _ → ⊤G)) (¬G (⊗ˢ o (λ _ → ⊤G))) ∘g ⊗-decSplit o
 
 _ : passes (run (isOp!' varOp) at ((var 0) ↦ true  ∷ idT ↦ false ∷ []))
 _ = refl

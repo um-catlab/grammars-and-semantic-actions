@@ -23,7 +23,12 @@ open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
 
 open import TheoryGrammar.Enumerable
+import TheoryGrammar.Decidable.Enumerated as DE
+open DE using (module DecEnum)
 open import TheoryGrammar.Instances.Strings.Enumeration Char public
+
+-- the cut search, and the two abbreviations its hypothesis is stated in
+open DecEnum strFib using (⊗at; Refutes; dec-⊗-cuts)
 
 -- `¬G_` and `Dec⟨_⟩` are the generic ones (`Decidable.Additive`, via
 -- `DecFib` in `Strings.Base`); this instance defines neither.
@@ -63,10 +68,80 @@ module CYK (V : Type₀)
   Deriv : V → Gr
   Deriv P w = G.μ CYKF (P , w)
 
+  Der : G.Ix → Type₀
+  Der = G.μ CYKF
+
+  -- ================================================================
+  -- THE DESCRIPTION, READ AS CONNECTIVES.
+  --
+  -- `⟦_⟧c` (Inductive) is the description spelled in the connectives:
+  -- `⊕e` IS `⊕ᴰ`, `&e` IS `&ᴰ`, `⊗e` IS `⊗ˢ`, `⌜_⌝` IS `Liftg`, all
+  -- DEFINITIONALLY.  So the abbreviations below are grammars, and
+  --
+  --     Layer P         ≡ ⊕ᴰ (Rule P) (RuleG P)
+  --     RuleG P (inl _) ≡ Liftg ⌈ c ∷ [] ⌉
+  --     RuleG P (inr _) ≡ SlotG Q ⊗' SlotG T
+  --     SlotG Q         ≡ &ᴰ Bool (λ b → …)   -- Deriv Q, and its resource
+  --
+  -- hold on the nose.  That is what lets the generic `dec-⊕ᴰ` /
+  -- `dec-⊗-cuts` / `dec-&ᴰ` be applied to a DESCRIPTION with no
+  -- coercion anywhere.
+  -- ================================================================
+
+  Layer : V → Gr
+  Layer P = G.⟦ CYKF P ⟧c Der
+
+  RuleG : (P : V) → Rule P → Gr
+  RuleG P r = G.⟦ ruleF P r ⟧c Der
+
+  SlotG : V → Gr
+  SlotG Q = G.⟦ NEvar Q ⟧c Der
+
+  binSlots : V → V → Bool → Gr
+  binSlots Q T a = G.⟦ binSlot Q T a ⟧c Der
+
+  -- ================================================================
+  -- THE FIXED POINT, as maps of the calculus.  `Inductive` explains why
+  -- `rollg`/`unrollg` cannot be stated generically (a level
+  -- stratification, not a mathematical obstruction) and says to define
+  -- them per instance, where the levels are concrete.  These are the
+  -- only place `sup` / `toC` / `fromC` appear outside `leaf` / `node`.
+  -- ================================================================
+
+  unrollD : (P : V) → Deriv P ⊢ Layer P
+  unrollD P w t = G.toC (CYKF P) w (G.unroll t)
+
+  rollD : (P : V) → Layer P ⊢ Deriv P
+  rollD P w t = G.roll (G.fromC (CYKF P) w t)
+
+  -- ================================================================
+  -- THE RESOURCE CERTIFICATE A SLOT CARRIES -- a term.
+  --
+  -- `NEslot Q false = ⌜ NonTrivial ⌝`, so projecting the `false`
+  -- component of a slot and discharging the constant former's `Lift`
+  -- says: a slot of a binary rule certifies ITS OWN part to be
+  -- non-trivial.  This one term is the whole content of "CNF has no
+  -- ε-productions", and it is `&ᴰ-E` followed by `lowerg`.
+  -- ================================================================
+
+  neOf : (Q : V) → SlotG Q ⊢ NonTrivial
+  neOf Q = lowerg ∘g &ᴰ-E Bool {B = λ b → G.⟦ NEslot Q b ⟧c Der} false
+
+  derOf : (Q : V) → SlotG Q ⊢ Deriv Q
+  derOf Q = &ᴰ-E Bool {B = λ b → G.⟦ NEslot Q b ⟧c Der} true
+
   -- ================================================================
   -- Guardedness.  Both slots of a binary rule are proper parts, so this
   -- is the uniform rule -- CNF is precisely the shape that makes it so.
+  --
+  -- PRIMITIVE (phase 1): `neOfSh` is `neOf` at the level of SHAPES,
+  -- which is where guardedness lives (`Guarded` is stated with
+  -- `Sh`/`Pos`/`nx`).  It is the only place a shape is looked at, and it
+  -- is the shape analogue of a term that already exists.
   -- ================================================================
+
+  neOfSh : (Q : V) (w : String) → G.Sh (NEvar Q) w → NonTrivial w
+  neOfSh Q w sh = lower (sh false)
 
   ≤NEslot : (Q : V) (b : Bool) → G.Guarded≤ (NEslot Q b)
   ≤NEslot Q true  = G.≤Var Q
@@ -82,8 +157,8 @@ module CYK (V : Type₀)
       pr : (Q T : V) (m : String) (sp : MonSplit appop m)
            (sh : (a : Bool) → G.Sh (binSlot Q T a) (MonParts appop m sp a))
            (a : Bool) → G.Pos (binSlot Q T a) _ (sh a) → StrProper appop m sp a
-      pr Q T m (u , v , s) sh true  p = lower (sh false false)
-      pr Q T m (u , v , s) sh false p = lower (sh true false)
+      pr Q T m sp sh true  p = neOfSh T (MonParts appop m sp false) (sh false)
+      pr Q T m sp sh false p = neOfSh Q (MonParts appop m sp true)  (sh true)
 
       alt : (r : Rule P) → G.Guarded (ruleF P r)
       alt (inl (c , _))     = G.<⌜⌝ ⌈ c ∷ [] ⌉
@@ -99,6 +174,23 @@ module CYK (V : Type₀)
 -- shape; see `TheoryGrammar.View`.
 decNT : Cover (NonTrivial ⊕ ⌈ [] ⌉)
 decNT = caseOf charCase ⊕-I₂ ⊕-I₁
+
+-- PRIMITIVE (phase 1): the empty word is trivial.  The only fact about
+-- the resource predicate that is not already a term.
+¬NT[] : No (NonTrivial [])
+¬NT[] (c , (u , v , s) , h) = go (h true) s
+  where go : u Eq.≡ c ∷ [] → Split3 u v [] → E.⊥* {ℓ-zero}
+        go Eq.refl ()
+
+-- ... so non-triviality is DECIDED, as an internal probe: the cover
+-- `decNT` says every word is trivial or not, and `¬NT[]` turns the
+-- trivial branch into a refutation.  `⌈⌉-E` is what carries a fact
+-- known at ONE world to a map out of that world's representable, so
+-- this is a composite of combinators and one primitive.
+probe-NT : Probe NonTrivial
+probe-NT = caseOf decNT
+             (dec-yes NonTrivial)
+             (⌈⌉-E {a = []} {B = Dec⟨ NonTrivial ⟩} (dec-no NonTrivial [] ¬NT[]))
 
 module Parser (V : Type₀)
               (unitR : V → Char → Type₀)
@@ -192,69 +284,114 @@ module Parser (V : Type₀)
 
   -- ================================================================
   -- THE DECISION.  `Dec⟨ Deriv P ⟩ = Deriv P ⊕ ¬G Deriv P`, decided by
-  -- `löb` whose step is a named `▷ … ⊢ᴵ …` term.  Both searches -- over
-  -- rules and over splittings -- are the SAME combinator, `decΣ`.
+  -- `löb` whose step is a named `▷ … ⊢ᴵ …` term, and every layer of
+  -- that term is a combinator:
+  --
+  --     dec-map (Layer P) (Deriv P) (rollD P) (unrollD P)
+  --       ∘ dec-⊕ᴰ  (Rule P)          -- search the rules
+  --           ∘ per rule:
+  --               dec-map … ∘ litProbe c        -- the terminal
+  --               dec-⊗-cuts appop …            -- search the cuts
+  --                 ∘ per cut: dec-elim probe-NT …
+  --                     ∘ dec-&ᴰ                -- nonterminal + resource
+  --
+  -- The two searches -- over rules and over cuts -- are the SAME
+  -- combinator (`Enumerable.decΣ`, wrapped as `dec-⊕ᴰ` and
+  -- `dec-⊗-cuts`), because `⊕ᴰ` over the tags and `⊗ˢ` over the
+  -- splittings are both `Σ`s.
+  --
+  -- `dec-⊗-cuts` asks for a decision of each cut AS A WHOLE, not of
+  -- each slot separately, and that is what makes the guarded call
+  -- legal: a cut with a trivial side is refuted outright (by `neOf`,
+  -- since a slot certifies its own part non-trivial), and a cut with
+  -- neither side trivial has both sides PROPER, hence strictly shorter
+  -- by `deg<`.  See `Instances.Spans.CYK`, which is the same term over
+  -- the span theory.
   -- ================================================================
 
-  module Decide (allRules : (P : V) → List (Rule P))
+  module Decide (allRules    : (P : V) → List (Rule P))
                 (allComplete : (P : V) (r : Rule P) → r ∈L allRules P)
-                (decEq : (u v : String) → (u Eq.≡ v) ⊎ No (u Eq.≡ v)) where
-
-    Der : G.Ix → Type₀
-    Der = G.μ CYKF
+                (litProbe    : (c : Char) → Probe ⌈ c ∷ [] ⌉) where
 
     DecMot : G.Ix → Type₀
     DecMot i = Dec⟨ Deriv (i .fst) ⟩ (i .snd)
 
-    -- PRIMITIVE (phase 1): the empty word is trivial
-    ¬NT[] : No (NonTrivial [])
-    ¬NT[] (c , (u , v , s) , h) = go (h true) s
-      where go : u Eq.≡ c ∷ [] → Split3 u v [] → E.⊥* {ℓ-zero}
-            go Eq.refl ()
-
-    decNTat : (u : String) → NonTrivial u ⊎ No (NonTrivial u)
-    decNTat u = out (decNT u tt)
-      where out : (NonTrivial ⊕ ⌈ [] ⌉) u → NonTrivial u ⊎ No (NonTrivial u)
-            out (inl nt)      = inl nt
-            out (inr Eq.refl) = inr ¬NT[]
+    -- the terminal alternative, decided.  `Liftg` is the constant
+    -- former's coercion and `dec-map` transports the decision across it.
+    decLit : (c : Char) → Probe (Liftg ⌈ c ∷ [] ⌉)
+    decLit c = dec-map ⌈ c ∷ [] ⌉ (Liftg ⌈ c ∷ [] ⌉) liftg lowerg ∘g litProbe c
 
     module _ (P : V) (w : String)
              (rec : (j : G.Ix) → G.degIx j < length w → DecMot j) where
 
-      Slots : (Q T : V) → MonSplit appop w → Type₀
-      Slots Q T sp = (a : Bool) → G.⟦ binSlot Q T a ⟧c Der (MonParts appop w sp a)
+      module _ (Q T : V) (sp : MonSplit appop w) where
 
-      decCut : (Q T : V) (sp : MonSplit appop w)
-             → Slots Q T sp ⊎ No (Slots Q T sp)
-      decCut Q T (u , v , s) = go (decNTat u) (decNTat v)
-        where
-          go : NonTrivial u ⊎ No (NonTrivial u)
-             → NonTrivial v ⊎ No (NonTrivial v)
-             → Slots Q T (u , v , s) ⊎ No (Slots Q T (u , v , s))
-          go (inr ku) _        = inr λ f → ku (lower (f true false))
-          go _        (inr kv) = inr λ f → kv (lower (f false false))
-          go (inl nu) (inl nv) =
-            decΠBool (decΠBool (rec (Q , u) (split3LenL< s (ntLen nv)))
-                               (inl (lift nu)))
-                     (decΠBool (rec (T , v) (split3LenR< s (ntLen nu)))
-                               (inl (lift nv)))
+        private
+          u v : String
+          u = MonParts appop w sp true
+          v = MonParts appop w sp false
 
-      decRule : (r : Rule P) → G.⟦ ruleF P r ⟧c Der w ⊎ No (G.⟦ ruleF P r ⟧c Der w)
-      decRule (inl (c , pf)) = lit (decEq w (c ∷ []))
-        where lit : (w Eq.≡ c ∷ []) ⊎ No (w Eq.≡ c ∷ [])
-                  → G.⟦ ruleF P (inl (c , pf)) ⟧c Der w
-                    ⊎ No (G.⟦ ruleF P (inl (c , pf)) ⟧c Der w)
-              lit (inl q) = inl (lift q)
-              lit (inr k) = inr λ x → k (lower x)
-      decRule (inr (Q , T , pf)) =
-        decΣ (cuts w) (enumComplete appop w) (decCut Q T)
+          CutDec : Type₀
+          CutDec = ⊗at appop (binSlots Q T) w sp
+                 ⊎ Refutes appop (binSlots Q T) w sp
 
+          -- a trivial side refutes the cut, because `neOf` says the slot
+          -- sitting there certifies its own part to be non-trivial
+          missL : (¬G NonTrivial) u → Refutes appop (binSlots Q T) w sp
+          missL k h = k (neOf Q u (h true))
+
+          missR : (¬G NonTrivial) v → Refutes appop (binSlots Q T) w sp
+          missR k h = k (neOf T v (h false))
+
+          -- neither side trivial: each side is then a PROPER part, and
+          -- `deg<` -- the grading's own field -- says a proper part is
+          -- strictly smaller, which is exactly what `▷` demands.  So
+          -- `split3LenL<` / `split3LenR<` / `ntLen` are used only to
+          -- BUILD `strGraded`, never to use it.
+          slotDec : (R : V) (t : String) → G.degIx (R , t) < length w
+                  → NonTrivial t → Dec⟨ SlotG R ⟩ t
+          slotDec R t shorter nt =
+            dec-&ᴰ (λ b → G.⟦ NEslot R b ⟧c Der) t
+              λ { true  → rec (R , t) shorter
+                ; false → dec-yes (Liftg NonTrivial) t
+                                  (liftg {A = NonTrivial} t nt) }
+
+          -- `decΠBool` is the arity-finiteness concession, the same one
+          -- `DecEnumerable.decAt` makes: the two slots sit at DIFFERENT
+          -- words, so combining them is not a `&ᴰ` of the calculus.
+          both : NonTrivial u → NonTrivial v → CutDec
+          both nu nv =
+            decΠBool {B = λ a → binSlots Q T a (MonParts appop w sp a)}
+              (slotDec Q u (strGraded .deg< appop w sp true  nv) nu)
+              (slotDec T v (strGraded .deg< appop w sp false nu) nv)
+
+        -- THE CUT, decided.  Two nested `dec-elim`s on the resource
+        -- probe -- an instance never matches a sum, it eliminates one.
+        decCut : CutDec
+        decCut =
+          dec-elim NonTrivial u
+            (λ nu → dec-elim NonTrivial v
+                      (λ nv → both nu nv)
+                      (λ k → inr (missR k))
+                      (probe-NT v tt))
+            (λ k → inr (missL k))
+            (probe-NT u tt)
+
+      -- one rule, decided: the terminal alternative, or a search over
+      -- the cuts.  `cuts` / `enumComplete` are the file's only external
+      -- residue.
+      decRule : (r : Rule P) → Dec⟨ RuleG P r ⟩ w
+      decRule (inl (c , _))     = decLit c w tt
+      decRule (inr (Q , T , _)) =
+        dec-⊗-cuts appop (binSlots Q T) w (cuts w) (enumComplete appop w)
+                   (decCut Q T)
+
+      -- ... and the whole layer: search the rules with `dec-⊕ᴰ`, then
+      -- transport the decision across the fixed point with `dec-map`.
       decStep : DecMot (P , w)
-      decStep = shift (decΣ (allRules P) (allComplete P) decRule)
-        where
-          shift : G.⟦ CYKF P ⟧c Der w ⊎ No (G.⟦ CYKF P ⟧c Der w) → DecMot (P , w)
-          shift (inl t) = inl (G.roll (G.fromC (CYKF P) w t))
-          shift (inr k) = inr λ d → k (G.toC (CYKF P) w (G.unroll d))
+      decStep =
+        dec-map (Layer P) (Deriv P) (rollD P) (unrollD P) w
+          (dec-⊕ᴰ (Rule P) (RuleG P) (allRules P) (allComplete P) w decRule)
 
     -- the löb step, as a named term of the right type -- projections
     -- only, no match on the index

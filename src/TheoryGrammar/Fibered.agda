@@ -200,6 +200,61 @@ canonicalPoint {σ = σ} M .split o m⃗ = m⃗ , Eq.refl
 canonicalPoint {σ = σ} M .parts-split o m⃗ = refl
 
 -- ==================================================================
+-- WHEN ⊗ˢ AND ⊗[ o ] AGREE.
+--
+-- `⊗ˢ` convolves over the SPLITTINGS; `⊗[ o ]` (Base.agda) convolves
+-- over the OPERATION, carrying `op o m⃗ Eq.≡ m`.  Programs are written
+-- against the first, `ChangeOfTheory` and `Equations` are stated at the
+-- second, and both `Instances/Nat/Length` and `Instances/Semimodule/
+-- Graded` had to write the translation by hand.  It belongs here, and
+-- the hypothesis it needs is exactly one the record does NOT have:
+--
+--     HONEST -- every splitting of `m` really does recompose to `m`.
+--
+-- `parts-split` is the converse (every tuple splits its own composite).
+-- Honesty is emphatically NOT derivable, and `Bags` is the counterexample
+-- the rest of this development already turns on: `Ilv u v w` does not
+-- imply `u ++ v ≡ w`, so an interleaving splitting recomposes to a
+-- PERMUTATION of `w`.  That is the whole reason a promodel is allowed to
+-- be strictly larger than the graph of its point.  So it stays a
+-- hypothesis -- `Representable` already takes it, under the name
+-- `unsplit`.
+-- ==================================================================
+
+Honest : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {Fib : Fibered σ ℓX ℓP}
+       → LaxPoint Fib → Type (ℓ-max ℓ (ℓ-max ℓX ℓP))
+Honest {σ = σ} {Fib = Fib} P =
+  (o : σ .ops) (m : Fib .carrier (σ .resultSort o)) (sp : Fib .Split o m)
+  → P .op o (Fib .parts o m sp) Eq.≡ m
+
+-- the equational presentation is the FREE honest choice: honesty there
+-- is just the proof component of a splitting, handed back
+canonicalHonest : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX)
+                → Honest (canonicalPoint M)
+canonicalHonest M o m sp = sp .snd
+
+module Bridge {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {Fib : Fibered σ ℓX ℓP}
+              (P : LaxPoint Fib) (hon : Honest P) where
+
+  open FibNotation Fib
+  open Notation ⌊ P ⌋ using (⊗[_])
+
+  module _ (o : σ .ops)
+           {A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a)} where
+
+    -- forward: read off the parts, and honesty supplies the equation
+    ⊗ˢ→⊗ : ⊗ˢ o A ⊢ ⊗[ o ] A
+    ⊗ˢ→⊗ m (sp , h) = Fib .parts o m sp , hon o m sp , h
+
+    -- backward: `split` supplies the splitting and `parts-split` moves
+    -- the payload onto it.  Matching `Eq.refl` is what makes the index a
+    -- variable, so nothing here transports along the OUTER equation.
+    ⊗→⊗ˢ : ⊗[ o ] A ⊢ ⊗ˢ o A
+    ⊗→⊗ˢ .(P .op o m⃗) (m⃗ , Eq.refl , h) =
+        P .split o m⃗
+      , λ a → subst (A a) (sym (λ κ → P .parts-split o m⃗ κ a)) (h a)
+
+-- ==================================================================
 -- DEFINITIONAL β/η FOR THE RESIDUAL.
 --
 -- `⊸ˢ` above still carries a `parts o m sp i ≡ x` component, so it has

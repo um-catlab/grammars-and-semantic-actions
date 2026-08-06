@@ -242,27 +242,19 @@ private
   isPropEqℕ : {x y : ℕ} → isProp (x Eq.≡ y)
   isPropEqℕ {x} {y} = subst isProp (Eq.PathPathEq {x = x} {y = y}) (isSetℕ x y)
 
-  -- The PathP analogue of `funExt`.  This is what makes the round trips
-  -- writable at all: an extended lambda cannot be compared with another
-  -- extended lambda at a VARIABLE, but checking a clause-list against an
-  -- expected type of the form `(b : Bool) → PathP … (f b) (g b)` splits
-  -- on the constructors, where both endpoints DO reduce.  Its own
-  -- endpoints are fine because `p i0 = x` holds definitionally for
-  -- `p : PathP A x y`.
-  funExtP : {X : Bool → I → Type₀}
-            {f : (b : Bool) → X b i0} {g : (b : Bool) → X b i1}
-          → ((b : Bool) → PathP (λ κ → X b κ) (f b) (g b))
-          → PathP (λ κ → (b : Bool) → X b κ) f g
-  funExtP h κ b = h b κ
-
-  -- `Bool` has no η, so a payload rebuilt slotwise is only
-  -- PROPOSITIONALLY the one it came from -- the tax CLAUDE.md records,
-  -- and the only reason these round trips are not `refl`.  Note it must
-  -- be spelled INLINE at each use: extended lambdas are identified
-  -- NOMINALLY, so a general `boolη` lemma produces a different term from
-  -- the one `⊗×-mk` built, and the two do not reduce against each other
-  -- at a variable.  `funExt` only ever needs the two constructor cases,
-  -- where both sides do reduce.
+  -- ON THE PAYLOAD PATHS.  `Bool` has no η, so a payload rebuilt
+  -- slotwise is only PROPOSITIONALLY the one it came from -- the tax
+  -- CLAUDE.md records, and the only reason these round trips are not
+  -- `refl`.  It must be discharged INLINE at each use: extended lambdas
+  -- are identified NOMINALLY, so a general `boolη`-style lemma produces
+  -- a different term from the one `⊗×-mk` built and the two do not
+  -- reduce against each other at a variable.
+  --
+  -- `funExt` escapes this, and note it is already the PathP form in
+  -- `Cubical.Foundations.Prelude` -- it takes `(x : A) → PathP (B x) …`
+  -- -- so it serves the moving-index slots too.  What makes it work is
+  -- that the clause-list is checked against the EXPECTED type, which
+  -- splits on the constructors, where both endpoints do reduce.
 
 distrib-Iso : (A B C : Gr) (pr : Precise A) (n : ℕ)
             → Iso ((A ⊗× (B ⊗₊ C)) n) (((A ⊗× B) ⊗₊ (A ⊗× C)) n)
@@ -276,7 +268,7 @@ distrib-Iso A B C pr n .Iso.inv = distribInv A B C pr n
 -- (`single`).
 distrib-Iso A B C pr n .Iso.sec ((u , v , t) , gg) =
   ΣPathP ( ΣPathP (up , ΣPathP (vp , isProp→PathP (λ _ → isPropSplitAdd) _ t))
-         , funExtP (λ { true → trueP ; false → falseP }) )
+         , funExt (λ { true → trueP ; false → falseP }) )
   where
     i₁ = gg true .fst .fst   ; p = gg true .fst .snd .fst
     e₁ = gg true .fst .snd .snd
@@ -300,7 +292,7 @@ distrib-Iso A B C pr n .Iso.sec ((u , v , t) , gg) =
 
     falseP : PathP (λ κ → (A ⊗× C) (vp κ)) (⊗×-mk Eq.refl a₁ c) (gg false)
     falseP = ΣPathP ( ΣPathP (same , ΣPathP (refl , isProp→PathP (λ _ → isPropEqℕ) _ e₂))
-                    , funExtP (λ { true  → isProp→PathP (λ κ → single pr (same κ)) a₁ a₂
+                    , funExt (λ { true  → isProp→PathP (λ κ → single pr (same κ)) a₁ a₂
                                  ; false → refl }) )
 
 -- distribInv ∘ distrib ≡ id.  Only ONE index moves here -- `p + q ≡ j`,
@@ -308,7 +300,7 @@ distrib-Iso A B C pr n .Iso.sec ((u , v , t) , gg) =
 -- reading both copies off the same slot.
 distrib-Iso A B C pr n .Iso.ret ((i , j , e) , h) =
   ΣPathP ( ΣPathP (refl , ΣPathP (jp , isProp→PathP (λ _ → isPropEqℕ) _ e))
-         , funExtP (λ { true → refl ; false → falseP }) )
+         , funExt (λ { true → refl ; false → falseP }) )
   where
     p = h false .fst .fst  ; q = h false .fst .snd .fst
     s = h false .fst .snd .snd
