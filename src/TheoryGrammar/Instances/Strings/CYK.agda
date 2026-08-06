@@ -90,10 +90,29 @@ module CYK (V : Type₀)
       alt (inr (Q , T , _)) =
         G.<⊗e appop (binSlot Q T) (≤binSlot Q T) (pr Q T)
 
--- every word is empty or not, internally
+-- PRIMITIVE (phase 1): a word with a first character is non-empty.
+-- The one place below that opens a splitting.
+charNE : (c : Char) → (⌈ c ∷ [] ⌉ ⊗' ⊤G) ⊢ NonEmpty
+charNE c w ((u , v , s) , h) = go (h true) s
+  where go : u Eq.≡ c ∷ [] → Split3 u v w → NonEmpty w
+        go Eq.refl s' = split3LenL s'
+
+-- DERIVED (phase 2): every word is empty or not.  Point-free, out of
+-- the decomposition axiom and the ⊕ rules.
 decNE : ⊤G ⊢ (NonEmpty ⊕ ⌈ [] ⌉)
-decNE []      _ = inr Eq.refl
-decNE (c ∷ w) _ = inl (suc-≤-suc zero-≤)
+decNE = ⊕-E isEmpty hasChar ∘g charCase
+  where
+    Out : Gr
+    Out = NonEmpty ⊕ ⌈ [] ⌉
+
+    isEmpty : ⌈ [] ⌉ ⊢ Out
+    isEmpty = ⊕-I₂
+
+    isNE : NonEmpty ⊢ Out
+    isNE = ⊕-I₁
+
+    hasChar : ⊕ᴰ Char (λ c → ⌈ c ∷ [] ⌉ ⊗' ⊤G) ⊢ Out
+    hasChar = ⊕ᴰ-E (λ c → isNE ∘g charNE c)
 
 module Parser (V : Type₀)
               (unitR : V → Char → Type₀)
