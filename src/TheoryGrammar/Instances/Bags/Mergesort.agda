@@ -16,7 +16,7 @@ open import Cubical.Data.Nat.Order
 open import Cubical.Data.List
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Substrate
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
 
@@ -99,3 +99,34 @@ module MSort (le : A → A → Bool) where
 
   mergesort : Bag → Bag
   mergesort m = hyloC mfGuarded mcoalg malg (tt , m) tt
+
+-- ==================================================================
+-- MERGE IS NOT YET INTERNAL, and what it would take.
+--
+-- `merge : Bag → Bag → Bag` above is phase-1 code -- an Agda function
+-- on carriers.  Internally it should be
+--
+--     mergeG : (Bagged ⊗ Bagged) ⊢ Bagged      Bagged m = Σ[out] Perm out m
+--
+-- and then permutation-correctness is FREE: `_⊢_` preserves the index
+-- and `⊗ˢ` splits it, so a term of that type cannot invent or drop
+-- elements.
+--
+-- The obstruction is not the type, it is the permutation theory.  The
+-- term needs `Perm (merge a b) w` from `Perm a u`, `Perm b v`,
+-- `Ilv u v w`, and `merge a b` is NOT `a ++ b` -- it is a reordering of
+-- it.  So three lemmas are missing:
+--
+--   permTrans   : Perm p q → Perm q r → Perm p r
+--   permInsert  : Ilv (x ∷ []) v w → Perm w c
+--               → Σ[ v' ] (Perm v v' × Ilv (x ∷ []) v' c)
+--   mergePerm   : (a b : Bag) → Perm (merge a b) (a ++ b)
+--
+-- `permInsert` is the load-bearing one and is the usual fiddly part of
+-- any permutation development.  With it, `mergeG` is three lines.
+--
+-- Note the CONCATENATION version needs none of this:
+--   appendG (…) = (a ++ b , permMerge pa pb s)
+-- is immediate.  It is `merge`'s order-preservation, not its
+-- bag-preservation, that costs.
+-- ==================================================================
