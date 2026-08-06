@@ -1,12 +1,28 @@
-# Porting `Grammar/` and `Term/` to be generic in the theory
+# Porting `Grammar/` to be generic in the theory
 
-Measured, not estimated. Counts from the tree at the time of writing:
-`Grammar/` is 157 files, of which **18 mention `_++_`**; `Term/` is 3
-files, of which **0** do.
+File-by-file, measured. `Grammar/` is **157 files**.
+
+| axis | count | share |
+|---|---|---|
+| mention `⊗` | **57** | 36% |
+| purely additive (no `⊗` anywhere) | **100** | 64% |
+| import `Grammar.String` directly | 21 | 13% |
+| mention `Splitting` | 13 | 8% |
+| mention `Nullable` | 8 | 5% |
+
+**Correction to the first pass of this audit.** It reported "18 files use
+`_++_`" and treated that as the porting cost. That was the wrong axis:
+`++` only catches files doing splitting *arithmetic*, not files that
+merely *use* the tensor. The real number is **57**, and `LinearProduct/`
+itself does not appear in the `++` count because it defines `⊗` rather
+than reasoning about lengths. So the multiplicative surface is three
+times larger than first reported — though still a minority of the tree.
+
+`Term/` is 3 files, none of which mention `⊗` or `++`; it ports whole.
 
 ## Three buckets
 
-### 1. Ports verbatim — the additive layer and all of `Term/`
+### 1. Ports verbatim — the additive layer and all of `Term/` (100 files)
 
 `&`, `⊕`, `⊤`, `⊥`, `⇒`, `⊕ᴰ`, `&ᴰ`, `Lift`, `Maybe`, `Negation`,
 `PropositionalTruncation`, `Equalizer`, `Limits`, `Subgrammar`,
@@ -22,7 +38,7 @@ All of `Term/` is in this bucket. `Term/Base` (`id`, `_∘g_`, `isMono`,
 `Term/Category` builds the monoidal category, and only its *monoidal*
 half needs bucket 2 — the underlying category is verbatim.
 
-### 2. Has an analogue but changes shape — the 18 `++` files
+### 2. Has an analogue but changes shape — the 57 `⊗` files
 
 These do not port one-to-one, because the thing they were generic over
 (one binary `⊗`) becomes indexed by the operations of the theory.
@@ -37,7 +53,7 @@ These do not port one-to-one, because the thing they were generic over
 | `Par/*` | one per operation, dual to `⊗ˢ` |
 | `Derivative/*` | needs a *unary* operation to differentiate along; generic only for signatures that have one |
 | `Later/InfixOrder`, `SuffixOrder` | needs a degree/grading homomorphism to ℕ, which not every theory has |
-| `Yoneda/Reflect` | `⌈⌉-UP` — the Yoneda lemma for the substrate, already generic in `Rules.agda` |
+| `Yoneda/Reflect` | `⌈⌉-UP` — the Yoneda lemma for the promodel, already generic in `Rules.agda` |
 | `SequentialUnambiguity/Properties`, `Greedy/Automata` | need equidivisibility (Levi's lemma); a genuine extra hypothesis |
 
 The important structural change: **the assoc/unit isomorphisms stop
@@ -50,7 +66,7 @@ condition.
 ### 3. Does not port — string-specific
 
 `String/*`, `External/String/*`, `RegularExpression/*`, `Greedy/*`,
-`Coinductive/*`. These are about a particular substrate. The
+`Coinductive/*`. These are about a particular promodel. The
 *replacements* are generic facts, per the brief:
 
 - `⊤ ≅ String` is not an axiom about strings. It says the carrier is the
@@ -87,7 +103,7 @@ Split : (o) → carrier (resultSort o) → Type
 parts : (o) (m) → Split o m → (a : arities o) → carrier (sortOf o a)
 ```
 
-See `TheoryGrammar/Substrate.agda`. Recommendation for the existing
+See `TheoryGrammar/Fibered.agda`. Recommendation for the existing
 tree: change `Splitting` to the inductive family. Blast radius is the 18
 files above; the payoff is that `AsPath` probably stops having a reason
 to exist.
@@ -98,10 +114,72 @@ to exist.
   index — then `⊤ ≅ μ(shape)` as the generic replacement for `⊤ ≅ String`.
 - The `⊗ ⊣ ⊸` adjunction as a single `Iso`. Both sides now have
   definitional β/η *separately*; making them definitionally inverse to
-  **each other** additionally requires the substrate's unfocused and
+  **each other** additionally requires the promodel's unfocused and
   focused splittings to be definitionally inverse. That holds for
   strings but is not automatic, and is the right place to state it as a
-  substrate law.
-- Port `Grammar/Inductive/` (μ, the SPFunctor) over `Substrate`; the
+  promodel law.
+- Port `Grammar/Inductive/` (μ, the SPFunctor) over `Fibered`; the
   `NO_POSITIVITY_CHECK` there is an opacity artefact, not slime, and the
   container presentation removes it.
+
+## Coverage: what `TheoryGrammar/` already has
+
+Not a plan — a measurement against the 21 modules currently in
+`TheoryGrammar/`.
+
+| `Grammar/` group | files | covered by | state |
+|---|---|---|---|
+| Sum, Product, Top, Bottom, Lift, Maybe, Negation, PropTrunc, Equalizer, Limits, HLevels, Properties, Function, Equivalence | ~60 | `Rules`, `RulesFib` | **done** |
+| Distributivity | 1 | `Distributive` | **done** |
+| LinearProduct | 6 | `Fibered` (`⊗ˢ`) | **done** |
+| LinearFunction | 2 | `Fibered` (`⊸ᶠ`), `CanonicalFocus` | **done** |
+| Epsilon, Literal | 13 | `Representable` | **done** |
+| Inductive, KleeneStar | 11 | `Inductive` (generic `μ`) | **done** |
+| Par | 2 | `Par` (`Allˢ`) | **done** |
+| SemanticAction | 2 | `SemanticAction` | **done** |
+| Yoneda | 2 | `Representable` (`⌈⌉-UP`) | **done** |
+| Later | 7 | `Graded` (`▷`, `löb`, `hyloC`) | **partial** — `Box`, `Infix` not ported |
+| Subgrammar | 2 | — | **not started**, but additive; should be easy |
+| **Derivative** | 3 | — | **not started**; needs a unary operation |
+| **SequentialUnambiguity** | 5 | — | **not started**; needs Levi |
+| **Greedy** | 2 | — | **not started**; needs Levi |
+| **RegularExpression** | 2 | — | **not started**; needs Derivative first |
+| **Coinductive** | 4 | — | **not started**; no `ν` in the generic layer |
+| String, External | 12 | — | *replaced*, not ported |
+
+So the additive half is done, the multiplicative core is done, and what
+remains is **18 files in five groups**, each blocked on one identifiable
+hypothesis rather than on volume.
+
+## The remaining work, in dependency order
+
+1. **`Derivative` (3 files).** Unblocks `RegularExpression`, and is the
+   third constructor for `⊗-EM` (`Decidable/Rule.agda`) — the one that
+   decides a tensor with *no search*, since the `length w + 1`
+   decompositions are the unfolding of a two-case law. Needs a unary
+   operation to differentiate along; exists for strings (`cons c`) and
+   bags (`add x`), and `δ` does **not** lift to bags because Levi fails.
+2. **`SequentialUnambiguity` + `Greedy` (7 files).** Both need
+   equidivisibility (Levi's lemma), which is a genuine property of the
+   theory — true for free monoids, false for commutative ones. It should
+   be a named hypothesis on the promodel, not ambient.
+3. **`Coinductive` (4 files).** Needs a greatest-fixed-point counterpart
+   to `Inductive`'s `μ`. Not blocked on anything but volume.
+4. **`Subgrammar` (2 files).** Additive; nothing in the way.
+5. **`Later/{Box,Infix}`.** `Infix` is the two-sided order — the CYK
+   shape — and is the one worth having, since it is what the bag
+   instance would want.
+
+Three things are *stated but unbuilt*, and they matter more than any of
+the above:
+
+- `⊤ ≅ μ(shape)` as the generic replacement for `⊤ ≅ String`. The
+  decomposition axiom exists per-instance (`charCase`, `bagCase`); what
+  is missing is the generic `μ` of the shape functor, forded so
+  `resultSort o` is not a stuck index.
+- `⊗ ⊣ ⊸` as a single `Iso`. Both sides have definitional β/η
+  *separately*; making them definitionally inverse to each other needs
+  the promodel's focused and unfocused splittings to be definitionally
+  inverse — true for strings, not automatic.
+- `permTrans` / `permInsert` / `mergePerm`, which is what stands between
+  `merge : Bag → Bag → Bag` and an internal `Bagged ⊗ Bagged ⊢ Bagged`.
