@@ -50,25 +50,23 @@ binR _   _   _   = ⊥
 
 open Parser NT unitR binR
 
--- the two leaves ...
+-- The two leaves and the node, built from the DESCRIPTION'S intro
+-- rules (`leaf`, `node`).  Nothing here mentions `sup`, shapes,
+-- positions, or absurd position patterns -- that is phase-1 vocabulary
+-- and an example has no business with it.
 leafA : Deriv ntA (true ∷ [])
-leafA = G.sup (inl (true , Eq.refl) , lift Eq.refl) λ ()
+leafA = leaf true Eq.refl Eq.refl
 
 leafB : Deriv ntB (false ∷ [])
-leafB = G.sup (inl (false , Eq.refl) , lift Eq.refl) λ ()
+leafB = leaf false Eq.refl Eq.refl
 
--- ... and a parse tree for "ab" from S.  The type is a GRAMMAR, so the
--- word it parses is in the index and cannot drift from the tree.
+-- a parse tree for "ab" from S.  The type is a GRAMMAR, so the word it
+-- parses is in the index and cannot drift from the tree.
 parseAB : Deriv ntS (true ∷ false ∷ [])
-parseAB = G.sup
-  ( inr (ntA , ntB , tt)
-  , (((true ∷ []) , (false ∷ []) , cons nil)
-    , λ { true  → λ { true → tt* ; false → lift (literalNN true  _ Eq.refl) }
-        ; false → λ { true → tt* ; false → lift (literalNN false _ Eq.refl) } }) )
-  λ { (true  , (true  , _)) → leafA
-    ; (false , (true  , _)) → leafB
-    ; (true  , (false , ()))
-    ; (false , (false , ())) }
+parseAB = node tt (cons nil)
+               (literalNN true  _ Eq.refl)
+               (literalNN false _ Eq.refl)
+               leafA leafB
 
 -- ==================================================================
 -- ... and the parser, as a term.
