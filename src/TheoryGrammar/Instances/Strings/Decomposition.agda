@@ -58,3 +58,39 @@ decompGuarded tt = <⊕e Bool decompAlt alt
     alt : (b : Bool) → Guarded (decompAlt b)
     alt true  = <⌜⌝ ⌈ [] ⌉
     alt false = <⊕e Char _ (λ c → ⊗-guard appop (decompSlot c) (go c))
+
+-- ================================================================
+-- ... and it is COMPLETE, with a POSITIVE complement on both sides.
+--
+-- `charCase` was already total.  What is added here is the exclusion --
+-- a word cannot be both empty and headed by a character -- which makes
+-- it a `Complete` view in the sense of `TheoryGrammar.View`.
+--
+-- The refinement over `Dec⟨ ⌈ [] ⌉ ⟩` is not logical: `¬G ⌈ [] ⌉` is a
+-- grammar and `contra` excludes it just as well.  It is descriptive.
+-- Rejecting `⌈ [] ⌉` here HANDS BACK `NonTrivial` -- the character and
+-- the rest of the word -- rather than a function into `⊥`, and that is
+-- what the parser downstream actually needs.  `certifies` maps this
+-- back to the negative reading, so nothing is lost either way.
+-- ================================================================
+
+-- PRIMITIVE, and the only content of the exclusion: the empty word is
+-- trivial.  A splitting of `[]` cannot have a one-character left part.
+¬NT[] : NonTrivial [] → E.⊥
+¬NT[] (c , (u , v , s) , h) = go (h true) s
+  where go : u Eq.≡ c ∷ [] → Split3 u v [] → E.⊥
+        go Eq.refl ()
+
+EmptyOr : Bool → Gr
+EmptyOr b = if b then ⌈ [] ⌉ else NonTrivial
+
+emptyOrNot : Complete Bool EmptyOr
+emptyOrNot .total =
+  ⊕-E (⊕ᴰ-I Bool {A = EmptyOr} true) (⊕ᴰ-I Bool {A = EmptyOr} false)
+  ∘g charCase
+emptyOrNot .exclusive true  true  d = λ _ _ → E.rec (d refl)
+emptyOrNot .exclusive false false d = λ _ _ → E.rec (d refl)
+emptyOrNot .exclusive true  false _ =
+  λ { .([]) (Eq.refl , nt) → E.rec (¬NT[] nt) }
+emptyOrNot .exclusive false true  _ =
+  λ { .([]) (nt , Eq.refl) → E.rec (¬NT[] nt) }

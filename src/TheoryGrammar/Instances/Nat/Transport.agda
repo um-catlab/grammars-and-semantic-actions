@@ -105,3 +105,36 @@ private
 
 dyckLen-unroll : DyckLen ⊢ DyckLenBody
 dyckLen-unroll = ⊕-E ⊕-I₁ (⊕-I₂ ∘g outer) ∘g pullTerm Sp.dyck-unroll
+
+-- ==================================================================
+-- ... AND BACK.  This is the direction that needs `lengthReflects`:
+-- `pull⊗ˢ'⁻` is built from `pull⊗⁻`, which exists exactly because
+-- `length` is Conduché.  Over abelianisation everything above this line
+-- still typechecks and everything below it does not -- which is the
+-- sharpest way to see what "reflects splittings" is doing.
+-- ==================================================================
+
+private
+  inner⁻ : (pull Sp.x ⊗' pull Sp.D) ⊢ pull (Sp.x Sp.⊗' Sp.D)
+  inner⁻ = pull⊗ˢ'⁻ Sp.x Sp.D
+
+  middle⁻ : (pull Sp.D ⊗' pull Sp.x ⊗' pull Sp.D)
+          ⊢ pull (Sp.D Sp.⊗' Sp.x Sp.⊗' Sp.D)
+  middle⁻ =
+    pull⊗ˢ'⁻ Sp.D (Sp.x Sp.⊗' Sp.D)
+    ∘g ⊗ˢ-map appop
+         {A = λ b → if b then pull Sp.D else (pull Sp.x ⊗' pull Sp.D)}
+         {B = λ b → if b then pull Sp.D else pull (Sp.x Sp.⊗' Sp.D)}
+         (λ { true → idg ; false → inner⁻ })
+
+  outer⁻ : (pull Sp.x ⊗' pull Sp.D ⊗' pull Sp.x ⊗' pull Sp.D)
+         ⊢ pull (Sp.x Sp.⊗' Sp.D Sp.⊗' Sp.x Sp.⊗' Sp.D)
+  outer⁻ =
+    pull⊗ˢ'⁻ Sp.x (Sp.D Sp.⊗' Sp.x Sp.⊗' Sp.D)
+    ∘g ⊗ˢ-map appop
+         {A = λ b → if b then pull Sp.x else (pull Sp.D ⊗' pull Sp.x ⊗' pull Sp.D)}
+         {B = λ b → if b then pull Sp.x else pull (Sp.D Sp.⊗' Sp.x Sp.⊗' Sp.D)}
+         (λ { true → idg ; false → middle⁻ })
+
+dyckLen-roll : DyckLenBody ⊢ DyckLen
+dyckLen-roll = pullTerm Sp.dyck-roll ∘g ⊕-E ⊕-I₁ (⊕-I₂ ∘g outer⁻)

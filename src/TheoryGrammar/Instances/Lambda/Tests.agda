@@ -28,6 +28,7 @@ open import TheoryGrammar.Instances.Lambda.Passes.Decide
 open import TheoryGrammar.Instances.Lambda.Initial
 open Lambda ℕ discreteℕ
 open Decide ℕ discreteℕ
+open Readable ℕ using (opCase; completeCase; certifies)
 open Initial ℕ using (size!)
 
 idT open' bigger shadow : Raw
@@ -178,3 +179,81 @@ _ : passes (run (size! []) at
              ∷ bigger            ↦ 6
              ∷ [] ))
 _ = refl
+
+-- ==================================================================
+-- THE REJECTIONS, AS THEOREMS -- and the CONTRAST that makes the point.
+--
+-- `refute` is uniform in the error grammar, so it applies to every
+-- program above.  What comes back depends entirely on which `E` the
+-- program was written at, and that is the whole content of the
+-- `Result E A` framing:
+--
+--     E = ¬G A   a refutation `A m → ⊥`   -- a theorem
+--     E = ⊤G     `tt`                     -- nothing at all
+--
+-- Until they are put through `refute` the two kinds of negative test
+-- are indistinguishable; afterwards one is a proof and the other is a
+-- unit.  See the demonstration at the bottom.
+-- ==================================================================
+
+noClosed : (t : Raw) → run closed! t ≡ false → (¬G (Scoped [])) t
+noClosed = refute (Scoped []) DecCl closed?
+
+-- `λx. y` is not merely unproved closed -- it has NO closing derivation
+no-closed-open : (¬G (Scoped [])) open'
+no-closed-open = noClosed open' refl
+
+-- ... and the positive side is the derivation itself, not a `true`
+yes-closed-idT : Scoped [] idT
+yes-closed-idT = witness (Scoped []) DecCl closed? idT refl
+
+-- scope membership: `0` is in NO scope when the scope is empty
+no-in-nil : (¬G (In [])) 0
+no-in-nil = refute (In []) (¬G (In [])) (dec-In []) 0 refl
+
+no-in-9 : (¬G (In (7 ∷ 8 ∷ []))) 9
+no-in-9 = refute (In (7 ∷ 8 ∷ [])) (¬G (In (7 ∷ 8 ∷ []))) (dec-In (7 ∷ 8 ∷ [])) 9
+                 refl
+
+-- unique readability, negatively: `var 0` is not an application
+no-app-var : (¬G (⊗ˢ appOp (λ _ → ⊤G))) (var 0)
+no-app-var = refute (⊗ˢ appOp (λ _ → ⊤G)) (¬G (⊗ˢ appOp (λ _ → ⊤G)))
+                    (⊗-decSplit appOp) (var 0) refl
+
+-- names: `3` is not `4`, internally
+no-name : (¬G (⌈_⌉ {s = nm} 3)) 4
+no-name = refute (⌈_⌉ {s = nm} 3) (¬G (⌈_⌉ {s = nm} 3)) (dec-⌈⌉ 3) 4 refl
+
+-- ==================================================================
+-- COMPLETENESS WITH A POSITIVE COMPLEMENT.
+--
+-- `⊗-decSplit o` already decides each operation, at `¬G (⊗ˢ o ⊤)`.
+-- `opCase` (Lambda.Readable) says the same thing better: every raw term
+-- is an o-composite for EXACTLY ONE `o`, so rejecting `appOp` hands back
+-- WHICH operation it was instead of a function into `⊥`.
+--
+-- `certifies` maps the positive reading back to the negative one, so
+-- the two agree -- which is `largest` at work: `¬G` is the largest
+-- complement, and `opCase`'s branches factor through it.
+-- ==================================================================
+
+-- reading a term by its operation is now one `⊕ᴰ` elimination
+opName : ⊤G ⊢ Δ ℕ
+opName = completeCase opCase λ { varOp → pureA ℕ 0
+                               ; appOp → pureA ℕ 1
+                               ; lamOp → pureA ℕ 2 }
+
+_ : passes (run opName at
+             ( (var 0)       ↦ 0
+             ∷ (app idT idT) ↦ 1
+             ∷ idT           ↦ 2
+             ∷ [] ))
+_ = refl
+
+-- the positive certificate: being a lambda REFUTES being an application
+lam-not-app : (⊗ˢ lamOp (λ _ → ⊤G)) ⊢ ¬G (⊗ˢ appOp (λ _ → ⊤G))
+lam-not-app = certifies opCase lamOp appOp (λ ())
+
+-- ... and it agrees with the decision, on the term `⊗-decSplit` refuted
+same-refutation : (¬G (⊗ˢ appOp (λ _ → ⊤G))) idT
+same-refutation = lam-not-app idT (mkLam 0 (var 0) , λ _ → tt)

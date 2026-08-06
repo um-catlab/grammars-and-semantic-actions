@@ -234,3 +234,52 @@ _ = refl
 
 _ : passes (run (isOp! baseOp) at (o ↦ true ∷ []))
 _ = refl
+
+-- ==================================================================
+-- THE REJECTIONS, AS THEOREMS.
+--
+-- `refute` turns each negative observation into the refutation the
+-- decision was carrying: `Syn [] t → ⊥` says the term has NO type in
+-- the empty context, which is what "ill typed" is supposed to mean.  A
+-- `≡ false` on its own only says the checker returned no.
+-- ==================================================================
+
+noSyn : (t : Raw) → run infers! t ≡ false → (¬G (Syn [])) t
+noSyn = refute (Syn []) (¬G (Syn [])) closed-infer?
+
+noChk : (C : Ty) (t : Raw) → run (checks! C) t ≡ false → (¬G (Check [] C)) t
+noChk C = refute (Check [] C) (¬G (Check [] C)) (closed-check? C)
+
+-- MODE DISCIPLINE, as a theorem in both directions: a bare lambda has
+-- no synthesised type at all ...
+no-syn-bare : (¬G (Syn [])) bare
+no-syn-bare = noSyn bare refl
+
+-- ... but it does CHECK at the right type, and at no other
+yes-chk-bare : Check [] (o ⇒ᵗ o) bare
+yes-chk-bare = witness (Check [] (o ⇒ᵗ o)) (¬G (Check [] (o ⇒ᵗ o)))
+                       (closed-check? (o ⇒ᵗ o)) bare refl
+
+no-chk-bare-o : (¬G (Check [] o)) bare
+no-chk-bare-o = noChk o bare refl
+
+no-chk-bare-hi : (¬G (Check [] ((o ⇒ᵗ o) ⇒ᵗ o))) bare
+no-chk-bare-hi = noChk ((o ⇒ᵗ o) ⇒ᵗ o) bare refl
+
+-- ILL TYPED, genuinely: no type exists, rather than none was found
+no-syn-badArg : (¬G (Syn [])) badArg      -- o expected, o→o given
+no-syn-badArg = noSyn badArg refl
+
+no-syn-badAnn : (¬G (Syn [])) badAnn      -- a lambda at a base type
+no-syn-badAnn = noSyn badAnn refl
+
+no-syn-freeVar : (¬G (Syn [])) freeVar    -- unbound
+no-syn-freeVar = noSyn freeVar refl
+
+-- the switch rule really does compare types, and the mismatch is refuted
+no-chk-selfApp : (¬G (Check [] o)) selfApp
+no-chk-selfApp = noChk o selfApp refl
+
+-- ... and the well-typed side is a witness, not a report
+yes-syn-idAnn : Syn [] idAnn
+yes-syn-idAnn = witness (Syn []) (¬G (Syn [])) closed-infer? idAnn refl

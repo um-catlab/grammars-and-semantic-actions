@@ -136,3 +136,23 @@ _ : passes (run (subScoped! 0 (var 1) (1 ∷ [])) at
              ∷ (lam 2 (var 0))  ↦ true
              ∷ [] ))
 _ = refl
+
+-- ==================================================================
+-- The pass rejections, as theorems: an unscoped term has NO closing
+-- derivation, so the pass is not merely undefined on it.
+-- ==================================================================
+
+noClosed : (t : Raw) → run (okA (Scoped []) DecCl ∘g closed?) t ≡ false
+         → (¬G (Scoped [])) t
+noClosed = refute (Scoped []) DecCl closed?
+
+no-closed-open : (¬G (Scoped [])) (lam 0 (var 1))
+no-closed-open = noClosed (lam 0 (var 1)) refl
+
+-- substitution, negatively: no substitution instance of `var 2` is
+-- scoped in `1 ∷ []`, which is a fact about the TRANSPORTED decision
+module SP = Along (Inl.subCM 0 (var 1))
+
+no-sub : (SP.pull (¬G (Scoped (1 ∷ [])))) (var 2)
+no-sub = refute (SP.pull (Scoped (1 ∷ []))) (SP.pull (¬G (Scoped (1 ∷ []))))
+                (Inl.subScoped? 0 (var 1) (1 ∷ [])) (var 2) refl

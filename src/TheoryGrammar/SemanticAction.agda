@@ -37,7 +37,8 @@
 module TheoryGrammar.SemanticAction where
 
 open import Cubical.Foundations.Prelude
-open import Cubical.Data.Bool using (Bool; true; false)
+open import Cubical.Data.Bool using (Bool; true; false; true≢false; false≢true)
+open import Cubical.Data.Empty using () renaming (rec to ⊥rec)
 open import Cubical.Data.List using (List; []; _∷_; map)
 open import Cubical.Data.Maybe using (Maybe; just; nothing)
 open import Cubical.Data.Sigma
@@ -50,6 +51,7 @@ open import TheoryGrammar.Rules
 open import TheoryGrammar.RulesFib
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Distributive
+open import TheoryGrammar.Decidable.Additive
 open import TheoryGrammar.Result
 
 private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓB ℓC ℓE ℓY ℓZ ℓW : Level
@@ -104,6 +106,7 @@ module Act {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Car : S → Type ℓX) w
   open CarrierNotation Car
   open RulesCarrier Car
   open Dist Car using (⊕ᴰ-&-in)
+  open DecAdd Car using (⊕-E-atᴰ)
   open Res Car using (Result; ok; err; caseR; MaybeG; toMaybe)
 
   private variable
@@ -267,6 +270,40 @@ module Act {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Car : S → Type ℓX) w
   runΔ : (X : Type ℓY) (E : TheoryTy ℓE s)
        → ⊤G ⊢ Result E (Δ {s = s} X) → Car s → Maybe X
   runΔ X E p = runResult (Δ X) E p idA
+
+  -- ================================================================
+  -- A NEGATIVE OBSERVATION IS A REFUTATION.
+  --
+  -- `okA` reads a result as a Bool.  If that Bool is `false` the term
+  -- must have taken its ERROR branch -- so the `≡ false` of a test is
+  -- not merely a statement that the algorithm computes, it hands back
+  -- whatever `E` carries.  Dually for `true` and `A`.
+  --
+  -- This is uniform in `E`, and that is what makes the point: at
+  -- `E = ¬G A` a negative test yields a REFUTATION `A m → ⊥`, a theorem
+  -- about the language; at `E = ⊤G` it yields `tt`, which says nothing.
+  -- The two shapes of test look alike until they are put through this.
+  -- ================================================================
+
+  refute : (A : TheoryTy ℓA s) (E : TheoryTy ℓE s) (p : ⊤G ⊢ Result E A)
+           (m : Car s)
+         → run (okA A E ∘⊢ p) m ≡ false → E m
+  refute A E p m =
+    ⊕-E-atᴰ A E m
+      {Z = λ d → (okA A E m d .fst) ≡ false → E m}
+      (λ _ eq → ⊥rec (true≢false eq))
+      (λ k _  → k)
+      (p m tt)
+
+  witness : (A : TheoryTy ℓA s) (E : TheoryTy ℓE s) (p : ⊤G ⊢ Result E A)
+            (m : Car s)
+          → run (okA A E ∘⊢ p) m ≡ true → A m
+  witness A E p m =
+    ⊕-E-atᴰ A E m
+      {Z = λ d → (okA A E m d .fst) ≡ true → A m}
+      (λ x _  → x)
+      (λ _ eq → ⊥rec (false≢true eq))
+      (p m tt)
 
   -- ... and with the failure observed as well
   eitherA : (A : TheoryTy ℓA s) (E : TheoryTy ℓE s)

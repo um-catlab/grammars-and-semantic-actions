@@ -95,6 +95,8 @@ open import Cubical.Data.Sum using (_⊎_; inl; inr)
 open import Cubical.Data.Unit
 open import Cubical.Data.Nat
 open import Cubical.Data.Nat.Order
+open import Cubical.Data.Nat.Mod
+open import Cubical.Relation.Nullary using (Dec; yes; no; ¬_)
 open import Cubical.Data.List
 open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
@@ -289,9 +291,126 @@ NoSmall→Above ns p pr e t = ns p e t (pr .fst)
   valued algebra, and the worked parse at the bottom of this file -- is
   independent of this hole.
 -}
+-- ==================================================================
+-- THE ONE COMPUTATION.  Decidable divisibility, and the least divisor
+-- ≥ 2 by bounded search.  All arithmetic; nothing here is about the
+-- calculus, which is exactly why it sat apart from everything else.
+-- ==================================================================
+
+private
+  nzPlus2 : (j : ℕ) → NonZero (j + 2)
+  nzPlus2 zero    = tt
+  nzPlus2 (suc j) = tt
+
+  nz2≤ : {d : ℕ} → 2 ≤ d → NonZero d
+  nz2≤ (j , p) = subst NonZero p (nzPlus2 j)
+
+  -- a cofactor of something ≥ 2 cannot be 0
+  nzCofactor : {a b c : ℕ} → Times a b c → 2 ≤ c → NonZero b
+  nzCofactor {a} {zero}  t 2c =
+    E.rec (¬-<-zero (subst (2 ≤_) (sym (timesPath t) ∙ ·-comm a 0) 2c))
+  nzCofactor {a} {suc b} t 2c = tt
+
+  -- (c·f = e) and (d·e = n)  ⟹  c·(f·d) = n.  This is step (iv)/(v) of
+  -- the plan: a factor of the COFACTOR is a factor of the whole.
+  timesAssoc : {c f e d n : ℕ} → Times c f e → Times d e n → Times c (f · d) n
+  timesAssoc {c} {f} {e} {d} {n} tcf tde =
+    subst (Times c (f · d)) pf (timesAll c (f · d))
+    where
+      pf : c · (f · d) ≡ n
+      pf = ·-assoc c f d ∙ cong (_· d) (timesPath tcf)
+         ∙ ·-comm e d ∙ timesPath tde
+
+  -- DECIDABLE DIVISIBILITY, straight from the division algorithm.  The
+  -- refutation is the interesting half: if `d` did divide `n` then
+  -- `n mod d` would be `(e · d) mod d`, which is 0.
+  divides? : (d n : ℕ) → Dec (Σ[ e ∈ ℕ ] Times d e n)
+  divides? zero n with discreteℕ n 0
+  ... | yes p = yes (0 , subst (Times 0 0) (sym p) tzero)
+  ... | no ¬p = no λ { (e , tzero) → ¬p refl }
+  divides? (suc d') n with discreteℕ (n mod suc d') 0
+  ... | yes r0 =
+    yes ( quotient n / suc d'
+        , subst (Times (suc d') (quotient n / suc d'))
+                ( cong (_+ (suc d' · (quotient n / suc d'))) (sym r0)
+                ∙ ≡remainder+quotient (suc d') n )
+                (timesAll (suc d') (quotient n / suc d')) )
+  ... | no ¬r0 =
+    no λ { (e , t) → ¬r0 ( cong (_mod suc d') (sym (timesPath t))
+                         ∙ cong (_mod suc d') (·-comm (suc d') e)
+                         ∙ zero-charac-gen (suc d') e ) }
+
+  -- The least factor ≥ 2, with its minimality certificate.  Minimality
+  -- is what makes the factor PRIME without any theory of primes, and
+  -- what re-establishes `NoSmall` on the cofactor.
+  record LF (n : ℕ) : Type₀ where
+    constructor mkLF
+    field
+      lfd lfe : ℕ
+      lf2≤    : 2 ≤ lfd
+      lfT     : Times lfd lfe n
+      lfLeast : (c f : ℕ) → Times c f n → 2 ≤ c → lfd ≤ c
+
+  -- Linear search upward from `j`, carrying "nothing in [2,j) divides n".
+  -- The fuel is bounded by `n`, and when it runs out `j ≡ n`, which is
+  -- fine because `n` divides itself.
+  search : (n j : ℕ) → 2 ≤ n → 2 ≤ j
+         → ((c f : ℕ) → Times c f n → 2 ≤ c → j ≤ c)
+         → (fuel : ℕ) → n ≤ j + fuel → LF n
+  search n j 2n 2j inv zero le =
+    mkLF n 1 2n (times1R n) (λ c f t 2c → subst (_≤ c) j≡n (inv c f t 2c))
+    where
+      j≡n : j ≡ n
+      j≡n = ≤-antisym (inv n 1 (times1R n) 2n) (subst (n ≤_) (+-zero j) le)
+  search n j 2n 2j inv (suc fuel) le with divides? j n
+  ... | yes (e , t) = mkLF j e 2j t inv
+  ... | no ¬d =
+    search n (suc j) 2n (≤-suc 2j) inv' fuel (subst (n ≤_) (+-suc j fuel) le)
+    where
+      inv' : (c f : ℕ) → Times c f n → 2 ≤ c → suc j ≤ c
+      inv' c f t 2c with ≤-split (inv c f t 2c)
+      ... | inl j<c = j<c
+      ... | inr j≡c = E.rec (¬d (f , subst (λ z → Times z f n) (sym j≡c) t))
+
+  leastFactor : (n : ℕ) → 2 ≤ n → LF n
+  leastFactor n 2n =
+    search n 2 2n ≤-refl (λ c f t 2c → 2c) n (≤-suc (≤-suc ≤-refl))
+
+-- ==================================================================
+-- ... and the primitive itself.  Matching on the carrier is what makes
+-- this phase 1; every consumer below is a composite of combinators.
+-- ==================================================================
+
 lpf : (k : ℕ)
     → NoSmall k ⊢ (δ ⊕ ⊕ᴰ (P≥ k) (λ pp → ⌈ pv pp ⌉ ⊗' NoSmall (val (pv pp))))
-lpf k = {!!}
+lpf k (zero , ()) ns
+lpf k (suc zero , tt) ns = inl (tt , λ ())
+lpf k (suc (suc m) , tt) ns = inr (pp , payload)
+  where
+    N : ℕ
+    N = suc (suc m)
+
+    2≤N : 2 ≤ N
+    2≤N = suc-≤-suc (suc-≤-suc zero-≤)
+
+    L : LF N
+    L = leastFactor N 2≤N
+
+    dp ep : ℕ₊
+    dp = LF.lfd L , nz2≤ (LF.lf2≤ L)
+    ep = LF.lfe L , nzCofactor (LF.lfT L) 2≤N
+
+    -- (iii) the least factor is ≥ k, straight from the invariant coming in
+    pp : P≥ k
+    pp = dp , (LF.lf2≤ L , ns dp ep (LF.lfT L) (LF.lf2≤ L))
+
+    -- (v) the cofactor inherits the invariant, at the sharper bound `d`
+    nsE : NoSmall (LF.lfd L) ep
+    nsE c f tcf 2c =
+      LF.lfLeast L (val c) (val f · LF.lfd L) (timesAssoc tcf (LF.lfT L)) 2c
+
+    payload : (⌈ dp ⌉ ⊗' NoSmall (LF.lfd L)) (suc (suc m) , tt)
+    payload = ⊗-mk dp ep (LF.lfT L) Eq.refl nsE
 
 -- Plumbing between two spellings of one type.  Pure coercion: the
 -- description carries a `Lift` on the representable and its slot family

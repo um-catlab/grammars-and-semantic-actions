@@ -282,3 +282,51 @@ _ = refl
 
 _ : passes (run (litM? false) at ((false ∷ []) ↦ true ∷ []))
 _ = refl
+
+-- ==================================================================
+-- THE REJECTIONS, AS THEOREMS -- and the CONTRAST, which this instance
+-- is the only one that can show, because it has BOTH shapes of the same
+-- algorithm.
+--
+-- `refute` is uniform in the error grammar, so it applies to `parse`
+-- and to `derives?` alike.  What comes back is not alike:
+--
+--     derives?  E = ¬G (Deriv P)   ⟹  Deriv P w → ⊥   -- a theorem
+--     parse     E = ⊤G             ⟹  tt              -- nothing
+--
+-- Both tests above read `↦ false`.  Only one of them says anything
+-- about the LANGUAGE; the other says something about the algorithm.
+-- ==================================================================
+
+noDeriv : (P : NT) (w : String) → run (derives! P) w ≡ false
+        → (¬G Deriv P) w
+noDeriv P = refute (Deriv P) (¬G Deriv P) (derives? P)
+
+-- "ba" is REFUTED: no parse tree from S exists for it, at all
+no-parse-ba : (¬G Deriv ntS) (false ∷ true ∷ [])
+no-parse-ba = noDeriv ntS (false ∷ true ∷ []) refl
+
+-- neither does "aa", and this is a fact about the grammar S → A B
+no-parse-aa : (¬G Deriv ntS) (true ∷ true ∷ [])
+no-parse-aa = noDeriv ntS (true ∷ true ∷ []) refl
+
+-- ... and the accepting side hands back the derivation itself
+yes-parse-ab : Deriv ntS (true ∷ false ∷ [])
+yes-parse-ab = witness (Deriv ntS) (¬G Deriv ntS) (derives? ntS)
+                       (true ∷ false ∷ []) refl
+
+-- THE CONTRAST.  The same combinator at `parse`, whose error grammar is
+-- `⊤G`, yields `Unit` -- there is nothing to hand back.  This is the
+-- honest content of an incomplete parser, and it is why `Search` is
+-- weaker than `Decide` even though both compute the same booleans.
+nothing-from-parse : ⊤G (false ∷ true ∷ [])
+nothing-from-parse = refute (Deriv ntS) ⊤G (parse ntS) (false ∷ true ∷ []) refl
+
+-- the literal matcher, both ways: `litProbe` refutes, `matchLit` cannot
+no-lit : (¬G ⌈ true ∷ [] ⌉) (false ∷ [])
+no-lit = refute ⌈ true ∷ [] ⌉ (¬G ⌈ true ∷ [] ⌉) (litProbe true) (false ∷ []) refl
+
+-- and the views, whose "failure" branch was always positive information:
+-- refuting `⌈ [] ⌉` at a non-empty word RETURNS the non-triviality
+nonTrivial-ab : NonTrivial (true ∷ false ∷ [])
+nonTrivial-ab = refute ⌈ [] ⌉ NonTrivial charCase (true ∷ false ∷ []) refl

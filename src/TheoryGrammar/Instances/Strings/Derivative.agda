@@ -1,41 +1,25 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  THE FIRST STEP OF DERIVATIVE PARSING, INTERNALLY.
+{- The Brzozowski derivative, as an instance of the generic one.
 
-  To decide `A ⊗' B` at `w` one must consider every cut of `w`.  The
-  enumeration of cuts cannot be written internally -- `TheoryTy` is a
-  family over the CARRIER, so there is no grammar indexed by the
-  splittings of the current world, and hence no way to iterate them.
-  `⊗ˢ` mentions a cut but commits to one; a Π over cuts is negative and
-  can only be queried.
+   Two things are being checked here.
 
-  The move that IS internal is to case-split the LEFT FACTOR'S GRAMMAR
-  rather than the splitting:
+   (1) `act` is `c ∷ _` DEFINITIONALLY.  It is assembled as "appop with
+   the left slot pinned to `c`", so it unfolds to `(c ∷ []) ++ x`, and
+   `act-β` is `refl`.  Nothing in `Derivative.agda` mentions strings;
+   the string-ness is entirely in the `Assembly`.
 
-      A ⊗' B  ≅  ((A & ⌈[]⌉) ⊗' B)  ⊕  ((A & NonTrivial) ⊗' B)
-
-  "either the left factor is matched by the empty prefix, or it is not."
-  Iterating this generates the cuts one at a time, as a chain of `⊕`s
-  rather than as a `List` -- and each iteration peels one character, so
-  the recursion descends on `length` and `Graded`'s ℕ-degree suffices.
-  No span order is needed.
-
-  Everything below is a combinator except ONE phase-1 rule, `⊗-dist⊕`:
-  the sum sits at a SLOT and the conclusion is at the WHOLE, which the
-  index-preserving `⊕-E` cannot cross.  That is the same obstruction as
-  the single match in `Decidable.Tensor.dec-⊗`, and it is discharged
-  here once.  It is unconditionally true -- `Σ` distributes over `⊎` --
-  and the only reason it is not generic is that substituting at slot `i`
-  needs `Focus`'s `Rest`.
-
-  This is the first customer for `View.viewCase`: `splitLeft` consults a
-  view (`charCase`) while a payload (`A`) is in hand, which is exactly
-  the case `caseOf` does not cover.
--}
+   (2) The tensor law -- the one thing the generic layer cannot prove --
+   is a PATTERN MATCH.  `Split3` is indexed by its output, so a
+   splitting of `c ∷ x` is inverted by matching its two constructors:
+   `nil` says the left factor is empty, `cons` says the left factor
+   absorbed the `c`.  That is Levi's lemma for free monoids, and it is
+   four lines.  The `split++` inversion lemma the old
+   `Grammar/Derivative/String.agda` needed does not appear. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Strings.Derivative (Char : Type₀) where
 
+open import Cubical.Foundations.Isomorphism
 open import Cubical.Data.Sigma
 open import Cubical.Data.Bool hiding (_⊕_; _≤_)
 open import Cubical.Data.Sum using (_⊎_; inl; inr)
@@ -44,73 +28,69 @@ open import Cubical.Data.List
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
-open import TheoryGrammar.View
+open import TheoryGrammar.CanonicalFocus
+open import TheoryGrammar.Derivative
 
-open import TheoryGrammar.Instances.Strings.Decomposition Char public
+open import TheoryGrammar.Instances.Strings.Base Char public
 
--- ==================================================================
--- THE ONE PHASE-1 RULE.
---
--- A sum at the left slot becomes a sum at the whole.  One match, on the
--- payload of a slot; the splitting is untouched and simply carried.
--- ==================================================================
+private variable ℓA : Level
 
-⊗-dist⊕ : (A A' B : Gr) → ((A ⊕ A') ⊗' B) ⊢ ((A ⊗' B) ⊕ (A' ⊗' B))
-⊗-dist⊕ A A' B w (sp , h) with h true
-... | inl a = inl (sp , λ { true → a ; false → h false })
-... | inr a' = inr (sp , λ { true → a' ; false → h false })
+-- Pin the LEFT slot of `appop`; the focus is the right slot, which is
+-- the remainder being differentiated.
+consAs : Assembly strFib appop false
+consAs .Rest       = Unit
+consAs .restOf _   = true
+consAs .tuple x f a = if a then f tt else x
 
--- ==================================================================
--- ... and everything else is a combinator.
--- ==================================================================
+module Derivᶜ (c : Char) where
 
-module _ (A B : Gr) where
+  open ActOf strFib strPoint appop false consAs (λ _ → c ∷ []) public
 
-  -- Consult `charCase` with `A` still in hand.  `viewCase` is exactly
-  -- this: `&-I` puts the view in the context, `dist&r` distributes.
-  -- At `B = ⊤G` it would collapse to `caseOf`; here it does not, because
-  -- the payload `A` has to survive the analysis.
-  atLeft : A ⊢ ((A & ⌈ [] ⌉) ⊕ (A & NonTrivial))
-  atLeft = viewCase charCase ⊕-I₁ ⊕-I₂
+  -- (1) the action is `c ∷ _` on the nose
+  act-β : (x : String) → act x ≡ (c ∷ x)
+  act-β x = refl
 
-  private
-    lmap : {P P' Q Q' : Gr} → P ⊢ P' → Q ⊢ Q' → (P ⊗' Q) ⊢ (P' ⊗' Q')
-    lmap {P} {P'} {Q} {Q'} f g =
-      ⊗ˢ-map appop {A = λ b → if b then P else Q}
-                   {B = λ b → if b then P' else Q'}
-                   λ { true → f ; false → g }
+  -- ================================================================
+  -- (2) THE TENSOR LAW.
+  --
+  --   δ (A ⊗ B)  ≅  (A ε × δ B)  ⊕  (δ A ⊗ B)
+  --
+  -- the classical Brzozowski rule, with the left disjunct saying the
+  -- `c` went to the right factor (so the left factor is empty and
+  -- contributes its nullability) and the right disjunct saying the left
+  -- factor absorbed it.
+  -- ================================================================
+  module _ (A : (a : monoidSig .arities appop) → TheoryTy ℓA tt) where
 
-  -- THE SPLIT.  "The left factor either matches the empty prefix or it
-  -- does not."  Iterating this is the cut-scan.
-  splitLeft : (A ⊗' B) ⊢ (((A & ⌈ [] ⌉) ⊗' B) ⊕ ((A & NonTrivial) ⊗' B))
-  splitLeft =
-    ⊗-dist⊕ (A & ⌈ [] ⌉) (A & NonTrivial) B ∘g lmap atLeft idg
+    -- the derivative of the left factor, in the same slot shape
+    δA : (a : monoidSig .arities appop) → TheoryTy ℓA tt
+    δA a = if a then δ (A true) else A false
 
-  -- ... and it is an iso: forgetting the extra conjunct is `&-E₁`.
-  joinLeft : (((A & ⌈ [] ⌉) ⊗' B) ⊕ ((A & NonTrivial) ⊗' B)) ⊢ (A ⊗' B)
-  joinLeft = ⊕-E (lmap &-E₁ idg) (lmap &-E₁ idg)
+    δ⊗ : TheoryTy ℓA tt
+    δ⊗ x = (A true [] × δ (A false) x) ⊎ ⊗ˢ appop δA x
 
-  -- So a decision transports across it, with `dec-map` and `dec-⊕`:
-  -- deciding the two summands decides the tensor.  The ε-summand is the
-  -- nullability case; the NonTrivial summand is where a character is
-  -- peeled and the recursion descends.
-  decSplitLeft : (Dec⟨ (A & ⌈ [] ⌉) ⊗' B ⟩ & Dec⟨ (A & NonTrivial) ⊗' B ⟩)
-               ⊢ Dec⟨ A ⊗' B ⟩
-  decSplitLeft =
-    dec-map (((A & ⌈ [] ⌉) ⊗' B) ⊕ ((A & NonTrivial) ⊗' B)) (A ⊗' B)
-            joinLeft splitLeft
-    ∘g dec-⊕ ((A & ⌈ [] ⌉) ⊗' B) ((A & NonTrivial) ⊗' B)
+    -- The inversion.  `nil` and `cons` are the ONLY ways a splitting of
+    -- `c ∷ x` can arise, and Agda sees that because `Split3` is indexed
+    -- by its output.
+    δ⊗-fun : δ (⊗ˢ appop A) ⊢ δ⊗
+    δ⊗-fun x ((.[]     , .(c ∷ x) , nil)     , h) = inl (h true , h false)
+    δ⊗-fun x ((.(c ∷ _) , v       , cons s') , h) =
+      inr ((_ , v , s') , λ { true → h true ; false → h false })
 
--- ==================================================================
--- The derivative itself: `∂ c A` is `A` with a leading `c` consumed.
--- This is `Strings.Connectives._⟜'_` at a literal, i.e. the residual at
--- the canonical focus -- no new connective.
--- ==================================================================
+    δ⊗-inv : δ⊗ ⊢ δ (⊗ˢ appop A)
+    δ⊗-inv x (inl (p , q)) =
+      ([] , c ∷ x , nil) , λ { true → p ; false → q }
+    δ⊗-inv x (inr ((u' , v , s') , h)) =
+      (c ∷ u' , v , cons s') , λ { true → h true ; false → h false }
 
-∂ : Char → Gr → Gr
-∂ c A = A ⟜' literal c
-
--- `⟜-app` read as the derivative's counit: putting the character back
--- recovers the grammar.
-∂-app : (c : Char) (A : Gr) → (literal c ⊗' ∂ c A) ⊢ A
-∂-app c A = ⟜-app
+    δ⊗-Iso : DerivTensor strFib strPoint appop false consAs (λ _ → c ∷ [])
+                         A δ⊗
+    δ⊗-Iso x .Iso.fun = δ⊗-fun x
+    δ⊗-Iso x .Iso.inv = δ⊗-inv x
+    δ⊗-Iso x .Iso.sec (inl (p , q)) = refl
+    δ⊗-Iso x .Iso.sec (inr ((u' , v , s') , h)) =
+      cong inr (ΣPathP (refl , funExt λ { true → refl ; false → refl }))
+    δ⊗-Iso x .Iso.ret ((.[]      , .(c ∷ x) , nil)     , h) =
+      ΣPathP (refl , funExt λ { true → refl ; false → refl })
+    δ⊗-Iso x .Iso.ret ((.(c ∷ _) , v        , cons s') , h) =
+      ΣPathP (refl , funExt λ { true → refl ; false → refl })

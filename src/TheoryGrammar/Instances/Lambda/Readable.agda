@@ -17,16 +17,19 @@ open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
 import Cubical.Data.Bool.Properties as B
 open import Cubical.Data.Unit
+open import Cubical.Data.Empty as E using () renaming (rec to ⊥rec)
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.Decidable
+open import TheoryGrammar.View
 open import TheoryGrammar.Instances.Lambda.Signature
 open import TheoryGrammar.Instances.Lambda.Base
 
 module Readable (Name : Type₀) where
 
   open LamBase Name
+  open Views λFib using (Cover; Complete; total; exclusive; completeCase; certifies)
 
   -- PRIMITIVE.  At most one splitting: unique readability.
   Split-isProp : (o : LOp) (t : Raw) (p q : LSplit o t) → p ≡ q
@@ -78,3 +81,35 @@ module Readable (Name : Type₀) where
   λDR .decSlots  = λ-decSlots
 
   open DecTensor λDR public using (dec-⊗)
+
+  -- ================================================================
+  -- THE OPERATIONS PARTITION THE TERMS.
+  --
+  -- `⊗-decSplit o` decides each operation separately, at the complement
+  -- `¬G (⊗ˢ o ⊤)`.  That is already complete; what it does not say is
+  -- that the three rejections are the SAME fact -- a term that is not an
+  -- application is a variable or a lambda, positively.
+  --
+  -- `opCase` says exactly that: every raw term is an o-composite for
+  -- EXACTLY ONE `o`.  Totality is the `discrim` match (this instance's
+  -- one look at a term, and the same one `⊗-decSplit` already makes);
+  -- exclusivity is by the emptiness of the other operations' splittings,
+  -- which is unique readability in its positive form.
+  -- ================================================================
+
+  opCase : Complete LOp (λ o → ⊗ˢ o (λ _ → ⊤G))
+  opCase .total = discrim
+    where
+      discrim : Cover (⊕ᴰ LOp (λ o → ⊗ˢ o (λ _ → ⊤G)))
+      discrim (var n)   _ = varOp , (mkVar n   , λ _ → tt)
+      discrim (app u v) _ = appOp , (mkApp u v , λ _ → tt)
+      discrim (lam n t) _ = lamOp , (mkLam n t , λ _ → tt)
+  opCase .exclusive varOp varOp d = λ _ _ → ⊥rec (d refl)
+  opCase .exclusive appOp appOp d = λ _ _ → ⊥rec (d refl)
+  opCase .exclusive lamOp lamOp d = λ _ _ → ⊥rec (d refl)
+  opCase .exclusive varOp appOp _ _ ((mkVar _ , _) , (() , _))
+  opCase .exclusive varOp lamOp _ _ ((mkVar _ , _) , (() , _))
+  opCase .exclusive appOp varOp _ _ ((mkApp _ _ , _) , (() , _))
+  opCase .exclusive appOp lamOp _ _ ((mkApp _ _ , _) , (() , _))
+  opCase .exclusive lamOp varOp _ _ ((mkLam _ _ , _) , (() , _))
+  opCase .exclusive lamOp appOp _ _ ((mkLam _ _ , _) , (() , _))

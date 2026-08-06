@@ -54,6 +54,7 @@ module TheoryGrammar.View where
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool using (Bool; true; false)
 open import Cubical.Data.Unit
+open import Cubical.Data.Empty using (⊥)
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
@@ -92,6 +93,49 @@ module Views {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX 
   P ⇛ Q = P ⊢ Q
 
   infix 1 _⇛_
+
+  -- ================================================================
+  -- COMPLETE views: a total map into a disjunction of DISJOINT
+  -- grammars.
+  --
+  --     total     : ⊤G ⊢ ⊕ᴰ Y P
+  --     exclusive : distinct branches are jointly empty
+  --
+  -- `Cover P` alone says the branches EXHAUST; this adds that they
+  -- EXCLUDE.  `Decidable.Additive.Decision` is the binary case, and
+  -- `Dec⟨ A ⟩` is ALREADY an instance of it: `¬G A` is a grammar like
+  -- any other and `contra` is its exclusion.  So completeness is not
+  -- what a positive complement buys.
+  --
+  -- What it buys is a better DESCRIPTION of the same fact.  `largest`
+  -- says every complement embeds into `¬G A`, so choosing a positive
+  -- one -- `NonTrivial` rather than `¬G ⌈ [] ⌉`, or the other two
+  -- operations rather than `¬G (⊗ˢ appOp ⊤)` -- refines what the
+  -- rejecting branch tells you without changing what it proves.  The
+  -- n-ary form is here because a syntax's operations partition its
+  -- terms, and that is the shape those refinements take.
+  -- ================================================================
+
+  record Complete (Y : Type ℓY) (P : Y → TheoryTy ℓA s)
+    : Type (ℓ-max ℓX (ℓ-max ℓY ℓA)) where
+    field
+      total     : Cover (⊕ᴰ Y P)
+      exclusive : (y z : Y) → (y ≡ z → ⊥) → (P y & P z) ⊢ ⊥G
+
+  open Complete public
+
+  -- reading one off is `⊕ᴰ`'s own rule
+  completeCase : {C : TheoryTy ℓC s} {Y : Type ℓY} {P : Y → TheoryTy ℓA s}
+               → Complete Y P → ((y : Y) → P y ⊢ C) → Cover C
+  completeCase K f = ⊕ᴰ-E f ∘g K .total
+
+  -- ... and the CERTIFICATE: landing in branch `y` refutes every other
+  -- branch.  This is `largest` applied branchwise -- the positive
+  -- description mapping back to the negative one it refines.
+  certifies : {Y : Type ℓY} {P : Y → TheoryTy ℓA s}
+              (K : Complete Y P) (y z : Y) → (y ≡ z → ⊥)
+            → P y ⊢ ¬G (P z)
+  certifies K y z d = ⇒-I (K .exclusive y z d)
 
   -- ================================================================
   -- `with`, internally.
