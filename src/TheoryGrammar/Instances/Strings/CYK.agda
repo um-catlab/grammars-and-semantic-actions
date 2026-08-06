@@ -131,11 +131,13 @@ module Parser (V : Type₀)
     Mot : G.Ix → Type₀
     Mot i = MaybeG (Deriv (i .fst)) (i .snd)
 
-    -- the grammar must be NAMED: `MaybeG A w` unfolds to `A w ⊎ Unit*`,
-    -- and a grammar-valued implicit is not recoverable from that
-    orElse : (A : Gr) (w : String) → MaybeG A w → MaybeG A w → MaybeG A w
-    orElse A w (inl t) _ = inl t
-    orElse A w (inr _) y = y
+    -- Alternation, point-free.  `⊕-E` into an internal hom, so the
+    -- first alternative is eliminated by the rule rather than matched.
+    orElse : (A : Gr) → MaybeG A ⊢ (MaybeG A ⇒ MaybeG A)
+    orElse A = ⊕-E (⇒-I (just-I ∘g &-E₁)) (⇒-I &-E₂)
+
+    alt2 : {X A : Gr} → X ⊢ MaybeG A → X ⊢ MaybeG A → X ⊢ MaybeG A
+    alt2 {A = A} f g = ⇒-E (orElse A ∘g f) g
 
     module _ (P : V) (w : String) (rec : G.▷ Mot (P , w)) where
 
@@ -154,7 +156,8 @@ module Parser (V : Type₀)
       tryCuts : (Q T : V) → binR P Q T → List (MonSplit appop w) → Mot (P , w)
       tryCuts Q T pf []       = inr tt*
       tryCuts Q T pf (c ∷ cs) =
-        orElse (Deriv P) w (tryCut Q T pf c) (tryCuts Q T pf cs)
+        alt2 {X = ⊤G} (λ _ _ → tryCut Q T pf c)
+                      (λ _ _ → tryCuts Q T pf cs) w tt
 
       tryRule : Rule P → Mot (P , w)
       tryRule (inl (c , pf))     = fromLit (matchLit c w tt)
@@ -165,7 +168,8 @@ module Parser (V : Type₀)
 
       tryRules : List (Rule P) → Mot (P , w)
       tryRules []       = inr tt*
-      tryRules (r ∷ rs) = orElse (Deriv P) w (tryRule r) (tryRules rs)
+      tryRules (r ∷ rs) =
+        alt2 {X = ⊤G} (λ _ _ → tryRule r) (λ _ _ → tryRules rs) w tt
 
     -- FIXME (phase violation).  This is a SEMANTIC löb: the step is an
     -- Agda function, not a `▷ Mot ⊢ᴵ Mot` term, so `tryRules` /

@@ -279,3 +279,17 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
     hyloC = löb λ { (x , m) rec ai →
       alg x m (mapC (F x) m (GS .deg (xs x) m) (c x m ai)
                     (λ p → gF x m _ p) (λ j q → rec j q)) }
+
+  -- ================================================================
+  -- THE GENERIC ▷-APP.  A `later` may be consumed at any position of a
+  -- GUARDED description, because guardedness is precisely the
+  -- strictness the `later` demands.  This is the analogue of
+  -- `▷-app-NE` (Grammar/Later/Properties.agda) and is what makes a
+  -- point-free löb step writable: without it, the only way to use a
+  -- `▷` is to apply it to a hand-supplied `<` proof.
+  -- ================================================================
+
+  ▷pos : {A : Ix → Type ℓM} {s : S} (F : Functor s) → Guarded F
+       → (m : GS .sub .carrier s) (sh : Sh F m) (p : Pos F m sh)
+       → ((j : Ix) → degIx j < GS .deg s m → A j) → A (nx F m sh p)
+  ▷pos F g m sh p r = r (nx F m sh p) (g m sh p)
