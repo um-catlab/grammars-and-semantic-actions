@@ -302,10 +302,10 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   -- No pragmas here either, and no positivity worry: `ν` is a record,
   -- so its recursive occurrence is behind a projection by construction.
   --
-  -- `out-into` is `refl`; `into-out` is NOT, and the asymmetry is worth
+  -- `νout-νinto` is `refl`; `νinto-νout` is NOT, and the asymmetry is worth
   -- recording.  Agda deliberately withholds η from COINDUCTIVE records
   -- -- it would let the productivity checker be fooled -- so
-  -- `into (out t) ≡ t` cannot hold definitionally.  It is still one
+  -- `νinto (νout t) ≡ t` cannot hold definitionally.  It is still one
   -- line, but as a path built by COPATTERN on the interval rather than
   -- by `refl`, which is the cubical way of saying "bisimilar at depth
   -- one".  `μ`'s dual `roll-unroll` needed a pattern match; this needs
@@ -324,44 +324,44 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   module _ {F : (x : X) → Functor (xs x)} where
 
     -- ν is a coalgebra, definitionally
-    out : (i : Ix) → ν F i → ⟦ F (i .fst) ⟧ (ν F) (i .snd)
-    out i t = t .shOf , t .nxOf
+    νout : (i : Ix) → ν F i → ⟦ F (i .fst) ⟧ (ν F) (i .snd)
+    νout i t = t .shOf , t .nxOf
 
-    into : (i : Ix) → ⟦ F (i .fst) ⟧ (ν F) (i .snd) → ν F i
-    into i (sh , f) .shOf = sh
-    into i (sh , f) .nxOf = f
+    νinto : (i : Ix) → ⟦ F (i .fst) ⟧ (ν F) (i .snd) → ν F i
+    νinto i (sh , f) .shOf = sh
+    νinto i (sh , f) .nxOf = f
 
-    out-into : (i : Ix) (t : ⟦ F (i .fst) ⟧ (ν F) (i .snd))
-             → out i (into i t) ≡ t
-    out-into i t = refl
+    νout-νinto : (i : Ix) (t : ⟦ F (i .fst) ⟧ (ν F) (i .snd))
+             → νout i (νinto i t) ≡ t
+    νout-νinto i t = refl
 
-    into-out : (i : Ix) (t : ν F i) → into i (out i t) ≡ t
-    into-out i t j .shOf   = t .shOf
-    into-out i t j .nxOf p = t .nxOf p
+    νinto-νout : (i : Ix) (t : ν F i) → νinto i (νout i t) ≡ t
+    νinto-νout i t j .shOf   = t .shOf
+    νinto-νout i t j .nxOf p = t .nxOf p
 
     -- THE CORECURSOR, against a coalgebra over an arbitrary motive.
     -- Dual to `fold`, and productive by copatterns rather than
     -- terminating by structural descent.
-    unfold : {ℓM : Level} (M : Ix → Type ℓM)
+    νunfold : {ℓM : Level} (M : Ix → Type ℓM)
            → ((x : X) (m : Fib .carrier (xs x))
               → M (x , m)
               → Σ[ sh ∈ Sh (F x) m ]
                   ((p : Pos (F x) m sh) → M (nx (F x) m sh p)))
            → (i : Ix) → M i → ν F i
-    unfold M γ i a .shOf   = γ (i .fst) (i .snd) a .fst
-    unfold M γ i a .nxOf p = unfold M γ _ (γ (i .fst) (i .snd) a .snd p)
+    νunfold M γ i a .shOf   = γ (i .fst) (i .snd) a .fst
+    νunfold M γ i a .nxOf p = νunfold M γ _ (γ (i .fst) (i .snd) a .snd p)
 
     -- ... and its computation rule, on the nose
-    unfold-β : {ℓM : Level} (M : Ix → Type ℓM) (γ : _) (i : Ix) (a : M i)
-             → out i (unfold M γ i a)
-             ≡ Fmap (F (i .fst)) (λ j → unfold M γ j) (i .snd)
+    νunfold-β : {ℓM : Level} (M : Ix → Type ℓM) (γ : _) (i : Ix) (a : M i)
+             → νout i (νunfold M γ i a)
+             ≡ Fmap (F (i .fst)) (λ j → νunfold M γ j) (i .snd)
                     (γ (i .fst) (i .snd) a)
-    unfold-β M γ i a = refl
+    νunfold-β M γ i a = refl
 
     -- ================================================================
     -- WHAT IS NOT HERE: uniqueness of the corecursor (`coind`).
     --
-    -- Splitting the record into `shOf`/`nxOf` is what makes `unfold`
+    -- Splitting the record νinto `shOf`/`nxOf` is what makes `νunfold`
     -- above pass the productivity checker unaided.  Upstream's `ν` has
     -- a single field `unroll : ⟦ F x ⟧ (ν F) w`, so its recursive
     -- occurrence is buried under a Σ and a function type, and
@@ -370,7 +370,7 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
     --
     -- The split does NOT rescue uniqueness, and it is worth saying why
     -- rather than leaving it implicit.  A homomorphism `ϕ` agrees with
-    -- `unfold` on `shOf` by `cong fst` of the homomorphism square, and
+    -- `νunfold` on `shOf` by `cong fst` of the homomorphism square, and
     -- on `nxOf` by `cong snd` of it composed with the corecursive call
     -- --  but that call sits under `funExt`, which is not a guard, so
     -- the definition fails termination checking.  Measured, not
@@ -390,7 +390,7 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   -- The corecursor against a CONNECTIVE-form coalgebra -- dual to
   -- `foldC`, and `fromC` where that used `toC`.  Same rationale: a
   -- coalgebra should never be written against `Sh`/`Pos`.
-  unfoldC : {F : (x : X) → Functor (xs x)} (A : Ix → Type ℓSh)
+  νunfoldC : {F : (x : X) → Functor (xs x)} (A : Ix → Type ℓSh)
           → CoalgC F A → (i : Ix) → A i → ν F i
-  unfoldC {F = F} A γ =
-    unfold A (λ x m a → fromC (F x) m (γ x m a))
+  νunfoldC {F = F} A γ =
+    νunfold A (λ x m a → fromC (F x) m (γ x m a))
