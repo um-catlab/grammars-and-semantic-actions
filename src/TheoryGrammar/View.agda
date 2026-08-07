@@ -369,21 +369,39 @@ module Rec {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
            (X : Type ℓV) (xs : X → S) where
 
   open Guard GS ℓA X xs
+  open FibNotation (GS .fib)
 
-  -- the terminal motive, at the level the descriptions live at
-  ⊤ᴵ : Ix → Type ℓSh
-  ⊤ᴵ _ = Unit*
-
-  -- ONE VIEW PER NONTERMINAL.  This is the coalgebra, renamed.
+  -- ONE VIEW PER NONTERMINAL: a coalgebra out of ⊤.
+  --
+  -- These are now ALIASES rather than definitions.  `Automaton` had
+  -- grown a second copy of both notions under the names `Scanner` and
+  -- `runAut`, and keeping two was the actual problem.  The view NAMES
+  -- are the better ones -- they carry the McBride framing this file is
+  -- built on, and "scanner" only says what strings do with it -- so
+  -- those survive and point at the single definition.
+  --
+  -- The definitions taken are the INTERNAL ones, which differ from what
+  -- stood here in two ways that are corrections rather than respellings:
+  --
+  --   * carried by the terminal GRAMMAR `⊤ᴳ`, and stated as a `⊢` term,
+  --     where this file had a function out of a bare `Unit*`.  A view is
+  --     a term of the calculus, so it should typecheck as one.
+  --
+  --   * taking `LocallyContractive`, not `Guarded`.  The strength is
+  --     what the recursion actually consumes; `Guarded` is the
+  --     syntactic sufficient criterion for it (`guarded→LC`), and
+  --     asking for it directly admits descriptions contractive for
+  --     other reasons.
   ViewsOf : ((x : X) → Functor (xs x)) → Type _
-  ViewsOf F = CoalgC F ⊤ᴵ
+  ViewsOf = Scanner
 
-  -- ... and a program is a view plus an algebra.  `byView` IS `hyloC`;
-  -- naming it is what makes the discipline visible at the use site.
-  byView : {F : (x : X) → Functor (xs x)} {B : Ix → Type ℓSh}
-         → ((x : X) → Guarded (F x))
-         → ViewsOf F → AlgC F B → ⊤ᴵ ⊢ᴵ B
-  byView gF V alg = hyloC gF V alg
+  -- ... and a program is a view plus an algebra.  `byView` IS the
+  -- hylomorphism at ⊤'s coalgebra; naming it is what makes the
+  -- discipline visible at the use site.
+  byView : {F : (x : X) → Functor (xs x)} {A : Fam}
+         → LocallyContractive F → ViewsOf F → Algᴳ F A
+         → (x : X) → ⊤G ⊢ A x
+  byView = runAut
 
   -- NOTE.  `Bags.Quicksort.qcoalg` has motive `λ _ → Unit` rather than
   -- `⊤ᴵ`.  Any contractible motive works and `hyloC` is stated at an

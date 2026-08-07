@@ -161,12 +161,13 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   -- ================================================================
   -- VIEWS, FREENESS, AND EQUIDIVISIBILITY -- one story.
   --
-  -- `TheoryGrammar.View` already observes that a coalgebra out of ⊤ IS
-  -- a view in McBride's sense: `Cover P = ⊤G ⊢ P` is the covering
-  -- function, and `Scanner`/`runAut` here are its `ViewsOf`/`byView` in
-  -- internal spelling.  What that file leaves open is the question
-  -- "views from the left" actually turns on, and the pieces are now all
-  -- present to answer it.
+  -- `TheoryGrammar.View` observes that a coalgebra out of ⊤ IS a view
+  -- in McBride's sense: `Cover P = ⊤G ⊢ P` is the covering function.
+  -- `Scanner`/`runAut` here ARE that file's `ViewsOf`/`byView` -- it now
+  -- aliases them rather than keeping a second copy, and the view names
+  -- are the ones to prefer at a use site.  What that file leaves open
+  -- is the question "views from the left" actually turns on, and the
+  -- pieces are now all present to answer it.
   --
   -- A view needs TWO properties to be a genuine pattern match.  Cover
   -- gives the first.  The second is that the analysis be DETERMINED --
