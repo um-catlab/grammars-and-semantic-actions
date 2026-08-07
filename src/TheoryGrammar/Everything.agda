@@ -26,6 +26,9 @@ import TheoryGrammar.Decidable.Rule
 import TheoryGrammar.Decidable.Splittings
 import TheoryGrammar.Decidable.Tensor
 import TheoryGrammar.Derivative
+import TheoryGrammar.Direct.Divisibility
+import TheoryGrammar.Direct.Proper
+import TheoryGrammar.Direct.SDProbe
 import TheoryGrammar.Distributive
 import TheoryGrammar.Domain
 import TheoryGrammar.Enumerable
@@ -51,6 +54,8 @@ import TheoryGrammar.Instances.Bags.Commutativity
 import TheoryGrammar.Instances.Bags.Connectives
 import TheoryGrammar.Instances.Bags.Examples
 import TheoryGrammar.Instances.Bags.Graded
+import TheoryGrammar.Instances.Bags.JSON
+import TheoryGrammar.Instances.Bags.JSONTests
 import TheoryGrammar.Instances.Bags.Mergesort
 import TheoryGrammar.Instances.Bags.Order
 import TheoryGrammar.Instances.Bags.Permutation
@@ -106,6 +111,9 @@ import TheoryGrammar.Instances.Lambda.Modes.Laws
 import TheoryGrammar.Instances.Lambda.Modes.Overlap
 import TheoryGrammar.Instances.Lambda.Modes.Substrate
 import TheoryGrammar.Instances.Lambda.Modes.Tests
+import TheoryGrammar.Instances.Lambda.Parse
+import TheoryGrammar.Instances.Lambda.ParseElab
+import TheoryGrammar.Instances.Lambda.ParseTests
 import TheoryGrammar.Instances.Lambda.Passes.Affine
 import TheoryGrammar.Instances.Lambda.Passes.All
 import TheoryGrammar.Instances.Lambda.Passes.Dead
@@ -134,8 +142,10 @@ import TheoryGrammar.Instances.LinLam.Syntax
 import TheoryGrammar.Instances.LinLam.Tests
 import TheoryGrammar.Instances.Nat.Base
 import TheoryGrammar.Instances.Nat.Connectives
+import TheoryGrammar.Instances.Nat.Glue
 import TheoryGrammar.Instances.Nat.Graded
 import TheoryGrammar.Instances.Nat.Length
+import TheoryGrammar.Instances.Nat.LengthFib
 import TheoryGrammar.Instances.Nat.Species
 import TheoryGrammar.Instances.Nat.Transport
 import TheoryGrammar.Instances.Ring.Base
@@ -167,6 +177,7 @@ import TheoryGrammar.Instances.Spans.Enumeration
 import TheoryGrammar.Instances.Spans.Examples
 import TheoryGrammar.Instances.Spans.Graded
 import TheoryGrammar.Instances.Spans.Tests
+import TheoryGrammar.Instances.Strings.Aligned
 import TheoryGrammar.Instances.Strings.Automata
 import TheoryGrammar.Instances.Strings.Base
 import TheoryGrammar.Instances.Strings.CYK
@@ -177,6 +188,7 @@ import TheoryGrammar.Instances.Strings.Derivative
 import TheoryGrammar.Instances.Strings.DerivativeExamples
 import TheoryGrammar.Instances.Strings.Enumeration
 import TheoryGrammar.Instances.Strings.Examples
+import TheoryGrammar.Instances.Strings.Free
 import TheoryGrammar.Instances.Strings.Graded
 import TheoryGrammar.Instances.Strings.Greedy
 import TheoryGrammar.Instances.Strings.KleeneStar
@@ -194,6 +206,8 @@ import TheoryGrammar.Instances.Traces.Examples
 import TheoryGrammar.Instances.Traces.Mode
 import TheoryGrammar.Instances.Traces.ModeTests
 import TheoryGrammar.Instances.Traces.Ordered
+import TheoryGrammar.Instances.Traces.Protocol
+import TheoryGrammar.Instances.Traces.ProtocolTests
 import TheoryGrammar.Instances.Traces.Refinement
 import TheoryGrammar.Instances.Traces.Shuffle
 import TheoryGrammar.Later
@@ -201,7 +215,13 @@ import TheoryGrammar.Multiplicative
 import TheoryGrammar.Par
 import TheoryGrammar.PointedProModel
 import TheoryGrammar.Precision
+import TheoryGrammar.Quine.Base
+import TheoryGrammar.Quine.RoundTrip
+import TheoryGrammar.Quine.Sanity
+import TheoryGrammar.Quine.Tiny
 import TheoryGrammar.Recursion
+import TheoryGrammar.Reedy.Base
+import TheoryGrammar.Reedy.Polarity
 import TheoryGrammar.Refinement
 import TheoryGrammar.Representable
 import TheoryGrammar.Restrict
