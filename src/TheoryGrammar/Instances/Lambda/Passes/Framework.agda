@@ -1,39 +1,43 @@
 {-
-  What a pass IS, in the calculus.
+  What a pass IS -- and the NEGATIVE result that shapes everything here.
 
-  A pass rewrites the term, so it moves the index.  Its output type is
-  therefore the internal existential over the carrier,
+  DENOTES: `Out Γ t` is "SOME term, with a derivation that IT is scoped
+  in Γ" -- `⊕ᴰ Raw (λ t _ → Scoped Γ t)`, a family CONSTANT in the
+  index.  So the tempting analogy fails: in `Sorted ⊗ Sorted ⊢ Sorted`
+  the index is preserved and does the work; here it pins nothing, and
+  correctness is NOT a freebie.  `Rename` locates the one exception.
 
-      Out Γ = ⊕ᴰ Raw (λ t' → Scoped Γ t'),
-
-  which is CONSTANT in the index -- and that is the whole difference
-  from `mergesort`, where `⊗ˢ` pinned the index and correctness came
-  free.  Here the index pins nothing; what is free is the recursion.
-
-  `idAlg` rebuilds every alternative.  A pass is `idAlg` with the ONE
-  alternative it rewrites replaced, so "the rest of the pass preserves
-  scope" is discharged once, here.
+    emit                     `⊕ᴰ-I` at the index itself
+    outVar/outApp/outLam(G)  the three rebuilding rules, and `idAlg`
+                             the pass that uses all three: the FREE
+                             part of every pass, discharged once here
+    tryEmit                  the shared scope move: evidence CARRIED
+    PassAlg/runPass/idPass   one algebra, folded
+    term                     the output term, as a semantic action
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Passes.Framework where
 
-open import Cubical.Foundations.Prelude
+open import Cubical.Data.List using (_∷_)
 open import Cubical.Data.Sigma
-open import Cubical.Data.List using (List; []; _∷_)
+open import Cubical.Data.Unit using (tt)
+open import Cubical.Foundations.Prelude
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Inductive
-open import TheoryGrammar.Instances.Lambda.Signature
 open import TheoryGrammar.Instances.Lambda.Base
 open import TheoryGrammar.Instances.Lambda.Scoped
+open import TheoryGrammar.Instances.Lambda.Signature
 
 module PassKit (Name : Type₀) where
 
   open LamBase Name
   open Wellscoped Name
 
-  -- the output of a pass: some term, with its scoping derivation
+  -- the output of a pass: some term, with its scoping derivation.  The
+  -- input index `t` does not occur on the right, and that constancy is
+  -- what the whole file is about.
   Out : Scope → TmG
   Out Γ = ⊕ᴰ Raw (λ t _ → Scoped Γ t)
 
@@ -45,7 +49,8 @@ module PassKit (Name : Type₀) where
 
   -- ================================================================
   -- The three rebuilding rules: `roll` after an injection, packaged.
-  -- These are the FREE part of every pass.
+  -- Each denotes "this node, put back exactly as it was, with the
+  -- derivation reassembled".  These are the FREE part of every pass.
   -- ================================================================
 
   outVar : (Γ : Scope) → VarG (In Γ) ⊢ Out Γ
@@ -64,7 +69,19 @@ module PassKit (Name : Type₀) where
   outLamG : (Γ : Scope) → ⊕ᴰ Name (λ n → LamG ⌈ n ⌉ (Out (n ∷ Γ))) ⊢ Out Γ
   outLamG Γ = ⊕ᴰ-E λ n → lam-elim λ _ _ _ o → outLam Γ n (o .fst) (o .snd)
 
-  -- the identity pass's algebra
+  -- The move every pass that lifts a subterm out from under a binder
+  -- makes, and the reason none of them needs a strengthening lemma: if
+  -- `s` is already scoped at the SMALLER Γ, emit it -- carrying the
+  -- derivation the decision produced, never re-deriving it -- else fall
+  -- back.  The fallback may be a different term: `Out Γ s` and `Out Γ t`
+  -- are the same type, which is the constancy above doing visible work.
+  -- The decision is a parameter, so this file stays free of `Decide`.
+  tryEmit : (Γ : Scope) → (⊤G ⊢ Dec⟨ Scoped Γ ⟩) → (s : Raw) → Out Γ s → Out Γ s
+  tryEmit Γ dec s fallback =
+    ⊕-E {A = Scoped Γ} {C = Out Γ} {B = ¬G (Scoped Γ)}
+        (emit Γ) (λ _ _ → fallback) s (dec s tt)
+
+  -- the identity pass's algebra: every alternative rebuilt
   idAlg : (Γ : Scope) → Step Out Γ ⊢ Out Γ
   idAlg Γ = ⊕-E (outVar Γ) (⊕-E (outApp Γ) (outLamG Γ))
 
@@ -72,6 +89,9 @@ module PassKit (Name : Type₀) where
   -- Running a pass: the generic `fold`, exactly as `toDB`.
   -- ================================================================
 
+  -- DENOTES: one rewriting step at each node, given already-rewritten
+  -- children.  A pass IS `idAlg` with the one alternative it rewrites
+  -- replaced.
   PassAlg : Type₀
   PassAlg = (Γ : Scope) → Step Out Γ ⊢ Out Γ
 

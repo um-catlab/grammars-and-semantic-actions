@@ -3,9 +3,10 @@
 
   Each `refl` holds only if `Uses`, the promodel's `dec-⊗ˢ`, the
   residual's transport and `dec-map` all reduce.  Acceptance is OBSERVED
-  with the generic `okA` (`accepts`, a TERM `⊤G ⊢ Δ Bool`), never by
-  matching a
-  decision.
+  by the mode's own `accepts` / `acceptsLf` -- the generic `okA`, a TERM
+  `⊤G ⊢ Δ Bool` -- never by matching a decision, and this file defines
+  no reader of its own.  `Bool` reaches the metalanguage only in the
+  `refl` lines, through `run`, which is the exit from the calculus.
 
                  ordered  linear  affine  relevant
       λx.x          T        T       T        T
@@ -14,15 +15,17 @@
       λx.λy.y x     F        T       T        T     -- exchange only
       λx.λy.x y     T        T       T        T
       S             F        F       F        T     -- contraction only
+
+  34 `refl` observations in 8 batches; `refute*`/`witness` then re-read
+  13 of them as theorems about the discipline (`no-*`, `yes-*`).
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Modes.Tests where
 
-open import Cubical.Foundations.Prelude
-open import Cubical.Data.Bool
-open import Cubical.Data.Unit
-open import Cubical.Data.List using (List; []; _∷_)
+open import Cubical.Data.Bool using (true; false)
+open import Cubical.Data.List using ([]; _∷_)
 open import Cubical.Data.Nat using (ℕ; discreteℕ)
+open import Cubical.Foundations.Prelude
 
 open import TheoryGrammar.SemanticAction using (passes; _↦_; _at_)
 open import TheoryGrammar.Instances.Lambda.Fibered
@@ -96,23 +99,11 @@ _ = refl
 -- The LEAF checker of each mode, which is what `check` bottoms out in.
 -- `decLf n` decides "this context is exactly the singleton n", so its
 -- world is a CONTEXT -- a different sort from the tests above, read by
--- the same `accepts?`.
+-- the same observer.
 -- ==================================================================
 
-leafOrd : (n : ℕ) → Ord._⊢_ Ord.⊤G (Ord.Δ Bool)
-leafOrd n = Ord.okA (Ord.Lf n) (Ord.¬G (Ord.Lf n)) Ord.∘g Ord.decLf n
-
-leafLin : (n : ℕ) → Lin._⊢_ Lin.⊤G (Lin.Δ Bool)
-leafLin n = Lin.okA (Lin.Lf n) (Lin.¬G (Lin.Lf n)) Lin.∘g Lin.decLf n
-
-leafAff : (n : ℕ) → Aff._⊢_ Aff.⊤G (Aff.Δ Bool)
-leafAff n = Aff.okA (Aff.Lf n) (Aff.¬G (Aff.Lf n)) Aff.∘g Aff.decLf n
-
-leafRel : (n : ℕ) → Rel._⊢_ Rel.⊤G (Rel.Δ Bool)
-leafRel n = Rel.okA (Rel.Lf n) (Rel.¬G (Rel.Lf n)) Rel.∘g Rel.decLf n
-
 -- ORDERED and LINEAR: the context must be the singleton, on the nose
-_ : passes ((λ Γ → Ord.run (leafOrd 0) Γ) at
+_ : passes ((λ Γ → Ord.run (Ord.acceptsLf 0) Γ) at
              ( (0 ∷ [])     ↦ true
              ∷ []           ↦ false
              ∷ (1 ∷ [])     ↦ false
@@ -120,16 +111,16 @@ _ : passes ((λ Γ → Ord.run (leafOrd 0) Γ) at
              ∷ [] ))
 _ = refl
 
-_ : passes ((λ Γ → Lin.run (leafLin 0) Γ) at
+_ : passes ((λ Γ → Lin.run (Lin.acceptsLf 0) Γ) at
              ((0 ∷ []) ↦ true ∷ (0 ∷ 1 ∷ []) ↦ false ∷ []))
 _ = refl
 
 -- AFFINE admits WEAKENING, RELEVANT admits CONTRACTION
-_ : passes ((λ Γ → Aff.run (leafAff 0) Γ) at
+_ : passes ((λ Γ → Aff.run (Aff.acceptsLf 0) Γ) at
              ((0 ∷ []) ↦ true ∷ [] ↦ false ∷ []))
 _ = refl
 
-_ : passes ((λ Γ → Rel.run (leafRel 0) Γ) at
+_ : passes ((λ Γ → Rel.run (Rel.acceptsLf 0) Γ) at
              ((0 ∷ []) ↦ true ∷ (1 ∷ []) ↦ false ∷ []))
 _ = refl
 

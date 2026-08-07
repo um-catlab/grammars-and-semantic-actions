@@ -1,29 +1,33 @@
 {-
   The two internal decisions every rewriting pass needs.
 
-  `scoped?` is the existing scope checker, instantiated at one scope.
-  It is the SIDE CONDITION of every pass that moves a subterm out from
-  under a binder: rather than a bespoke "n is not free in t" grammar
-  plus a strengthening lemma, the calculus already decides membership
-  of `Scoped Γ`, and that IS the side condition.
+    scoped? Γ   DENOTES "is this term scoped in Γ?".  It is the existing
+                scope checker at one scope, and it IS the side condition
+                of every pass that moves a subterm out from under a
+                binder: rather than a bespoke "n is not free in t"
+                grammar plus a strengthening lemma, the calculus already
+                decides membership of `Scoped Γ`.
 
-  `isVar?` is the generic `dec-⊗` at `varOp` over the representable.
-  Neither adds a primitive: both are composites of existing rules.
+    isVar? n    DENOTES "is this term the variable n?".  It is the
+                generic `dec-⊗` at `varOp` over the representable.
+
+  Neither adds a primitive: both are composites of existing rules, and
+  both produce evidence, which their callers carry rather than re-derive.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Passes.Decide where
 
-open import Cubical.Foundations.Prelude
 open import Cubical.Data.Unit
+open import Cubical.Foundations.Prelude
 open import Cubical.Relation.Nullary.Base using (Discrete)
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Instances.Lambda.Signature
-open import TheoryGrammar.Instances.Lambda.Fibered
 open import TheoryGrammar.Instances.Lambda.Base
+open import TheoryGrammar.Instances.Lambda.Fibered
 open import TheoryGrammar.Instances.Lambda.Readable
-open import TheoryGrammar.Instances.Lambda.Scoped
 open import TheoryGrammar.Instances.Lambda.ScopeCheck
+open import TheoryGrammar.Instances.Lambda.Scoped
+open import TheoryGrammar.Instances.Lambda.Signature
 
 module Decide (Name : Type₀) (_≟_ : Discrete Name) where
 

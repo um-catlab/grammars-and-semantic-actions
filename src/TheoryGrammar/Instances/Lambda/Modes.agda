@@ -2,19 +2,24 @@
   SUBSTRUCTURAL MODES over the lambda AST.  Index module.
 
   The claim under test: ordered, linear, affine and relevant are ONE
-  grammar over four context promodels.
+  grammar over THREE context promodels -- affine is the linear promodel
+  with a modality on the leaf, not a fourth notion of splitting.
 
     Ctx          the context signature: one sort, one binary operation
+    Substrate    a promodel from a ternary relation on lists: everything
+                 the three below share, so each is only its constructors
     Fold         `indRaw`, DERIVED: `readback` (Lambda.Initial) then `fold`
     Core         `Uses` and `check`, generic in the context promodel
     Concat       ordered contexts   (free monoid; `Split3` from Strings)
     Interleave   linear + affine    (free comm. monoid; `Ilv` from Bags)
     Overlap      relevant contexts  (idempotent; `Ilv` plus `both`)
     Instances    the four modes
-    Laws         which equations are refl and which cost funExt
-    Tests        24 `refl` tests: the four modes separate
+    Laws         which equations are refl, which cost funExt, and the
+                 two refutations (`splitR≢splitL`, `no-unsplit`)
+    Tests        the four modes separate: 34 `refl` observations in 8
+                 batches, 13 of them re-read as theorems
 
-  Generic support added under `TheoryGrammar/`:
+  Generic support this development leans on:
     CanonicalFocus            every promodel's residual, from `split`
     Decidable.Splittings      `dec-⊗` as an interface, not a theorem
     Decidable.Representable   `dec-⌈⌉`, stated once
@@ -23,6 +28,7 @@
 module TheoryGrammar.Instances.Lambda.Modes where
 
 open import TheoryGrammar.Instances.Lambda.Modes.Ctx        public
+open import TheoryGrammar.Instances.Lambda.Modes.Substrate  public
 open import TheoryGrammar.Instances.Lambda.Modes.Fold       public
 open import TheoryGrammar.Instances.Lambda.Modes.Core       public
 open import TheoryGrammar.Instances.Lambda.Modes.Concat     public

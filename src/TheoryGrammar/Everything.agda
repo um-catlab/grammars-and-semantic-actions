@@ -14,10 +14,8 @@ import TheoryGrammar.BaseChange
 import TheoryGrammar.CanonicalFocus
 import TheoryGrammar.CarrierMap
 import TheoryGrammar.ChangeOfTheory
-import TheoryGrammar.Compile.ReflSweep
 import TheoryGrammar.DP
 import TheoryGrammar.DP.Seq
-import TheoryGrammar.DPBench
 import TheoryGrammar.DPTests
 import TheoryGrammar.Decidable
 import TheoryGrammar.Decidable.Additive
@@ -98,6 +96,7 @@ import TheoryGrammar.Instances.Heap.Precise
 import TheoryGrammar.Instances.Heap.Precision
 import TheoryGrammar.Instances.Heap.Refinement
 import TheoryGrammar.Instances.Heap.Tests
+import TheoryGrammar.Instances.Heap.WithInput
 import TheoryGrammar.Instances.Lambda
 import TheoryGrammar.Instances.Lambda.Adjunctions
 import TheoryGrammar.Instances.Lambda.Base
@@ -205,6 +204,7 @@ import TheoryGrammar.Instances.Strings.Refinement
 import TheoryGrammar.Instances.Strings.RegExp
 import TheoryGrammar.Instances.Strings.SeqUnambig
 import TheoryGrammar.Instances.Strings.Shuffle
+import TheoryGrammar.Instances.Strings.ShuffleLevi
 import TheoryGrammar.Instances.Strings.Transducer
 import TheoryGrammar.Instances.Strings.TransducerGuard
 import TheoryGrammar.Instances.Strings.TransducerHylo
@@ -223,6 +223,7 @@ import TheoryGrammar.Instances.Traces.ProtocolTests
 import TheoryGrammar.Instances.Traces.Refinement
 import TheoryGrammar.Instances.Traces.Shuffle
 import TheoryGrammar.Later
+import TheoryGrammar.Lifting
 import TheoryGrammar.Machine.Example
 import TheoryGrammar.Machine.Morphism
 import TheoryGrammar.Machine.Refine
@@ -234,6 +235,8 @@ import TheoryGrammar.PointedProModel
 import TheoryGrammar.Precision
 import TheoryGrammar.Quine.Bag
 import TheoryGrammar.Quine.BagCYK
+import TheoryGrammar.Quine.BagRoundTrip
+import TheoryGrammar.Quine.BagTests
 import TheoryGrammar.Quine.Base
 import TheoryGrammar.Quine.Family
 import TheoryGrammar.Quine.Meta
@@ -241,10 +244,16 @@ import TheoryGrammar.Quine.RoundTrip
 import TheoryGrammar.Quine.Span
 import TheoryGrammar.Quine.SpanTests
 import TheoryGrammar.Quine.Tiny
+import TheoryGrammar.Quine.Trace
+import TheoryGrammar.Quine.TraceTests
 import TheoryGrammar.Recursion
 import TheoryGrammar.Reedy.Base
 import TheoryGrammar.Reedy.Polarity
 import TheoryGrammar.Refinement
+import TheoryGrammar.Reindex.Base
+import TheoryGrammar.Reindex.LinLam
+import TheoryGrammar.Reindex.Pass
+import TheoryGrammar.Reindex.Sanity
 import TheoryGrammar.Representable
 import TheoryGrammar.Restrict
 import TheoryGrammar.Result

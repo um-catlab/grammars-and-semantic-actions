@@ -17,10 +17,10 @@ module TheoryGrammar.Instances.SimplyTyped.Tests where
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
 open import Cubical.Data.List using ([]; _∷_)
-open import Cubical.Data.Sigma using (_×_; _,_)
-open import Cubical.Data.Nat using (ℕ; discreteℕ; snotz; znots; injSuc)
-open import Cubical.Data.Unit
 open import Cubical.Data.Maybe using (Maybe; just; nothing)
+open import Cubical.Data.Nat using (ℕ; discreteℕ; snotz; znots; injSuc)
+open import Cubical.Data.Sigma using (_×_; _,_)
+open import Cubical.Data.Unit
 
 open import TheoryGrammar.SemanticAction using (passes; _↦_; _at_)
 open import TheoryGrammar.Instances.SimplyTyped

@@ -12,18 +12,18 @@ module TheoryGrammar.Instances.Field.Tests where
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Sigma
 open import Cubical.Data.Unit
+open import Cubical.Data.List using ([]; _∷_)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
+open import TheoryGrammar.Domain
 open import TheoryGrammar.SemanticAction using (passes; _↦_; _at_; module ActFib)
-open import Cubical.Data.List using ([]; _∷_)
 open import TheoryGrammar.Instances.Field.Base
-open import TheoryGrammar.Instances.Field.Domain
 open import TheoryGrammar.Instances.Field.Partial
 open import TheoryGrammar.Instances.Field.NoPoint
 
-open ActFib fldFib using (Δ; run; caseA; pureA; okA; refute; witness)
+open ActFib fldFib using (Δ; run; caseA; pureA; refute; witness)
 
 -- ==================================================================
 -- 1.  The tables.
@@ -43,17 +43,7 @@ private
   _ = refl
 
 -- ==================================================================
--- 2.  THE DECISION.  `dec-inv` and the NORMALISED `dec-invOp = toDec
--- invDecision` must agree, and they do by `refl` -- which is the test
--- that `toDec`/`largest` compute.  Both are observed in §6 by the
--- generic `caseA`/`run`, so neither needs a reader here.
--- ==================================================================
-
--- (the observations themselves are terms, in §6 below -- a reader of
--- type `𝔽 → 𝔽` would have externalised at the definition)
-
--- ==================================================================
--- 3.  THE INVERSE, READ OFF A SPLITTING.  `parts invOp m sp tt` is the
+-- 2.  THE INVERSE, READ OFF A SPLITTING.  `parts invOp m sp tt` is the
 -- element whose inverse is m; the splitting comes from the internal
 -- proof that m is nonzero, so nothing here inspects 𝔽.
 -- ==================================================================
@@ -83,7 +73,7 @@ private
   _ = refl
 
 -- ==================================================================
--- 4.  THE COVERING WITNESSES for + and ·, through the generic
+-- 3.  THE COVERING WITNESSES for + and ·, through the generic
 -- `covering→img`.  These exercise `splitEq` (transport of a splitting
 -- along an `Eq`), which computes because the equation is `Eq.refl`.
 -- ==================================================================
@@ -118,7 +108,7 @@ private
   _ = refl
 
 -- ==================================================================
--- 5.  THE POINT OF THE FRAGMENT still computes: `rngPoint` is a real
+-- 4.  THE POINT OF THE FRAGMENT still computes: `rngPoint` is a real
 -- total algebra on the same carrier.
 -- ==================================================================
 
@@ -133,13 +123,13 @@ private
   _ = refl
 
 -- ==================================================================
--- 6.  THE SAME OBSERVATIONS, AS TERMS.
+-- 5.  THE DECISION, OBSERVED AS A TERM.
 --
--- `probe-img` / `probe-dec` above are metalanguage functions `𝔽 → 𝔽`:
--- they externalise at the DEFINITION, one step early.  The same
--- observations as terms are `⊤G ⊢ Δ 𝔽` -- built from `caseA`/`pureA`,
--- so still inside the calculus -- and `run` belongs in the `refl` line.
--- Batching the cases into a suite writes the term under test once.
+-- A reader of type `𝔽 → 𝔽` would externalise at the DEFINITION, one
+-- step early.  These observations are `⊤G ⊢ Δ 𝔽` instead -- built from
+-- `caseA`/`pureA`, so still inside the calculus -- and `run` belongs in
+-- the `refl` line.  Batching the cases into a suite writes the term
+-- under test once.
 -- ==================================================================
 
 imgA decA : ⊤G ⊢ Δ 𝔽
@@ -155,7 +145,7 @@ _ : passes (run decA at (f0 ↦ f0 ∷ f1 ↦ f1 ∷ f2 ↦ f1 ∷ []))
 _ = refl
 
 -- ==================================================================
--- 7.  THE REJECTION IS A THEOREM, and this instance shows why a
+-- 6.  THE REJECTION IS A THEOREM, and this instance shows why a
 -- POSITIVE complement is worth having.
 --
 -- `refute` (TheoryGrammar.SemanticAction) turns a negative observation

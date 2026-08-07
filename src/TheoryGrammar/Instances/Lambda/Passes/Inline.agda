@@ -1,45 +1,38 @@
 {-
-  PASS 3.  Inlining, i.e. substitution -- the predicted NEGATIVE result.
+  PASS 3.  Inlining, i.e. substitution -- a NEGATIVE result, localised
+  to a single operation.  `sub n u t` DENOTES "t with u put for n".
 
-  Substitution is a carrier map, so the additive fragment transports
-  definitionally (`pull-Dec`, `subScoped?` below): every additively
-  stated property of terms is a property of substituted terms, free.
+  ADDITIVELY it is a carrier map, so the whole fragment transports
+  definitionally: `pull-Dec` is `refl`, `subScoped?` the scope checker
+  itself transported by `pullTerm`.  MULTIPLICATIVELY the split is
+  exactly by operation --
 
-  Multiplicatively it splits into a positive and a negative half, and
-  the split is EXACTLY by operation:
-
-      appOp   preserved   `sub n u (app x y) = app (sub n u x) (sub n u y)`
-      lamOp   preserved   `sub n u (lam m t) = lam m (sub n u t)`
-      varOp   FAILS       `sub n u (var n) = u`, which need not be a var
-
-  So the failure is localised at the one operation the pass rewrites,
-  and it is a failure of BOTH directions: `¬subSplitPres` refutes
-  preservation at `varOp`, `¬subReflects` refutes reflection (the
-  discrete Conduché condition of `ChangeOfTheory`) at `appOp` -- if
-  `t = var n` and `σ n = app a b` then `σ t` splits and `t` does not.
-
-  The restricted positive case is in `Passes.Rename`: substituting a
-  VARIABLE, with binders renamed too, is a renaming, and renamings are
-  exactly the split-preserving maps.
+      appOp  preserved  (`subPres-app`, `pushˢ-app`, `pushApp`)
+      lamOp  preserved  (`subPres-lam`, `pushˢ-lam`)
+      varOp  FAILS      sub n u (var n) = u, which need not be a var
+  -- and at `varOp` it fails BOTH ways: `¬subSplitPres` refutes
+  preservation, `¬subReflects` reflection (`ChangeOfTheory`'s discrete
+  Conduché condition) at `appOp`.  The surviving positive case is
+  `Passes.Rename`: substituting a VARIABLE is a renaming.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Passes.Inline where
 
-open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool using (true; false; if_then_else_)
-open import Cubical.Data.Sigma
 open import Cubical.Data.Empty as E using (⊥)
+open import Cubical.Data.Sigma
+open import Cubical.Foundations.Prelude
 open import Cubical.Relation.Nullary.Base using (Discrete; yes; decRec)
 open import Cubical.Relation.Nullary.Properties using (isPropDec; Discrete→isSet)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.CarrierMap
-open import TheoryGrammar.Instances.Lambda.Signature
-open import TheoryGrammar.Instances.Lambda.Fibered
 open import TheoryGrammar.Instances.Lambda.Base
-open import TheoryGrammar.Instances.Lambda.Scoped
+open import TheoryGrammar.Instances.Lambda.Fibered
 open import TheoryGrammar.Instances.Lambda.Passes.Decide
+open import TheoryGrammar.Instances.Lambda.Scoped
+open import TheoryGrammar.Instances.Lambda.Signature
 
 module Inline (Name : Type₀) (_≟_ : Discrete Name) where
 
@@ -47,15 +40,16 @@ module Inline (Name : Type₀) (_≟_ : Discrete Name) where
   open Wellscoped Name
   open Decide Name _≟_
 
-  -- PRIMITIVE (carrier map): single substitution.  The metalanguage
-  -- `Dec` is consumed by its OWN elimination rule, `decRec`, exactly as
-  -- an internal `Dec⟨_⟩` is consumed by `dec-elim`: no `with`, no
-  -- `yes`/`no` pattern.
+  -- PRIMITIVE (carrier map): single substitution, `t` with `u` put for
+  -- `n`.  The metalanguage `Dec` is consumed by its OWN elimination
+  -- rule, `decRec`, exactly as an internal `Dec⟨_⟩` is consumed by
+  -- `dec-elim`: no `with`, no `yes`/`no` pattern.
   sub : Name → Raw → Raw → Raw
   sub n u (var m)   = decRec (λ _ → u) (λ _ → var m) (m ≟ n)
   sub n u (app x y) = app (sub n u x) (sub n u y)
   sub n u (lam m t) = lam m (sub n u t)
 
+  -- ... as a map of carriers: identity on names, `sub n u` on terms
   subCM : Name → Raw → CarrierMap λFib
   subCM n u .hom nm m = m
   subCM n u .hom tm   = sub n u
@@ -86,6 +80,10 @@ module Inline (Name : Type₀) (_≟_ : Discrete Name) where
 
   -- ================================================================
   -- POSITIVE, multiplicatively, AWAY FROM `varOp`.
+  --
+  -- `homSplit` forces the image of a splitting; `homParts` forces its
+  -- slots to be the images of the source's.  Both are `Eq.refl` here,
+  -- which is what "substitution commutes with the node" means.
   -- ================================================================
 
     subPres-app : SplitPresAt (subCM n u) appOp

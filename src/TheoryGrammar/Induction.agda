@@ -1,23 +1,22 @@
 {-
   The DEPENDENT eliminator of `μ`.
 
-  `Inductive.agda` exports `fold`, whose motive is `Ix → Type` — enough to
-  compute *with* a derivation, not enough to prove anything *about* one.
+  `Inductive.agda` exports `fold`, whose motive is `Ix → Type` -- enough
+  to compute WITH a derivation, not enough to prove anything ABOUT one.
   Uniqueness statements ("this element is the one `readback` produces")
   need a motive that mentions the element, so every such proof was
   spelling the recursion out again locally.
 
-  `indμ` is that eliminator, once, generically.  `fold` is its instance at
-  a constant motive (`foldD`), and `fold≡` proves the two agree -- by
-  induction, not by `refl`: they differ at the recursive call, so the step
-  needs `funExt` over positions.  So this file adds no strength, only the
-  missing generality.
+  `indμ` is that eliminator, once, generically, with `indμ-unique` the
+  η-rule it buys.  `fold` is its instance at a constant motive (`foldD`),
+  and `fold≡` proves the two agree -- by induction, not by `refl`: they
+  differ at the recursive call, so the step needs `funExt` over
+  positions.  So this file adds no strength, only the missing generality.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Induction where
 
 open import Cubical.Foundations.Prelude
-open import Cubical.Data.Sigma
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered

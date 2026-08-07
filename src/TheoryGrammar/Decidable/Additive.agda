@@ -18,10 +18,8 @@ module TheoryGrammar.Decidable.Additive where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.Isomorphism
-open import Cubical.Data.Sigma
+open import Cubical.Data.Sigma using (_×_)
 open import Cubical.Data.Sum using (_⊎_; inl; inr)
-open import Cubical.Data.Unit
-open import Cubical.Data.Empty using (⊥*)
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Rules
@@ -39,6 +37,17 @@ module DecAdd {S : Type ℓS} (Car : S → Type ℓX) where
     A : TheoryTy ℓA s
     B : TheoryTy ℓB s
     C : TheoryTy ℓC s
+
+  -- INTERNAL LOGICAL EQUIVALENCE: the two maps, nothing else.  Not a
+  -- decision notion, but it belongs with the additives -- it mentions
+  -- only `_⊢_`, so it needs nothing but the carrier, and every instance
+  -- that states "these two grammars are the same predicate" wants it.
+  -- (It was written out locally in `Instances/Field/Partial`; that copy
+  -- is gone and reads this one.)
+  _⊣⊢_ : ∀ {s} → TheoryTy ℓA s → TheoryTy ℓB s → Type (ℓ-max ℓX (ℓ-max ℓA ℓB))
+  A ⊣⊢ B = (A ⊢ B) × (B ⊢ A)
+
+  infix 1 _⊣⊢_
 
   -- internal negation
   ¬G_ : TheoryTy ℓA s → TheoryTy ℓA s
@@ -157,10 +166,16 @@ module DecAdd {S : Type ℓS} (Car : S → Type ℓX) where
   Complement : TheoryTy ℓA s → TheoryTy ℓB s → Type (ℓ-max ℓX (ℓ-max ℓA ℓB))
   Complement A A' = (A & A') ⊢ ⊥G
 
+  -- A `Decision A A'` denotes: `A'` decides `A`.  The two fields are the
+  -- two halves of that, and NEITHER alone is it -- `decide` without
+  -- `exclude` is satisfied by `A' = ⊤G`, and `exclude` without `decide`
+  -- by `A' = ⊥G`.
   record Decision (A : TheoryTy ℓA s) (A' : TheoryTy ℓB s)
     : Type (ℓ-max ℓX (ℓ-max ℓA ℓB)) where
     field
+      -- at least one of the two holds, everywhere
       decide  : ⊤G ⊢ (A ⊕ A')
+      -- ... and never both
       exclude : Complement A A'
 
   open Decision public
@@ -213,15 +228,21 @@ module DecAdd {S : Type ℓS} (Car : S → Type ℓX) where
         (dec-no (A & B) ∘⊢ (¬G-map &-E₁ ∘⊢ &-E₁))
     ∘⊢ dist&
 
-  -- the units decide themselves
-  -- double negation introduction
+  -- double negation introduction.  Named for its conclusion, like every
+  -- other introduction rule here (`⊕-I₁`, `⇒-I`, `dec-yes`).
+  ¬G¬G-I : (A : TheoryTy ℓA s) → A ⊢ ¬G ¬G A
+  ¬G¬G-I A = ⇒-I (contra {A = A})
+
+  -- DEPRECATED NAME.  `dni` is guessable only from the abbreviation, not
+  -- from the statement; prefer `¬G¬G-I` in new code.
   dni : (A : TheoryTy ℓA s) → A ⊢ ¬G ¬G A
-  dni A = ⇒-I (contra {A = A})
+  dni = ¬G¬G-I
 
   -- and so the negation of a decided grammar is decided
   dec-¬ : (A : TheoryTy ℓA s) → Dec⟨ A ⟩ ⊢ Dec⟨ ¬G A ⟩
-  dec-¬ A = ⊕-E (dec-no (¬G A) ∘⊢ dni A) (dec-yes (¬G A))
+  dec-¬ A = ⊕-E (dec-no (¬G A) ∘⊢ ¬G¬G-I A) (dec-yes (¬G A))
 
+  -- the units decide themselves
   dec-⊤ : ⊤G {s} ⊢ Dec⟨ ⊤G {s} ⟩
   dec-⊤ = dec-yes ⊤G
 

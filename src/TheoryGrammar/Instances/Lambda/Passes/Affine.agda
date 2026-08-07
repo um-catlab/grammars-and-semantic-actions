@@ -1,35 +1,34 @@
 {-
   WHAT WEAKENING COSTS.
 
-  `A ⊗ B ⊢ A` is not a term of this calculus: `_⊢_` preserves the
-  index and the projection does not.  What IS a term is
+  `A ⊗ B ⊢ A` is not a term of this calculus: `_⊢_` preserves the index
+  and the projection does not.  What IS a term is
 
-      AppG A B ⊢ pull A     along the carrier map `funPart`,
+      AppG A B ⊢ pull A     along the carrier map `funCM`,
 
-  the map sending an application to its function part.  So affine
-  weakening is not a rule of the multiplicative fragment -- it is a
-  CHANGE OF CARRIER, and the theorem below says precisely why it cannot
-  be internalised: `funPart` does not preserve `appOp`-splittings, so
-  `push⊗` is unavailable along it and the multiplicative fragment does
-  not transport.
+  whose `hom` DENOTES "the function part of an application" (`funPart`;
+  `argCM`/`argPart` dually).  So affine weakening is a CHANGE OF
+  CARRIER, not a rule of the multiplicative fragment, and
+  `⊗-weaken`/`⊗-weaken₂` are `app-elim` and nothing else.
 
-  `⊗-weaken` and `⊗-weaken₂` themselves are `app-elim` and nothing
-  else: once the carrier map is named, the projection is definitional.
+  `¬funSplitPres`, `¬argSplitPres` and `¬funReflects` say why it cannot
+  be internalised: the projections preserve no `appOp`-splitting and
+  reflect none, so `push⊗` is unavailable along them.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Passes.Affine where
 
-open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool using (false)
-open import Cubical.Data.Sigma
 open import Cubical.Data.Empty as E using (⊥)
+open import Cubical.Data.Sigma
+open import Cubical.Foundations.Prelude
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.CarrierMap
-open import TheoryGrammar.Instances.Lambda.Signature
-open import TheoryGrammar.Instances.Lambda.Fibered
 open import TheoryGrammar.Instances.Lambda.Base
+open import TheoryGrammar.Instances.Lambda.Fibered
+open import TheoryGrammar.Instances.Lambda.Signature
 
 module Affine (Name : Type₀) where
 
@@ -53,42 +52,48 @@ module Affine (Name : Type₀) where
   argCM .hom nm n = n
   argCM .hom tm   = argPart
 
-  private
-    module F = Along funCM
-    module A = Along argCM
+  module Fun = Along funCM
+  module Arg = Along argCM
 
   -- ================================================================
   -- The two weakenings, as terms over the projections.
   -- ================================================================
 
-  ⊗-weaken : {A B : TmG} → AppG A B ⊢ F.pull A
+  ⊗-weaken : {A B : TmG} → AppG A B ⊢ Fun.pull A
   ⊗-weaken = app-elim λ _ _ a _ → a
 
-  ⊗-weaken₂ : {A B : TmG} → AppG A B ⊢ A.pull B
+  ⊗-weaken₂ : {A B : TmG} → AppG A B ⊢ Arg.pull B
   ⊗-weaken₂ = app-elim λ _ _ _ b → b
 
   -- ================================================================
   -- ... and why they are not rules: the projections lose splittings.
   -- ================================================================
 
+  private
+    noApp : (x : Name) → IsApp (var x) → ⊥
+    noApp x ()
+
   -- `funPart` maps `app (var x) (var x)` to `var x`, which is not an
   -- application: so an `appOp`-splitting of the source has no image,
   -- and `push⊗` is not available.
   ¬funSplitPres : (x : Name) → SplitPresAt funCM appOp → ⊥
-  ¬funSplitPres x P with P .homSplit (app (var x) (var x)) (mkApp (var x) (var x))
-  ... | ()
+  ¬funSplitPres x P =
+    noApp x (P .homSplit (app (var x) (var x)) (mkApp (var x) (var x)))
 
   ¬argSplitPres : (x : Name) → SplitPresAt argCM appOp → ⊥
-  ¬argSplitPres x P with P .homSplit (app (var x) (var x)) (mkApp (var x) (var x))
-  ... | ()
+  ¬argSplitPres x P =
+    noApp x (P .homSplit (app (var x) (var x)) (mkApp (var x) (var x)))
 
   -- Reflection fails too: the splitting of `funPart m` constrains only
-  -- the function part, so the argument slot is unconstrained.
-  private
-    noEq : (x : Name) → (var x) Eq.≡ lam x (var x) → ⊥
-    noEq x ()
-
-  ¬funReflects : (x : Name) → F.ReflectsSplitAt appOp → ⊥
+  -- the function part, so the argument slot is unconstrained.  The
+  -- reflected splitting must be MATCHED before the equation reduces --
+  -- `LParts` at an abstract splitting is stuck -- and once matched it
+  -- says `var x Eq.≡ lam x (var x)`.
+  ¬funReflects : (x : Name) → Fun.ReflectsSplitAt appOp → ⊥
   ¬funReflects x R
     with R (app (app (var x) (var x)) (lam x (var x))) (mkApp (var x) (var x))
-  ... | mkApp _ _ , e = noEq x (e false)
+  ... | mkApp _ _ , e = argSlotUnconstrained (e false)
+    where
+    -- what the argument slot is forced to be, and is not
+    argSlotUnconstrained : (var x) Eq.≡ lam x (var x) → ⊥
+    argSlotUnconstrained ()

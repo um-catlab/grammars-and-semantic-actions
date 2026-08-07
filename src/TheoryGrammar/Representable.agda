@@ -1,32 +1,32 @@
 {-
-  REPRESENTABLES ARE THE TENSORS OF REPRESENTABLES.
+  A REPRESENTABLE AT A COMPOSITE IS THE TENSOR OF REPRESENTABLES.
 
-      ⌈ op o m⃗ ⌉  ≅  ⊗ˢ o (λ a → ⌈ m⃗ a ⌉)
+      ⌈ op o m⃗ ⌉  ⊣⊢  ⊗ˢ o (λ a → ⌈ m⃗ a ⌉)
 
-  `Fibered` says every tuple splits its own composite (`parts-split`).
-  The converse -- reassembling a splitting's parts gives the whole back
-  -- is NOT a field, and it is exactly what this iso's `from` direction
-  needs, so it is taken as a parameter (`unsplit`).  For a syntax
-  promodel every clause of it is `Eq.refl`.
+  Both directions -- `⌈⌉-into` and `⌈⌉-from` -- but NOT an `Iso`: the
+  round trips are not proved here, and no consumer has needed them.
+
+  `Fibered` gives `parts-split`: every tuple splits its own composite.
+  The converse -- a splitting's parts reassemble to the whole -- is what
+  the `from` direction needs and is NOT a field (it is refuted for
+  quotient substrates), so it is a module parameter, `unsplit`; for a
+  syntax promodel every clause of it is `Eq.refl`.
 
   Two consequences, both used to decide equality of a carrier without
-  ever leaving the calculus:
-
-    * a representable at a composite is a tensor, so `dec-⊗` decides it;
-    * the operations are INJECTIVE (`op-inj`), given unique readability.
-
-  So `Discrete` on a sort is not an input to an instance -- it is the
-  decidability of `⌈_⌉`, and it is built by the generic tensor rule.
+  leaving the calculus: `dec-⊗` decides a representable through the iso,
+  and the operations are INJECTIVE (`op-inj`) given unique readability.
+  So `Discrete` on a sort is not an input to an instance -- it is
+  decidability of `⌈_⌉`, built by the generic tensor rule.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Representable where
 
 open import Cubical.Foundations.Prelude
-open import Cubical.Data.Sigma
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
+open import TheoryGrammar.Precision using (module Prec)
 
 private variable ℓS ℓ ℓ' ℓX ℓP : Level
 
@@ -58,8 +58,7 @@ module Repr {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
   -- Unique readability makes the operations injective.
   -- ================================================================
 
-  module _ (splitProp : (o : σ .ops) (m : Fib .carrier (σ .resultSort o))
-                        (p q : Fib .Split o m) → p ≡ q) where
+  module _ (splitProp : Prec.SplitProp Fib) where
 
     op-inj : (o : σ .ops)
              (m⃗ m⃗' : (a : σ .arities o) → Fib .carrier (σ .sortOf o a))

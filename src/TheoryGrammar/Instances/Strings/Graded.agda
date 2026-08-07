@@ -18,6 +18,7 @@ open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
+open import TheoryGrammar.Enumerable
 
 open import TheoryGrammar.Instances.Strings.Connectives Char public
 
@@ -67,3 +68,21 @@ strGraded .deg< appop m (u , v , s) true  pr = split3LenL< s (ntLen pr)
 strGraded .deg< appop m (u , v , s) false pr = split3LenR< s (ntLen pr)
 
 open Guard strGraded ℓ-zero Unit (λ _ → tt) public
+
+-- THE RESOURCE LAW.  "If every slot of a cut is non-trivial then every
+-- slot is a proper part" -- one line, because properness of a slot IS
+-- non-triviality of its complement.  A fact about the grading, of the
+-- same kind as `deg<`, and what `Decidable.Guarded.resourceOf` needs in
+-- order to derive a cut's resource test from terms.
+ntProper : (w : String) (sp : MonSplit appop w)
+         → ((a : Bool) → NonTrivial (MonParts appop w sp a))
+         → (a : Bool) → StrProper appop w sp a
+ntProper w sp h true  = h false
+ntProper w sp h false = h true
+
+appAr : List Bool
+appAr = true ∷ false ∷ []
+
+appArComplete : (a : Bool) → a ∈L appAr
+appArComplete true  = here
+appArComplete false = there here

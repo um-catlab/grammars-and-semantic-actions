@@ -18,7 +18,6 @@ open import Cubical.Data.Empty as E using (⊥)
 open import Cubical.Relation.Nullary.Base using (Discrete; decRec)
 import Cubical.Data.Equality as Eq
 
-open import TheoryGrammar.Base
 open import TheoryGrammar.Decidable.Additive
 
 private variable ℓS ℓ ℓ' ℓX : Level

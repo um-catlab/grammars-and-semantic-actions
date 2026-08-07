@@ -10,6 +10,17 @@
 
   The right-hand sides are internal negations, not metalanguage ones, so
   "inv is undefined at 0" is a THEOREM OF THE CALCULUS.
+
+  DEFINES `Nonzero`, the primitive `dec-inv`, the four one-directional
+  theorems `img-inv⊢nonzero`/`nonzero⊢img-inv`/`dom-inv⊢nonzero`/
+  `nonzero⊢dom-inv`, their pairings `img-inv⊣⊢nonzero`/`dom-inv⊣⊢nonzero`,
+  and the decisions `invDecision`/`dec-invOp`/`dec-nonzero`.
+
+  ONE THEOREM OR TWO?  Two.  Each direction is proved and named on its
+  own, and every consumer -- `NoPoint`, `Joint`, `Tests` -- takes a
+  single direction.  The `⊣⊢` pairings below are DERIVED, kept only
+  because "invertibility IS nonzeroness" is the claim being made and a
+  conjunctive conclusion is the honest way to say `is`.
 -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Instances.Field.Partial where
@@ -22,25 +33,34 @@ import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
+open import TheoryGrammar.Domain
 open import TheoryGrammar.Instances.Field.Base
-open import TheoryGrammar.Instances.Field.Domain
 
+-- Brings in the two grammars this file is about, at `fldFib`:
+--   `Imgˢ o`    DENOTES "this element IS an o-composite"   (`⊗ˢ o ⊤`)
+--   `Domˢ o i`  DENOTES "this element OCCURS in slot i of one"
+-- At the unary `invOp` they read "m is somebody's inverse" and "m has
+-- an inverse"; `inv` is an involution on 𝔽₃, so §2 proves they agree.
 open DomainOf fldFib public
 
+-- `Gr` DENOTES a predicate on field elements -- the only sort there is.
 Gr : Type₁
 Gr = TheoryTy ℓ-zero tt
 
--- internal logical equivalence: the two maps, nothing else
-_⊣⊢_ : Gr → Gr → Type₀
-A ⊣⊢ B = (A ⊢ B) × (B ⊢ A)
-
-infix 1 _⊣⊢_
+-- `_⊣⊢_`, internal logical equivalence, is `Decidable.Additive`'s: it
+-- mentions only `_⊢_`, so it was never a field notion, and it arrives
+-- here through `DomainOf`'s re-export.  Its fixity (`infix 1`) is
+-- declared there.
 
 -- ==================================================================
 -- The one primitive: the domain of definition is DECIDED, and its
 -- complement is exactly the representable at zero.
 -- ==================================================================
 
+-- `Nonzero` DENOTES "this element is not zero", internally: a map out of
+-- the representable at f0 into ⊥G.  Not a `Dec`, not a `Bool` -- the
+-- refutation itself is the inhabitant, so downstream uses spend it
+-- rather than re-testing.
 Nonzero : Gr
 Nonzero = ¬G ⌈ f0 ⌉
 
@@ -66,9 +86,10 @@ nonzero⊢img-inv m k =
   ⊕-E-at (Imgˢ invOp) ⌈ f0 ⌉ m (λ x → x) (λ e → ⊥-E {A = Imgˢ invOp} m (k e)) (dec-inv m tt)
 
 -- THE DOMAIN OF DEFINITION OF inv, INTERNALLY: exactly the nonzero
--- elements.
-img-inv≡nonzero : Imgˢ invOp ⊣⊢ Nonzero
-img-inv≡nonzero = img-inv⊢nonzero , nonzero⊢img-inv
+-- elements.  DERIVED pairing of the two theorems above; the relation is
+-- `⊣⊢`, not `≡`, and the name now says so.
+img-inv⊣⊢nonzero : Imgˢ invOp ⊣⊢ Nonzero
+img-inv⊣⊢nonzero = img-inv⊢nonzero , nonzero⊢img-inv
 
 -- ==================================================================
 -- 2.  THE SAME AT THE ARGUMENT SIDE.  `Imgˢ` says which elements ARE
@@ -86,8 +107,9 @@ nonzero⊢dom-inv x k = x , sp , inv-fix x sp
   where sp : Nz x
         sp = nonzero⊢img-inv x k .fst
 
-dom-inv≡nonzero : Domˢ invOp tt ⊣⊢ Nonzero
-dom-inv≡nonzero = dom-inv⊢nonzero , nonzero⊢dom-inv
+-- DERIVED pairing, as above.
+dom-inv⊣⊢nonzero : Domˢ invOp tt ⊣⊢ Nonzero
+dom-inv⊣⊢nonzero = dom-inv⊢nonzero , nonzero⊢dom-inv
 
 -- ==================================================================
 -- 3.  AND SO INVERTIBILITY IS A DECISION, in the sense of

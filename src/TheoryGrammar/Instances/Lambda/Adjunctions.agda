@@ -8,6 +8,10 @@
 
   `⊸ᶠ-β`/`⊸ᶠ-η` are `refl` generically for every focus, including the
   cross-sorted ones.  So the ARITY costs and the sorts do not.
+
+  β and η are stated SEPARATELY -- `var-β`/`var-η`, `fun-β`/`fun-η` --
+  because that is what the measurement is about; `var-UP`/`fun-UP` are
+  their pairing as an `Iso`.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Adjunctions where
@@ -17,8 +21,6 @@ open import Cubical.Foundations.Isomorphism
 open import Cubical.Data.Bool hiding (_⊕_)
 open import Cubical.Data.Unit
 
-open import TheoryGrammar.Base
-open import TheoryGrammar.Instances.Lambda.Signature
 open import TheoryGrammar.Instances.Lambda.Base
 open import TheoryGrammar.Instances.Lambda.Residuals
 
@@ -27,7 +29,7 @@ module Adjunctions (Name : Type₀) where
   open LamBase Name
   open Residuals Name
 
-
+  -- the `varOp` adjunction: `VarG ⊣ Wraps`, at arity `Unit`
   module _ {P : NmG} {C : TmG} where
 
     var-curry : VarG P ⊢ C → P ⊢ Wraps C
@@ -50,6 +52,8 @@ module Adjunctions (Name : Type₀) where
     var-UP .Iso.sec = var-β
     var-UP .Iso.ret = var-η
 
+  -- the `appOp` adjunction at its function slot: `AppG - B ⊣ - ⟜ᵃ B`,
+  -- at arity `Bool`
   module _ {A C : TmG} {B : TmG} where
 
     fun-curry : AppG A B ⊢ C → A ⊢ (C ⟜ᵃ B)

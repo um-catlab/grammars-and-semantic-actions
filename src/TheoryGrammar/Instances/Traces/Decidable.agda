@@ -7,6 +7,17 @@
   interface that survives; `fromEnumerable` is the constructor that
   applies.  The arity is `Bool`, so slotwise decisions combine by
   `decΠBool` exactly as at `Strings`.
+
+  DEFINES `trDecEnum`, `trDecSplittings`, `trDecTensor`.
+
+  WHY A SEPARATE FILE, given that it shares `Enumeration`'s parameter
+  list exactly.  The seam is two names wide -- `enumSplit` and
+  `enumComplete` -- and it is the only one in the directory that narrow.
+  Everything the framework interfaces need (`Decidable.Enumerated`,
+  `Decidable.Rule`, `Decidable.Splittings`) is imported HERE and nowhere
+  else under `Traces/`, so folding this into `Enumeration` would drag
+  three framework modules into the combinatorics.  The cut is where the
+  glue is thinnest, which is the whole criterion.
 -}
 open import Cubical.Foundations.Prelude
 
@@ -27,8 +38,6 @@ open import Cubical.Data.List
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.Enumerable
-open import TheoryGrammar.Decidable.Additive
-open import TheoryGrammar.Decidable.Tensor
 open import TheoryGrammar.Decidable.Enumerated hiding (enumSplit; enumComplete)
 open import TheoryGrammar.Decidable.Rule
 import TheoryGrammar.Decidable.Splittings as DS

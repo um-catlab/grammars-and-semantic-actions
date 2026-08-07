@@ -85,7 +85,8 @@ module Sortedness (le : A → A → Bool)
     merge a b , mergeSorted a b sa sb
               , permTrans (mergePerm a b) (permMerge pa pb s)
 
-  -- the internal term
+  -- PRIMITIVE (phase 1): the internal term.  It matches the splitting;
+  -- downstream this is composed, never re-opened.
   mergeS : (SortedOf ⊗' SortedOf) ⊢ SortedOf
   mergeS w ((u , v , s) , h) = mergeSortedAt s (h true) (h false)
 

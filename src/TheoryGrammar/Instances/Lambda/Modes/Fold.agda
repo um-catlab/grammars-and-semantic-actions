@@ -1,11 +1,12 @@
 {-
   THE INDUCTION PRINCIPLE OF THE AST SUBSTRATE'S CARRIER -- DERIVED.
 
-  `indRaw` used to recurse on `Raw`.  It no longer does: it is
-  `readback` (the carrier read back into the initial algebra of the
-  shape functor, `Lambda.Initial`) followed by the framework's generic
-  `fold`.  So the recursion in `Modes/` runs through `μ`, and ANY
-  description over the carrier can be folded, not only this shape --
+  DENOTES: `indRaw P pv pa pl` is "P holds of every raw term", proved by
+  structural recursion.  It used to recurse on `Raw`.  It no longer
+  does: it is `readback` (the carrier read back into the initial algebra
+  of the shape functor, `Lambda.Initial`) followed by the framework's
+  generic `fold`.  So the recursion in `Modes/` runs through `μ`, and
+  ANY description over the carrier can be folded, not only this shape --
 
       Uses  = indRaw at a CONSTANT motive (so: the fold)
       check = indRaw at the motive  ⊤ ⊢ Dec⟨ Uses t ⟩
@@ -15,10 +16,10 @@
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Instances.Lambda.Modes.Fold where
 
-open import Cubical.Foundations.Prelude
+open import Cubical.Data.List using ([])
 open import Cubical.Data.Sigma
 open import Cubical.Data.Unit
-open import Cubical.Data.List using ([])
+open import Cubical.Foundations.Prelude
 
 open import TheoryGrammar.Instances.Lambda.Fibered
 open import TheoryGrammar.Instances.Lambda.Initial

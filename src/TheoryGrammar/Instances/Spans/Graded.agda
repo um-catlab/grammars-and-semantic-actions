@@ -26,12 +26,14 @@ open import Cubical.Data.Bool hiding (_⊕_; _≤_)
 open import Cubical.Data.Nat
 open import Cubical.Data.Nat.Order
 open import Cubical.Data.Unit
+open import Cubical.Data.List
 open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.Graded
+open import TheoryGrammar.Enumerable
 
 open import TheoryGrammar.Instances.Spans.Base public
 
@@ -115,3 +117,23 @@ spanGraded .deg< cat (i , n) c false pr = cutR< c (neLen pr)
 -- `▷ A (P , (i , n))` unfolds to "A at every span of length < n" --
 -- the CYK chart, as a connective.
 open Guard spanGraded ℓ-zero Unit (λ _ → tt) public
+
+-- THE RESOURCE LAW, at spans.  "If every slot of a cut is non-empty
+-- then every slot is a proper part" -- one line, because properness of
+-- a slot IS non-emptiness of its complement.  This is a fact about the
+-- grading, of the same kind as `deg<`, and it is what
+-- `Decidable.Guarded.resourceOf` needs in order to derive the cut's
+-- resource test from terms.  With it, no program at spans has to state
+-- anything about a cut.
+neProper : (s : Span) (c : SpanSplit cat s)
+         → ((a : Bool) → NonEmpty (SpanParts cat s c a))
+         → (a : Bool) → SpanProper cat s c a
+neProper s c h a = h (not a)
+
+-- the arity of `cat`, listed
+catAr : List Bool
+catAr = true ∷ false ∷ []
+
+catArComplete : (a : Bool) → a ∈L catAr
+catArComplete true  = here
+catArComplete false = there here

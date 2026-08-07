@@ -5,31 +5,33 @@
       Uses (app u v) =  Uses u ⊗ᶜ Uses v      -- the context tensor
       Uses (lam n t) =  Uses t ⟜ᶜ ⌈ n ⌉       -- ITS residual
 
-  `Uses t Γ` reads "t is well-used in Γ".  `var`/`app`/`lam` are fixed
-  once and for all here; a MODE is the pair (context promodel, leaf).
-  The binder is not a bump of a nonterminal index -- it is `⊸ᶠ` at the
-  canonical focus, so `Γ ⊢ λn.t iff Γ·n ⊢ t` is the residual adjunction
-  and not a definition.
+  DENOTATIONS.  `Γ · Δ` is Γ extended on the right by Δ.  `(A ⊗ᶜ B) Γ`
+  is "Γ decomposes into an A-part beside a B-part".  `(B ⟜ᶜ Δ) Γ` is
+  "B holds of Γ · Δ".  So `Uses t Γ` reads "t is well-used in Γ", and
+  the binder is `⊸ᶠ` at the canonical focus rather than a bump of a
+  nonterminal index: `Γ ⊢ λn.t iff Γ·n ⊢ t` is the residual adjunction,
+  not a definition.
 
-  `check` is the same eliminator at a decision-valued motive.
+  `check` is the same eliminator at a decision-valued motive; `accepts`
+  and `acceptsLf` observe it.  A MODE supplies only the leaf.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Modes.Core where
 
-open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
 open import Cubical.Data.Unit
+open import Cubical.Foundations.Prelude
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Fibered
 open import TheoryGrammar.CanonicalFocus
 open import TheoryGrammar.Decidable
 open import TheoryGrammar.Decidable.Splittings
-open import TheoryGrammar.Instances.Lambda.Signature using (tm)
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Instances.Lambda.Fibered using (module Terms)
 open import TheoryGrammar.Instances.Lambda.Modes.Ctx
 open import TheoryGrammar.Instances.Lambda.Modes.Fold
+open import TheoryGrammar.Instances.Lambda.Signature using (tm)
 
 -- The context promodel comes with a total point: `_·_` and the canonical
 -- focus are the two places a MODE needs the operation itself.  Everything
@@ -41,7 +43,7 @@ module Core (Name : Type₀)
             (sing : Name → CFib .carrier tt)
   where
 
-  open Terms Name using (Raw; var; app; lam; λFib)
+  open Terms Name using (Raw; λFib)
   open Fold Name using (indRaw)
   open DecFib CFib public
 
@@ -51,19 +53,31 @@ module Core (Name : Type₀)
   CtxG : Type₁
   CtxG = TheoryTy ℓ-zero tt
 
-  -- the operation, and the tensor it convolves
+  -- `Γ · Δ` : Γ extended on the right by Δ
   infixl 20 _·_
   _·_ : Ctx → Ctx → Ctx
   Γ · Δ = CPoint .op mul λ b → if b then Γ else Δ
 
+  -- `(A ⊗ᶜ B) Γ` : Γ decomposes into an A-part beside a B-part
   infixr 21 _⊗ᶜ_
   _⊗ᶜ_ : CtxG → CtxG → CtxG
   A ⊗ᶜ B = ⊗ˢ mul λ b → if b then A else B
+
+  -- The tensor's decision rule, and the ONLY place `CDec` is consulted:
+  -- `dec-⊗ˢ` at `mul`, with the two slots supplied uniformly.  Both the
+  -- `app` node of `check` and affine's modal leaf are this one term.
+  dec-⊗ᶜ : (A B : CtxG) → ⊤G ⊢ Dec⟨ A ⟩ → ⊤G ⊢ Dec⟨ B ⟩ → ⊤G ⊢ Dec⟨ A ⊗ᶜ B ⟩
+  dec-⊗ᶜ A B dA dB Γ _ =
+    CDec .dec-⊗ˢ mul (λ b → if b then A else B) Γ
+      λ { sp true → dA _ tt ; sp false → dB _ tt }
 
   -- ================================================================
   -- The residual, at the LEFT slot: "extend the context on the right".
   -- ================================================================
 
+  -- `Rest` names the other slots and `tuple` reassembles: what this
+  -- instance forces is that the complement of `mul`'s left slot is ONE
+  -- slot, filled by `false`.
   asm : Assembly CFib mul true
   asm .Rest       = Unit
   asm .restOf _   = false
@@ -89,6 +103,8 @@ module Core (Name : Type₀)
     module Res (Δ : Ctx) =
       Cn.Residual {A = λ _ → ⌈ Δ ⌉} (λ _ → Δ) (λ _ → Eq.refl) (repJ Δ) (λ _ _ → refl)
 
+  -- `(B ⟜ᶜ Δ) Γ` : B holds of Γ extended on the right by Δ
+  infixl 2 _⟜ᶜ_
   _⟜ᶜ_ : CtxG → Ctx → CtxG
   B ⟜ᶜ Δ = ⊸ᶠ (λ _ → ⌈ Δ ⌉) B
 
@@ -120,20 +136,21 @@ module Core (Name : Type₀)
   module Mode (Lf : Name → CtxG)
               (decLf : (n : Name) → ⊤G ⊢ Dec⟨ Lf n ⟩) where
 
+    -- `Uses t Γ` : "t is well-used in Γ", at THIS promodel and leaf
     Uses : Raw → CtxG
     Uses = indRaw (λ _ → CtxG)
                   Lf
                   (λ _ _ P Q → P ⊗ᶜ Q)
                   (λ n _ P → P ⟜ᶜ sing n)
 
+    -- the same eliminator at a decision-valued motive: for every Γ,
+    -- either a use-derivation or its refutation
     check : (t : Raw) → ⊤G ⊢ Dec⟨ Uses t ⟩
     check = indRaw (λ t → ⊤G ⊢ Dec⟨ Uses t ⟩) decLf cApp cLam
       where
       cApp : (u v : Raw) → (⊤G ⊢ Dec⟨ Uses u ⟩) → (⊤G ⊢ Dec⟨ Uses v ⟩)
            → ⊤G ⊢ Dec⟨ Uses u ⊗ᶜ Uses v ⟩
-      cApp u v cu cv Γ _ =
-        CDec .dec-⊗ˢ mul (λ b → if b then Uses u else Uses v) Γ
-          λ { sp true → cu _ tt ; sp false → cv _ tt }
+      cApp u v = dec-⊗ᶜ (Uses u) (Uses v)
 
       cLam : (n : Name) (t : Raw) → (⊤G ⊢ Dec⟨ Uses t ⟩)
            → ⊤G ⊢ Dec⟨ Uses t ⟜ᶜ sing n ⟩
@@ -148,6 +165,7 @@ module Core (Name : Type₀)
     -- which of the two indices is bound is a matter of reading.
     private module AST = DecFib λFib
 
+    -- `Scoped Γ t` : the same proposition as `Uses t Γ`, at the term sort
     Scoped : Ctx → AST.TheoryTy ℓ-zero tm
     Scoped Γ t = Uses t Γ
 
@@ -163,3 +181,8 @@ module Core (Name : Type₀)
     -- every other test suite in the development wrote for itself.
     accepts : (t : Raw) → ⊤G ⊢ Δ Bool
     accepts t = okA (Uses t) (¬G (Uses t)) ∘g check t
+
+    -- the same observation of the LEAF decision, whose world is a
+    -- CONTEXT rather than a term.  Same reader, different sort.
+    acceptsLf : (n : Name) → ⊤G ⊢ Δ Bool
+    acceptsLf n = okA (Lf n) (¬G (Lf n)) ∘g decLf n

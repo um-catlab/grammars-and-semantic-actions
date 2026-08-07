@@ -7,23 +7,26 @@
 
     * `Σ`, `Π`, `Unit`, `Unit*` and `Lift` have definitional η, so any
       round trip that only reassociates or re-wraps is `refl`;
-    * `Bool` (an arity) and `Eq._≡_` (a proof carried in a slot) do NOT,
-      so any round trip that REBUILDS a function over an arity, or that
-      has to look at a representable's proof, needs `funExt` -- with
-      `refl` at every leaf.
+    * `Bool` (an arity) does NOT, so any round trip that REBUILDS a
+      function over an arity needs `funExt` -- with `refl` at every leaf.
 
-  So the funExt debt of the whole instance is exactly "one per Bool
-  arity" plus "one per Eq match", and nothing else.
+  So the funExt debt of this instance is exactly ONE PER ARITY WITHOUT
+  DEFINITIONAL η, and nothing else: the four `Bool` arities, plus -- in
+  `Fibered.parts-split` -- the degenerate case of `baseOp`'s EMPTY
+  arity.  `Eq._≡_` also lacks η, but that is not paid in `funExt` here;
+  it is paid as the two `Eq.refl` matches in `Dependent.agda`.
+
+  Measured here: `⊗-β`/`⊗-η`, `varG-rt`/`varG-rt⁻`, `app-rt`/`app-rt⁻`,
+  `⟦J⟧-rt⁻` and `j-rt⁻`.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.SimplyTyped.Laws where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
+open import Cubical.Data.List using (_∷_)
 open import Cubical.Data.Sigma
 open import Cubical.Data.Sum using (inl; inr)
-open import Cubical.Data.List using (_∷_)
-open import Cubical.Data.Unit
 open import Cubical.Relation.Nullary.Base using (Discrete)
 
 open import TheoryGrammar.Base
@@ -40,14 +43,22 @@ module StLaws (Name : Type₀) (_≟_ : Discrete Name) where
   -- data, so there is no proof term to match.
   -- ================================================================
 
-  ⊗-βη : (o : TOp)
-         {A : (a : TAr o) → TheoryTy ℓ-zero (TSortOf o a)}
-         {B : TheoryTy ℓ-zero (TResult o)}
-       → ((g : MultiHomˢ o A B)
-          → curryˢ o {A = A} {B = B} (uncurryˢ o {A = A} {B = B} g) ≡ g)
-       × ((f : ⊗ˢ o A ⊢ B)
-          → uncurryˢ o {A = A} {B = B} (curryˢ o {A = A} {B = B} f) ≡ f)
-  ⊗-βη o = (λ _ → refl) , (λ _ → refl)
+  -- Two laws, stated separately: a single `_×_`-valued statement would
+  -- have to be split by every consumer anyway, and each half is checked
+  -- against its own `refl`.  (Upstream calls them `⊗-UP-β`/`⊗-UP-η`.)
+  ⊗-β : (o : TOp)
+        {A : (a : TAr o) → TheoryTy ℓ-zero (TSortOf o a)}
+        {B : TheoryTy ℓ-zero (TResult o)}
+      → (g : MultiHomˢ o A B)
+      → curryˢ o {A = A} {B = B} (uncurryˢ o {A = A} {B = B} g) ≡ g
+  ⊗-β o _ = refl
+
+  ⊗-η : (o : TOp)
+        {A : (a : TAr o) → TheoryTy ℓ-zero (TSortOf o a)}
+        {B : TheoryTy ℓ-zero (TResult o)}
+      → (f : ⊗ˢ o A ⊢ B)
+      → uncurryˢ o {A = A} {B = B} (curryˢ o {A = A} {B = B} f) ≡ f
+  ⊗-η o _ = refl
 
   -- ================================================================
   -- REFL.  The unary tensor's index can be pushed in and pulled out

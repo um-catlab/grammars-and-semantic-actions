@@ -6,6 +6,11 @@
   presentation can state.  `⊸ᶠ-β`/`⊸ᶠ-η` are `refl` generically for all
   four, including the two cross-sorted ones.  What is NOT generic is the
   adjunction with the tensor -- see `Adjunctions.agda`.
+
+  Defines the four foci `focFun`/`focBind`/`focBody`/`focVar` and the
+  residual each names: `_⟜ᵃ_`, `Binds`, `Under`, `Wraps`.  Proves
+  `bind-UP` and `body-UP`, the universal properties at the two
+  cross-sorted foci.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Residuals where
@@ -13,10 +18,9 @@ module TheoryGrammar.Instances.Lambda.Residuals where
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.Isomorphism
 open import Cubical.Data.Bool hiding (_⊕_)
-open import Cubical.Data.Unit
 open import Cubical.Data.Empty using (⊥)
+open import Cubical.Data.Unit
 
-open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.Instances.Lambda.Signature
 open import TheoryGrammar.Instances.Lambda.Base
@@ -35,6 +39,10 @@ module Residuals (Name : Type₀) where
 
   module F = FocusNotation focFun
 
+  -- `(C ⟜ᵃ B) u` DENOTES: "`u` is a function -- applying it to any `B`
+  -- gives a `C`".  Same fixity as the ambient library's `_⟜_`.
+  infixl 2 _⟜ᵃ_
+
   _⟜ᵃ_ : TmG → TmG → TmG
   C ⟜ᵃ B = F.⊸ᶠ (λ b → if b then C else B) C
 
@@ -49,6 +57,8 @@ module Residuals (Name : Type₀) where
 
   module B = FocusNotation focBind
 
+  -- `Binds A C n` DENOTES: "binding `n` is enough -- `lam n t` is a `C`
+  -- for every body `t` that is an `A`".
   Binds : TmG → TmG → NmG
   Binds A C = B.⊸ᶠ (λ { true → ⊤G ; false → A }) C
 
@@ -62,6 +72,8 @@ module Residuals (Name : Type₀) where
 
   module Y = FocusNotation focBody
 
+  -- `Under P C t` DENOTES: "`t` is a body good under any `P`-binder --
+  -- `lam n t` is a `C` for every name `n` satisfying `P`".
   Under : NmG → TmG → TmG
   Under P C = Y.⊸ᶠ (λ { true → P ; false → ⊤G }) C
 
@@ -76,6 +88,8 @@ module Residuals (Name : Type₀) where
 
   module V = FocusNotation focVar
 
+  -- `Wraps C n` DENOTES: "`var n` is a `C`".  The complement is empty,
+  -- so nothing else is quantified over.
   Wraps : TmG → NmG
   Wraps C = V.⊸ᶠ (λ _ → ⊤G) C
 

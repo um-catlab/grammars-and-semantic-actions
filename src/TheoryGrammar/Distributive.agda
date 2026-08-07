@@ -8,12 +8,15 @@
 
   This is what lets a synthesis grammar `⊕ᴰ Ty (λ A → ...)` be pushed
   through the unfolding of a judgment without ever matching on it.
+
+  MAIN: `⊕ᴰ-map`, `⊕ᴰ-swap`, the four `⊕ᴰ-⊕-`/`⊕ᴰ-&-` distributions,
+  and `dist&r`/`dist&₂`, `dist&`'s mirror and its square.
 -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Distributive where
 
 open import Cubical.Foundations.Prelude
-open import Cubical.Foundations.Isomorphism
+open import Cubical.Foundations.Isomorphism using (Iso)
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Rules
@@ -34,8 +37,8 @@ module Dist {S : Type ℓS} (Car : S → Type ℓX) where
          → (∀ y → A y ⊢ B y) → ⊕ᴰ Y A ⊢ ⊕ᴰ Y B
   ⊕ᴰ-map Y {B = B} f = ⊕ᴰ-E λ y → ⊕ᴰ-I Y {A = B} y ∘⊢ f y
 
-  -- reindexing along a bijection of index types, in the one shape used:
-  -- an iterated ⊕ᴰ is a ⊕ᴰ at the product
+  -- two nested indexed sums commute -- the ⊕ᴰ at the product read the
+  -- other way round
   module _ (Y : Type ℓY) (Z : Type ℓY) {A : Y → Z → TheoryTy ℓA s} where
 
     ⊕ᴰ-swap : ⊕ᴰ Y (λ y → ⊕ᴰ Z (λ z → A y z)) ⊢ ⊕ᴰ Z (λ z → ⊕ᴰ Y (λ y → A y z))

@@ -7,6 +7,9 @@
   by names (`varOp n`, `lamOp n`, so `ops` is as big as `Name`); here
   names are a sort instead, so there are exactly three operations and
   `⌈ n ⌉ : Name → Type` is what pins a binder.
+
+  Defines the sorts `LSort`, the operations `LOp`, their arities `LAr`,
+  the slot sorting `LSortOf`, and the signature `λSig` they assemble.
 -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Instances.Lambda.Signature where
@@ -17,12 +20,15 @@ open import Cubical.Data.Unit
 
 open import TheoryGrammar.Base
 
+-- the two sorts: names, and terms
 data LSort : Type₀ where
   nm tm : LSort
 
+-- the three ways a term is built
 data LOp : Type₀ where
   varOp appOp lamOp : LOp
 
+-- `LAr o` DENOTES: the slots of `o`, as an index type
 LAr : LOp → Type₀
 LAr varOp = Unit
 LAr appOp = Bool

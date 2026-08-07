@@ -108,6 +108,10 @@ module DFA (Q : Type₀) (step : Q → Char → Q) (acc : Q → Bool) where
                           {B = λ _ → Q → Bool}
                           (λ _ _ h q → h false (step q (lower (h true) .fst))) }
 
-  -- ... and the observable: run from a start state
-  accepts : Q → ⊤G ⊢ (λ _ → Bool)
-  accepts q₀ m x = runAut scanLC scanCoalg dfaAlg tt m x q₀
+  -- ... and the observable: run from a start state.  The codomain is
+  -- `Δ Bool`, NOT the constant grammar `λ _ → Bool`: a program is a map
+  -- into a grammar, and `Δ` is the grammar that carries a metalanguage
+  -- value.  `run` is then the single externalisation, and it belongs at
+  -- the test rather than here.
+  accepts : Q → ⊤G ⊢ Δ Bool
+  accepts q₀ m x = runAut scanLC scanCoalg dfaAlg tt m x q₀ , x

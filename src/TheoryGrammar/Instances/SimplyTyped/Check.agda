@@ -4,36 +4,34 @@
       typecheck : ⊤ ⊢   &ᴰ Ctx      (λ Γ     → Dec⟨ Syn Γ ⟩)
                       & &ᴰ (Ctx×Ty) (λ (Γ,C) → Dec⟨ Check Γ C ⟩)
 
-  Both modes are decided at once, for every context (and every checking
-  type), because the context grows while the term shrinks -- exactly as
-  in the scope checker.
+  Both modes at once, for every context: the context grows while the
+  term shrinks, so neither recursion closes on its own.  `infer?` and
+  `check?` are its two projections.
 
-  The load-bearing lemma is `dec-at`:
+  The load-bearing lemma is `dec-at`.  Deciding "synthesises SOME type"
+  gives deciding "synthesises THIS type" ONLY GIVEN the subsingleton
+  hypothesis, which is an EXPLICIT argument so that the dependency is a
+  theorem and not a remark.
 
-      dec-at : ((A B : Ty) → (Infer Γ A & Infer Γ B) ⊢ Kty A B)
-             → Dec⟨ Syn Γ ⟩ ⊢ Dec⟨ Infer Γ C ⟩
+  MEASUREMENT.  `Unique.synUnique` is consumed in exactly THREE places
+  here, all of them REFUTATIONS: twice in `dec-appᵈ` (the function
+  synthesised a non-arrow; the argument failed at its domain) and once
+  in `dec-at`.  Nothing positive uses it.
 
-  Deciding synthesis gives deciding checking-at-a-type ONLY GIVEN the
-  subsingleton hypothesis, which is stated as an explicit argument so
-  the dependency is a theorem and not a remark.  The same hypothesis is
-  what lets the application case REFUTE: if the function synthesises a
-  non-arrow, or an arrow whose domain the argument fails, there is no
-  other type it could have synthesised.
-
-  `dec-appᵈ` is the only decision written by hand; `⊗-decSplit`,
-  `dec-⊗`, `dec-⊕`, `dec-map` and the two `Dependent` decisions do
-  everything else.
+  Two decisions are written out by hand -- `dec-appᵈ` (see
+  `Dependent.agda` for why it is not there) and `dec-lamCase` -- and the
+  generic decision layer does everything else.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.SimplyTyped.Check where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
-open import Cubical.Data.Sigma
-open import Cubical.Data.Unit
+open import Cubical.Data.Empty as E using ()
 open import Cubical.Data.List using (List; []; _∷_)
 open import Cubical.Data.Nat.Order using (_<_)
-open import Cubical.Data.Empty as E using ()
+open import Cubical.Data.Sigma
+open import Cubical.Data.Unit using (tt)
 open import Cubical.Relation.Nullary.Base using (Discrete)
 
 open import TheoryGrammar.Base
@@ -61,71 +59,18 @@ module StCheck (Name : Type₀) (_≟_ : Discrete Name) where
   open StUnique Name _≟_
 
   -- ================================================================
-  -- One unfolding of `Syn Γ`, with the ⊕ᴰ pushed inwards.
-  -- ================================================================
-
-  QVar : Ctx → Ty → TmG
-  QVar Γ A = VarG (Lookup Γ A)
-
-  QApp' : Ctx → Ty → TmG
-  QApp' Γ A = ⊕ᴰ Ty (λ A₀ → AppG (Infer Γ (A₀ ⇒ᵗ A)) (Check Γ A₀))
-
-  QAnn : Ctx → Ty → TmG
-  QAnn Γ A = AnnG (Check Γ A) (⌈_⌉ {s = ty} A)
-
-  QApp : Ctx → Ty × Ty → TmG
-  QApp Γ AB = AppG (Infer Γ (AB .fst ⇒ᵗ AB .snd)) (Check Γ (AB .fst))
-
-  SynApp : Ctx → TmG
-  SynApp Γ = ⊕ᴰ (Ty × Ty) (QApp Γ)
-
-  SynAnn : Ctx → TmG
-  SynAnn Γ = ⊕ᴰ Ty (QAnn Γ)
-
-  SynStep : Ctx → TmG
-  SynStep Γ = VarG (Look Γ) ⊕ (SynApp Γ ⊕ SynAnn Γ)
-
-  -- internal: the ⊕ᴰ goes INTO the unary tensor by its functorial action
-  varG-push : (Γ : Ctx) → ⊕ᴰ Ty (QVar Γ) ⊢ VarG (Look Γ)
-  varG-push Γ = ⊕ᴰ-E λ A →
-    ⊗ˢ-map varOp {A = varFam (Lookup Γ A)} {B = varFam (Look Γ)}
-           (λ _ → ⊕ᴰ-I Ty {A = Lookup Γ} A)
-
-  -- PRIMITIVE: and out again.  This direction is NOT internal -- it
-  -- reads the index out of a slot and republishes it at the whole --
-  -- but for a UNARY operation it is only `Unit`'s η.
-  varG-pull : (Γ : Ctx) → VarG (Look Γ) ⊢ ⊕ᴰ Ty (QVar Γ)
-  varG-pull Γ t (sp , h) = h tt .fst , sp , λ _ → h tt .snd
-
-  -- internal: reindexing an iterated ⊕ᴰ along a product
-  appReindex : (Γ : Ctx) → ⊕ᴰ Ty (QApp' Γ) ⊢ SynApp Γ
-  appReindex Γ = ⊕ᴰ-E λ A → ⊕ᴰ-E λ A₀ → ⊕ᴰ-I (Ty × Ty) {A = QApp Γ} (A₀ , A)
-
-  appReindex⁻ : (Γ : Ctx) → SynApp Γ ⊢ ⊕ᴰ Ty (QApp' Γ)
-  appReindex⁻ Γ = ⊕ᴰ-E λ AB →
-      ⊕ᴰ-I Ty {A = QApp' Γ} (AB .snd)
-    ∘g ⊕ᴰ-I Ty {A = λ A₀ → AppG (Infer Γ (A₀ ⇒ᵗ AB .snd)) (Check Γ A₀)} (AB .fst)
-
-  syn-out : (Γ : Ctx) → Syn Γ ⊢ SynStep Γ
-  syn-out Γ =
-      ⊕-E (⊕-I₁ ∘g varG-push Γ)
-          (⊕-I₂ ∘g (⊕-E (⊕-I₁ ∘g appReindex Γ) ⊕-I₂ ∘g ⊕ᴰ-⊕-out Ty))
-    ∘g (⊕ᴰ-⊕-out Ty ∘g ⊕ᴰ-map Ty (λ A → j-unroll (syn , Γ , A)))
-
-  syn-in : (Γ : Ctx) → SynStep Γ ⊢ Syn Γ
-  syn-in Γ =
-      ⊕ᴰ-map Ty (λ A → j-roll (syn , Γ , A))
-    ∘g (⊕ᴰ-⊕-in Ty
-        ∘g ⊕-E (⊕-I₁ ∘g varG-pull Γ)
-               (⊕-I₂ ∘g (⊕ᴰ-⊕-in Ty
-                         ∘g ⊕-E (⊕-I₁ ∘g appReindex⁻ Γ) ⊕-I₂)))
-
-  -- ================================================================
   -- The application's dependent tensor: the argument's checking type
   -- comes from the FUNCTION's slot, and there is no representable
   -- pinning it, so this is where uniqueness has to be used.
+  --
+  -- (`SynStep`/`syn-out`/`syn-in` -- the unfolding this collapses --
+  -- live in `Judgments.agda` beside `JStep`, since they decide nothing.)
   -- ================================================================
 
+  -- `AppGᵈ Γ` denotes "the term is an application whose function
+  -- synthesises SOME arrow and whose argument checks at that arrow's
+  -- domain".  Both slots are read off the one splitting the witness
+  -- carries, so the two types are the same guess, not two guesses.
   AppGᵈ : Ctx → TmG
   AppGᵈ Γ t =
     Σ[ sp ∈ IsApp t ] Σ[ AB ∈ Ty × Ty ]
@@ -140,16 +85,25 @@ module StCheck (Name : Type₀) (_≟_ : Discrete Name) where
 
   module _ (Γ : Ctx) (t : Raw) where
 
-    private
-      Payload : IsApp t → Type₀
-      Payload sp =
-        Σ[ AB ∈ Ty × Ty ]
-          ( Infer Γ (AB .fst ⇒ᵗ AB .snd) (TParts appOp t sp true)
-          × Check Γ (AB .fst) (TParts appOp t sp false) )
+    -- `Payload sp` denotes what an `AppGᵈ` witness carries once its
+    -- splitting is known to be `sp`: the guessed arrow, and the two
+    -- derivations at that arrow.
+    Payload : IsApp t → Type₀
+    Payload sp =
+      Σ[ AB ∈ Ty × Ty ]
+        ( Infer Γ (AB .fst ⇒ᵗ AB .snd) (TParts appOp t sp true)
+        × Check Γ (AB .fst) (TParts appOp t sp false) )
 
-      -- any witness splits the same way, by unique readability
-      align : (sp : IsApp t) → AppGᵈ Γ t → Payload sp
-      align sp y = subst Payload (Split-isProp appOp t (y .fst) sp) (y .snd)
+    -- any witness splits the same way, by unique readability, so its
+    -- payload can be read AT a splitting chosen elsewhere
+    align : (sp : IsApp t) → AppGᵈ Γ t → Payload sp
+    align sp y = subst Payload (Split-isProp appOp t (y .fst) sp) (y .snd)
+
+    -- a payload CARRIES a synthesis derivation for the function slot,
+    -- at the arrow it guessed.  Every refutation below consumes exactly
+    -- this, so it is named once rather than rebuilt at each use.
+    payload-syn : (sp : IsApp t) → Payload sp → Syn Γ (TParts appOp t sp true)
+    payload-syn sp p = (p .fst .fst ⇒ᵗ p .fst .snd) , p .snd .fst
 
     dec-appᵈ : ((sp : IsApp t) → Dec⟨ Syn Γ ⟩ (TParts appOp t sp true))
              → ((sp : IsApp t) (A₀ : Ty)
@@ -170,27 +124,32 @@ module StCheck (Name : Type₀) (_≟_ : Discrete Name) where
       atArrow sp A₁ B₁ d =
         dec-elim (Check Γ A₁) (TParts appOp t sp false)
           (λ c → dec-yes (AppGᵈ Γ) t (sp , (A₁ , B₁) , d , c))
-          (λ k → dec-no (AppGᵈ Γ) t λ y →
-             k (subst (λ X → Check Γ X (TParts appOp t sp false))
-                      (sym (⇒ᵗ-inj A₁ B₁ (align sp y .fst .fst)
-                                         (align sp y .fst .snd)
-                             (synUnique Γ (A₁ ⇒ᵗ B₁)
-                                        (align sp y .fst .fst ⇒ᵗ
-                                         align sp y .fst .snd)
-                                        (TParts appOp t sp true)
-                                        (d , align sp y .snd .fst)) .fst))
-                      (align sp y .snd .snd)))
+          (λ k → dec-no (AppGᵈ Γ) t λ y → k (atDomain (align sp y)))
+        where
+        -- SUBSINGLETON AT WORK (1): the payload's own domain IS `A₁`,
+        -- by uniqueness of the synthesised type and then injectivity of
+        -- the arrow in its LEFT argument.
+        atDomain : Payload sp → Check Γ A₁ (TParts appOp t sp false)
+        atDomain p =
+          subst (λ X → Check Γ X (TParts appOp t sp false))
+                (sym (⇒ᵗ-injˡ A₁ B₁ (p .fst .fst) (p .fst .snd)
+                       (synUnique Γ (A₁ ⇒ᵗ B₁) (payload-syn sp p .fst)
+                                  (TParts appOp t sp true)
+                                  (d , p .snd .fst))))
+                (p .snd .snd)
 
-      -- SUBSINGLETON AT WORK: the synthesised type is the only one, so
-      -- "it is not an arrow" really does refute the application
       atType : (sp : IsApp t) (C : Ty)
              → Infer Γ C (TParts appOp t sp true) → Dec⟨ AppGᵈ Γ ⟩ t
-      atType sp base d = dec-no (AppGᵈ Γ) t λ y →
-        E.rec (base≢arr (align sp y .fst .fst) (align sp y .fst .snd)
-                (synUnique Γ base
-                           (align sp y .fst .fst ⇒ᵗ align sp y .fst .snd)
-                           (TParts appOp t sp true)
-                           (d , align sp y .snd .fst)))
+      atType sp base d = dec-no (AppGᵈ Γ) t λ y → E.rec (notArrow (align sp y))
+        where
+        -- SUBSINGLETON AT WORK (2): the synthesised type is the ONLY
+        -- one, so "it is not an arrow" really does refute the
+        -- application.  Without uniqueness this branch is unprovable.
+        notArrow : Payload sp → E.⊥
+        notArrow p =
+          base≢arr (p .fst .fst) (p .fst .snd)
+            (synUnique Γ base (payload-syn sp p .fst)
+                       (TParts appOp t sp true) (d , p .snd .fst))
       atType sp (A₁ ⇒ᵗ B₁) d = atArrow sp A₁ B₁ d (dArg sp A₁)
 
       fromFn : (sp : IsApp t) → Dec⟨ Syn Γ ⟩ (TParts appOp t sp true)
@@ -198,21 +157,24 @@ module StCheck (Name : Type₀) (_≟_ : Discrete Name) where
       fromFn sp =
         dec-elim (Syn Γ) (TParts appOp t sp true)
           (λ z → atType sp (z .fst) (z .snd))
-          (λ k → dec-no (AppGᵈ Γ) t λ y →
-             k ( align sp y .fst .fst ⇒ᵗ align sp y .fst .snd
-               , align sp y .snd .fst ))
+          (λ k → dec-no (AppGᵈ Γ) t λ y → k (payload-syn sp (align sp y)))
 
   -- ================================================================
   -- THE LEMMA THE WHOLE QUESTION IS ABOUT.
   -- ================================================================
 
-  dec-at : (Γ : Ctx) (C : Ty)
-         → ((A B : Ty) → (Infer Γ A & Infer Γ B) ⊢ Kty A B)
-         → Dec⟨ Syn Γ ⟩ ⊢ Dec⟨ Infer Γ C ⟩
+  -- `dec-at Γ C uniq` denotes: given a decision of "synthesises SOME
+  -- type", a decision of "synthesises `C`".  The uniqueness hypothesis
+  -- is EXPLICIT, and it is used only on the refutation side -- without
+  -- it one can decide "some type" but cannot refute "THIS type".
+  --
   -- The OUTER decision is uniform in the index, so it is the ordinary
   -- `⊕-E`, and the ⊕ᴰ that guesses the synthesised type is `⊕ᴰ-E`.
   -- Only the INNER one -- "is the synthesised type the one asked for?"
   -- -- sits at a fixed index (that very type), and takes `dec-elim`.
+  dec-at : (Γ : Ctx) (C : Ty)
+         → ((A B : Ty) → (Infer Γ A & Infer Γ B) ⊢ Kty A B)
+         → Dec⟨ Syn Γ ⟩ ⊢ Dec⟨ Infer Γ C ⟩
   dec-at Γ C uniq =
     ⊕-E (⊕ᴰ-E λ A t d →
            dec-elim (⌈_⌉ {s = ty} C) A
@@ -226,6 +188,10 @@ module StCheck (Name : Type₀) (_≟_ : Discrete Name) where
   -- The checking side's lambda rule.
   -- ================================================================
 
+  -- `LamCase Γ C` denotes the `lam` alternative of `Check Γ C`: the
+  -- checking type SPLITS as an arrow, and the body checks at its
+  -- codomain under the binder.  The `⊕ᴰ (IsArr C)` is the promodel's
+  -- own `Split arrOp C`, so no case analysis on `Ty` appears.
   LamCase : Ctx → Ty → TmG
   LamCase Γ C = ⊕ᴰ (IsArr C) (λ sa →
     ⊕ᴰ Name (λ n → LamG (Nm n) (Check ((n , dom sa) ∷ Γ) (cod sa))))
@@ -233,6 +199,7 @@ module StCheck (Name : Type₀) (_≟_ : Discrete Name) where
   module _ (Γ : Ctx) (C : Ty) (t : Raw) where
 
     private
+      -- the alternative at a fixed arrow-splitting, and its body
       Q : IsArr C → TmG
       Q sa = ⊕ᴰ Name (λ n → LamG (Nm n) (Check ((n , dom sa) ∷ Γ) (cod sa)))
 
@@ -263,6 +230,12 @@ module StCheck (Name : Type₀) (_≟_ : Discrete Name) where
   -- The typechecker.
   -- ================================================================
 
+  -- `DecJ` denotes both modes decided at once, at every context and
+  -- every checking type.  The `&` is not a conjunctive statement to be
+  -- split: the two recursions are MUTUAL -- a `chk` node's body is
+  -- decided at a longer context, and a `syn` node's function slot is
+  -- decided in `chk` -- so neither half is provable alone.  `infer?`
+  -- and `check?` below are the projections a caller wants.
   DecJ : TmG
   DecJ = &ᴰ Ctx (λ Γ → Dec⟨ Syn Γ ⟩)
        & &ᴰ (Ctx × Ty) (λ p → Dec⟨ Check (p .fst) (p .snd) ⟩)

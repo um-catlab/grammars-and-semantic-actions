@@ -1,44 +1,37 @@
 {-
   THE FREE CASE, and how small it is.
 
-  `CarrierMap.Transport` says: a carrier map preserving every splitting
-  transports every inductive grammar, the only obligations being one
-  per CONSTANT of the description.  So the honest question is which
-  passes are split-preserving, and the answer here is sharp:
+  `CarrierMap.Transport`: a carrier map preserving every splitting
+  transports every inductive grammar, owing one obligation per CONSTANT
+  of the description.  So: which passes are split-preserving?
 
-    * renaming is (`renPres`, all `Eq.refl`);
+    * renaming is (`rename`, `renCM`, `renPres` -- all `Eq.refl`);
+    * NOTHING ELSE is.  `hom-var`/`hom-app`/`hom-lam` derive the three
+      homomorphism equations FROM split preservation, so such a map is
+      fixed by its action on names (`homId`), i.e. IS a renaming.
 
-    * and NOTHING ELSE is -- `presVar`/`presApp`/`presLam` show that
-      split preservation forces the three homomorphism equations, so a
-      split-preserving carrier map is determined by its action on
-      names, i.e. is a renaming.
-
-  Instantiating the free transport at `Scoped` then exposes the price:
-  `mapμ` keeps the nonterminal (the scope) fixed while moving the
-  carrier, so the binder's representable `⌈ n ⌉` has to transport too,
-  and `nmTr→id` shows that obligation forces `ρ ≡ id`.
-
-  That is the real shape of the result.  Scope preservation is free for
-  a pass exactly when the pass is the identity; every genuine pass
-  fails split preservation somewhere, and `CarrierMap` localises where.
+  Instantiating the transport at `Scoped` (`scopedTr`, `scopedRename`)
+  exposes the price: `mapμ` holds the nonterminal fixed while moving the
+  carrier, so the binder's `⌈ n ⌉` must transport too, and `nmTr→ρ≡id`
+  shows that forces `ρ n ≡ n`.  THE ONLY FREE PASS IS THE IDENTITY.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Passes.Rename where
 
-open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool using (true; false)
+open import Cubical.Data.List using ([]; _∷_)
 open import Cubical.Data.Sigma
 open import Cubical.Data.Unit
-open import Cubical.Data.List using ([]; _∷_)
+open import Cubical.Foundations.Prelude
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Inductive
 open import TheoryGrammar.CarrierMap
-open import TheoryGrammar.Instances.Lambda.Signature
-open import TheoryGrammar.Instances.Lambda.Fibered
+open import TheoryGrammar.Inductive
 open import TheoryGrammar.Instances.Lambda.Base
+open import TheoryGrammar.Instances.Lambda.Fibered
 open import TheoryGrammar.Instances.Lambda.Scoped
+open import TheoryGrammar.Instances.Lambda.Signature
 
 module Rename (Name : Type₀) where
 
@@ -72,60 +65,66 @@ module Rename (Name : Type₀) where
 
   module _ (h : CarrierMap λFib) where
 
-    private
-      vLem : (k : Name) (w : Raw) (sp : IsVar w)
-           → LParts varOp w sp tt Eq.≡ h .hom nm k → w ≡ var (h .hom nm k)
-      vLem k .(var j) (mkVar j) e = cong var (Eq.eqToPath e)
+    -- INVERSION.  A splitting witness at `w` pins `w`'s shape, and only
+    -- once it is pinned do `LParts`' equations reduce.  Each says: `w`
+    -- is the node its splitting claims, built from `h`'s images.
 
-      aLem : (u v w : Raw) (sp : IsApp w)
-           → LParts appOp w sp true  Eq.≡ h .hom tm u
-           → LParts appOp w sp false Eq.≡ h .hom tm v
-           → w ≡ app (h .hom tm u) (h .hom tm v)
-      aLem u v .(app p q) (mkApp p q) e₁ e₂ =
-        cong₂ app (Eq.eqToPath e₁) (Eq.eqToPath e₂)
+    shape-var : (k : Name) (w : Raw) (sp : IsVar w)
+              → LParts varOp w sp tt Eq.≡ h .hom nm k → w ≡ var (h .hom nm k)
+    shape-var k .(var j) (mkVar j) e = cong var (Eq.eqToPath e)
 
-      lLem : (k : Name) (t w : Raw) (sp : IsLam w)
-           → LParts lamOp w sp true  Eq.≡ h .hom nm k
-           → LParts lamOp w sp false Eq.≡ h .hom tm t
-           → w ≡ lam (h .hom nm k) (h .hom tm t)
-      lLem k t .(lam j b) (mkLam j b) e₁ e₂ =
-        cong₂ lam (Eq.eqToPath e₁) (Eq.eqToPath e₂)
+    shape-app : (u v w : Raw) (sp : IsApp w)
+              → LParts appOp w sp true  Eq.≡ h .hom tm u
+              → LParts appOp w sp false Eq.≡ h .hom tm v
+              → w ≡ app (h .hom tm u) (h .hom tm v)
+    shape-app u v .(app p q) (mkApp p q) e₁ e₂ =
+      cong₂ app (Eq.eqToPath e₁) (Eq.eqToPath e₂)
 
-    presVar : SplitPresAt h varOp
+    shape-lam : (k : Name) (t w : Raw) (sp : IsLam w)
+              → LParts lamOp w sp true  Eq.≡ h .hom nm k
+              → LParts lamOp w sp false Eq.≡ h .hom tm t
+              → w ≡ lam (h .hom nm k) (h .hom tm t)
+    shape-lam k t .(lam j b) (mkLam j b) e₁ e₂ =
+      cong₂ lam (Eq.eqToPath e₁) (Eq.eqToPath e₂)
+
+    -- THE HOMOMORPHISM EQUATIONS, one per operation, each derived from
+    -- split preservation at that operation alone.
+
+    hom-var : SplitPresAt h varOp
             → (k : Name) → h .hom tm (var k) ≡ var (h .hom nm k)
-    presVar P k =
-      vLem k (h .hom tm (var k)) (P .homSplit (var k) (mkVar k))
-             (P .homParts (var k) (mkVar k) tt)
+    hom-var P k =
+      shape-var k (h .hom tm (var k)) (P .homSplit (var k) (mkVar k))
+                  (P .homParts (var k) (mkVar k) tt)
 
-    presApp : SplitPresAt h appOp
+    hom-app : SplitPresAt h appOp
             → (u v : Raw)
             → h .hom tm (app u v) ≡ app (h .hom tm u) (h .hom tm v)
-    presApp P u v =
-      aLem u v (h .hom tm (app u v)) (P .homSplit (app u v) (mkApp u v))
-               (P .homParts (app u v) (mkApp u v) true)
-               (P .homParts (app u v) (mkApp u v) false)
+    hom-app P u v =
+      shape-app u v (h .hom tm (app u v)) (P .homSplit (app u v) (mkApp u v))
+                    (P .homParts (app u v) (mkApp u v) true)
+                    (P .homParts (app u v) (mkApp u v) false)
 
-    presLam : SplitPresAt h lamOp
+    hom-lam : SplitPresAt h lamOp
             → (k : Name) (t : Raw)
             → h .hom tm (lam k t) ≡ lam (h .hom nm k) (h .hom tm t)
-    presLam P k t =
-      lLem k t (h .hom tm (lam k t)) (P .homSplit (lam k t) (mkLam k t))
-               (P .homParts (lam k t) (mkLam k t) true)
-               (P .homParts (lam k t) (mkLam k t) false)
+    hom-lam P k t =
+      shape-lam k t (h .hom tm (lam k t)) (P .homSplit (lam k t) (mkLam k t))
+                    (P .homParts (lam k t) (mkLam k t) true)
+                    (P .homParts (lam k t) (mkLam k t) false)
 
     -- PRIMITIVE (induction on `Raw`).  The three equations say a
     -- split-preserving carrier map is determined by its action on
     -- names -- i.e. IS a renaming -- so one that fixes names is the
-    -- identity.  With `nmTr→id` below this is the whole negative
+    -- identity.  With `nmTr→ρ≡id` below this is the whole negative
     -- result: the only pass whose scope preservation is free is `id`.
     homId : SplitPresAt h varOp → SplitPresAt h appOp → SplitPresAt h lamOp
           → ((k : Name) → h .hom nm k ≡ k)
           → (t : Raw) → h .hom tm t ≡ t
-    homId Pv Pa Pl e (var k)   = presVar Pv k ∙ cong var (e k)
+    homId Pv Pa Pl e (var k)   = hom-var Pv k ∙ cong var (e k)
     homId Pv Pa Pl e (app u v) =
-      presApp Pa u v ∙ cong₂ app (homId Pv Pa Pl e u) (homId Pv Pa Pl e v)
+      hom-app Pa u v ∙ cong₂ app (homId Pv Pa Pl e u) (homId Pv Pa Pl e v)
     homId Pv Pa Pl e (lam k t) =
-      presLam Pl k t ∙ cong₂ lam (e k) (homId Pv Pa Pl e t)
+      hom-lam Pl k t ∙ cong₂ lam (e k) (homId Pv Pa Pl e t)
 
   -- ================================================================
   -- The free transport, instantiated at `Scoped`.
@@ -134,7 +133,7 @@ module Rename (Name : Type₀) where
   module _ (ρ : Name → Name) where
 
     module A = Along (renCM ρ)
-    module T = A.Transport (renPres ρ) ℓ-zero Scope (λ _ → tm)
+    module T = Transport (renCM ρ) (renPres ρ) ℓ-zero Scope (λ _ → tm)
 
     -- The obligations `mapμ` leaves are exactly the CONSTANTS of
     -- `ScopedF`: the scope membership grammar, and the binder's
@@ -155,9 +154,9 @@ module Rename (Name : Type₀) where
     -- THE PRICE.  The binder obligation says `m Eq.≡ n → ρ m Eq.≡ n`,
     -- and at `m = n` that is `ρ n ≡ n`.  So the only renaming under
     -- which `Scoped` transports freely is the identity.
-    nmTr→id : ((n : Name) → ⌈_⌉ {s = nm} n ⊢ A.pull ⌈ n ⌉)
-            → (n : Name) → ρ n ≡ n
-    nmTr→id nmTr n = Eq.eqToPath (nmTr n n Eq.refl)
+    nmTr→ρ≡id : ((n : Name) → ⌈_⌉ {s = nm} n ⊢ A.pull ⌈ n ⌉)
+              → (n : Name) → ρ n ≡ n
+    nmTr→ρ≡id nmTr n = Eq.eqToPath (nmTr n n Eq.refl)
 
   -- the identity renaming, with its obligations discharged
   idInTr : (Δ : Scope) → In Δ ⊢ Along.pull (renCM (λ n → n)) (In Δ)

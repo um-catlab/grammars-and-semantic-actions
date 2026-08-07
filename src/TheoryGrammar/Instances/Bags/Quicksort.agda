@@ -1,6 +1,20 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- Quicksort: the two primitives (decomposition, partition) and the sort,
-   run both plainly and at the specification. -}
+{- Quicksort: the primitives, then the sort, run both plainly and at the
+   specification.
+
+   THE PRIMITIVES, counted honestly (the "two primitives" this header
+   used to claim were the two that carry CONTENT, not the whole list):
+
+     bagCase      decomposition -- ⊤'s coalgebra, no comparison in it
+     splitAround  partition -- the ONLY place `le` is used
+     intoQ        a coercion between two spellings of one type; pure
+                  plumbing, and the one primitive here that would
+                  disappear given `⊗e`-with-`if`-shaped arities
+     nil-empty    `[]` admits no one-element splitting; the exclusion
+                  half of `bagComplete`
+
+   `partitionOrd` is `splitAround`'s worker, not a separate entry.
+   Everything else in the file is composition or a semantic action. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Bags.Quicksort (A : Type₀) where
@@ -27,6 +41,7 @@ open import TheoryGrammar.Instances.Bags.QuicksortFunctor A public
 open Views bagFib using (Cover; Complete; total; exclusive; completeCase; certifies; fromUnique; caseOf; caseOfᴰ; refine; withView; viewCase; viewCaseᴰ; cover→probe; Probe; _⇛_)
 -- (the semantic actions now arrive via `DecFib` in Base)
 
+-- PRIMITIVE (phase 1).  (1) DECOMPOSITION: a bag is empty, or it is an
 -- element and a rest.  This is the bag instance of "⊤ is the initial
 -- algebra of the shape functor" -- no comparison appears in it.
 bagCase : Cover (⌈ [] ⌉ ⊕ ⊕ᴰ A (λ x → ⌈ x ∷ [] ⌉ ⊗' ⊤G))
@@ -77,6 +92,7 @@ module Sort (le : A → A → Bool)
       go false e (lo , hi , t , aa , bb) =
         lo , (y ∷ hi) , right t , aa , (leTotal y x e ∷ᵇ bb)
 
+  -- PRIMITIVE (phase 1).
   -- Typed as `⇛`: a VIEW MORPHISM, re-analysing one pattern as another.
   -- `_⇛_` is `_⊢_`; the name records the role, not a new notion.  The
   -- codomain now says `lo` is below the pivot and `hi` above it.
@@ -92,6 +108,7 @@ module Sort (le : A → A → Bool)
             (rest , e1 , e2)        = ilvAssoc s' t
         in ⊗-mk e1 (tt , aa) (⊗-mk e2 Eq.refl (tt , bb))
 
+  -- PRIMITIVE (phase 1), and the one here with no content.
   -- Plumbing between two spellings of one type: the description's ⊗e
   -- carries a Lift on the representable, and its arity-family is not
   -- `if`-shaped, so the implicits must be pinned.  Pure coercion.
@@ -114,6 +131,7 @@ module Sort (le : A → A → Bool)
   BagCase : Bool → TheoryTy ℓ-zero tt
   BagCase b = if b then ⌈ [] ⌉ else ⊕ᴰ A (λ x → ⌈ x ∷ [] ⌉ ⊗' ⊤G)
 
+  -- PRIMITIVE (phase 1): `[]` admits no one-element splitting.
   nil-empty : (⊕ᴰ A (λ x → ⌈ x ∷ [] ⌉ ⊗' ⊤G)) [] → E.⊥
   nil-empty (x , (u , v , s) , h) = go (h true) s
     where go : u Eq.≡ x ∷ [] → Ilv u v [] → E.⊥
@@ -145,8 +163,13 @@ module Sort (le : A → A → Bool)
       (⊕ᴰ-E (λ x → ⊕ᴰ-I _ false ∘g ⊕ᴰ-I _ x
                       ∘g intoQ x ∘g splitAround x))
 
-  -- THE ALGEBRA, point-free: the empty branch returns ε, the pivot
-  -- branch concatenates around the pivot.
+  -- THE ALGEBRA.  Not point-free, and it cannot be: the carrier is the
+  -- CONSTANT family `λ _ → Bag`, so there is no index for a combinator
+  -- to preserve and the two branches are metalanguage `++`/`∷` on the
+  -- payload.  That is a SEMANTIC ACTION, which is allowed -- but it is
+  -- also exactly the information `qalgV` keeps and this one throws
+  -- away.  Read the pair as the measurement: the constant carrier is
+  -- what makes permutation-correctness a separate obligation.
   qalg : AlgC QF (λ _ → Bag)
   qalg tt =
     ⊕ᴰ-E λ { true  → λ _ _ → []
@@ -156,8 +179,11 @@ module Sort (le : A → A → Bool)
                         sLo true ++ (piv ∷ ⊗E {P = λ a → ⟦ QG' piv a ⟧c (λ _ → Bag)}
                                           (λ _ _ _ _ sHi → sHi true) inner)) t }
 
-  quicksort : Bag → Bag
-  quicksort m = hyloC qfGuarded qcoalg qalg (tt , m) tt
+  -- The plain sort, still as a TERM.  `Bag → Bag` would have left the
+  -- calculus in a definition; `Δ Bag` is the grammar that carries the
+  -- answer, and `run` is then the single exit, in a test.
+  qsortP : ⊤G ⊢ Δ Bag
+  qsortP m x = hyloC qfGuarded qcoalg qalg (tt , m) tt , x
 
   -- ... and the same coalgebra, run at the SPECIFICATION.
   qalgV : AlgC QF Spec
@@ -171,11 +197,11 @@ module Sort (le : A → A → Bool)
                               specJoin piv e1 e2 (lower pf) (sLo true) (sHi true))
                            inner) t }
 
-  -- INTRINSICALLY VERIFIED QUICKSORT.
-  quicksortV : (m : Bag) → Σ[ out ∈ Bag ] Perm out m
-  quicksortV m = hyloC qfGuarded qcoalg qalgV (tt , m) tt
-
-  -- ... and it is a MAP OUT OF TOP, so the generic interface applies.
+  -- INTRINSICALLY VERIFIED QUICKSORT.  Stated directly as the `Cover`
+  -- below: there is deliberately no `(m : Bag) → Σ[ out ] Perm out m`
+  -- spelling of it, because that name would already be outside.
+  --
+  -- It is a MAP OUT OF TOP, so the generic interface applies.
   -- The specification grammar IS a `⊕ᴰ` over the output bag, so reading
   -- the sorted bag off it is the GENERIC `tagA` and running the program
   -- is the GENERIC `observe` (TheoryGrammar.SemanticAction).  The `.fst`
@@ -186,7 +212,7 @@ module Sort (le : A → A → Bool)
   SpecG m = Σ[ out ∈ Bag ] Perm out m
 
   quicksortC : Cover SpecG
-  quicksortC m _ = quicksortV m
+  quicksortC m _ = hyloC qfGuarded qcoalg qalgV (tt , m) tt
 
   qsortV : ⊤G ⊢ Δ Bag
   qsortV = tagA Bag ∘g quicksortC

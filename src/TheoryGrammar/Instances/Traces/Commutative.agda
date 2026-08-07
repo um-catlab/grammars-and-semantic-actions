@@ -8,6 +8,10 @@
   difference is that `right` carries a side condition, which at `I = ⊤`
   is a nested `Unit` and so contractible.  `allTtUnique` is that fact,
   and it is all the round trips need.
+
+  DEFINES `⊤I`, `allTt`/`allTtUnique`, the translations `toIlv`/
+  `fromIlv`, and the two theorems `commutative≅` (on shuffles) and
+  `commutativeSplit≅` (on the `appop` splittings of a word).
 -}
 open import Cubical.Foundations.Prelude
 

@@ -127,6 +127,12 @@ module Fold (B : Type₀) (nil· : B) (cons· : A → B → B) where
                                 {B = λ _ → B}
                                 (λ _ _ h → cons· (lower (h true) .fst) (h false)) }
 
-  -- an INTERNAL term out of ⊤
-  runFold : ⊤G ⊢ (λ _ → B)
-  runFold = runAut scanLC scanCoalg foldAut tt
+  -- An INTERNAL term out of ⊤ -- which means its codomain has to be a
+  -- GRAMMAR.  `λ _ → B` is not one in the sense that matters: it is the
+  -- constant family, and a name whose type mentions it has already left
+  -- the calculus.  `Δ B` is the grammar that carries a `B`, so this is
+  -- the same computation with the externalisation deferred to `run`.
+  -- The `A` suffix is the semantic-action convention (`okA`, `tagA`,
+  -- `mapA`); a `run`-prefixed name would advertise the wrong thing.
+  foldA : ⊤G ⊢ Δ B
+  foldA m x = runAut scanLC scanCoalg foldAut tt m x , x

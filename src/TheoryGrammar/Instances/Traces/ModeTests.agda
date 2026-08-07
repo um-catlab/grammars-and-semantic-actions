@@ -73,3 +73,30 @@ _ : passes ((λ t → Trace.run (Trace.accepts t) []) at
              ∷ tB   ↦ true
              ∷ [] ))
 _ = refl
+
+-- ==================================================================
+-- THE `F` COLUMN, AS THEOREMS.
+--
+-- The batch above reports what the checker RETURNS.  The header table
+-- claims something stronger: that no use-derivation exists.  `refute`
+-- (TheoryGrammar.SemanticAction) turns each negative observation into
+-- the refutation the decision was carrying all along, from the same
+-- `refl` -- see `Instances/Lambda/Modes/Tests` for the four-mode
+-- version of this block.
+-- ==================================================================
+
+refuteTr : (t : Raw) → Trace.run (Trace.accepts t) [] ≡ false
+         → (Trace.¬G (Trace.Uses t)) []
+refuteTr t = Trace.refute (Trace.Uses t) (Trace.¬G (Trace.Uses t)) (Trace.check t) []
+
+no-trace-K : (Trace.¬G (Trace.Uses tK)) []      -- no weakening
+no-trace-K = refuteTr tK refl
+
+no-trace-W : (Trace.¬G (Trace.Uses tW)) []      -- no contraction
+no-trace-W = refuteTr tW refl
+
+-- THE SEPARATION, stated rather than observed: exchange at a DEPENDENT
+-- pair is refuted, while `tC01` -- the same term at an independent pair
+-- -- is accepted above.  One substrate, two answers.
+no-trace-C02 : (Trace.¬G (Trace.Uses tC02)) []
+no-trace-C02 = refuteTr tC02 refl

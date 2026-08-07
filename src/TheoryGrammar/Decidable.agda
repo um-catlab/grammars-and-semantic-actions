@@ -11,10 +11,15 @@
                  `fromReadable` (unique readability) and `fromEnumerable`
                  (the splittings are listable -- what resource promodels
                  need, since `splitProp` is false for them)
-    Representable  `dec-⌈⌉`, decidability of a representable
+    Representable `dec-⌈⌉`, decidability of a representable
 
   A decision is a map `⊤ ⊢ A ⊕ A'` plus `(A & A') ⊢ ⊥`, never a
   metalanguage `Dec`.
+
+  `Decidable/{Enumerated,Guarded,Rule}` are NOT re-exported here, and
+  cannot be as things stand: `Rule.fromEnumerable` would collide with
+  `Splittings.fromEnumerable` (they are the same theorem twice -- see
+  `Splittings`), and instances routinely shadow `Enumerated.enumSplit`.
 -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Decidable where

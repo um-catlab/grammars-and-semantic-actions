@@ -3,37 +3,31 @@
 
       synUnique : (Infer Γ A & Infer Γ B) ⊢ Kty A B
 
-  "two synthesis derivations of the same term give equal types", stated
-  with the calculus' own equality of types (`Kty A B = ⌈ B ⌉ A`) and
-  proved with the calculus' own rules.  It says exactly that
+  Two synthesis derivations of one term give equal types -- stated with
+  the calculus' own equality of types (`Kty A B = ⌈ B ⌉ A`), proved with
+  the calculus' own rules.  Equivalently: `Syn Γ = ⊕ᴰ Ty (Infer Γ)` is a
+  SUBSINGLETON in its index.  That is the same shape of fact as
+  `Split-isProp` -- at most one splitting -- and it plays the same role,
+  turning a positive answer elsewhere into a REFUTATION here
+  (`Check.dec-at`, which takes it as an explicit hypothesis).
 
-      Syn Γ = ⊕ᴰ Ty (λ A → Infer Γ A)
-
-  is a SUBSINGLETON in its index: the sum has at most one summand
-  inhabited.  That is the same shape of fact `Split-isProp` states for
-  the promodel -- at most one splitting -- and it plays the same role:
-  it is what turns a positive answer somewhere else into a REFUTATION
-  here.  See `Check.agda`, where `dec-at` takes it as a hypothesis.
-
-  The proof is the generic `fold`, with the motive
+  The proof is the generic `fold` at the motive
 
       UM (syn , Γ , A , t) = (B : Ty) → Infer Γ B t → TyEq A B
       UM (chk , Γ , C , t) = ⊤
 
   so the induction hypothesis arrives already at the right index, and
-  only the `app` rule uses it.  The nine cases are eliminated by
-  `dist&₂` and `⊕-E`; six are refuted because two derivations of the
-  same term cannot use different head operations, and `ann/ann` needs no
-  induction at all -- the type is read straight off the `ty` slot.
+  only `app` uses it.  Of the nine cases `dist&₂` produces, six are
+  refuted by `Readable`'s disjointness of the head operations, and
+  `ann/ann` needs no induction at all -- the type is read straight off
+  the `ty` slot.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.SimplyTyped.Unique where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
-open import Cubical.Data.Sigma
-open import Cubical.Data.Unit
-open import Cubical.Data.List using (List; []; _∷_)
+open import Cubical.Data.Unit using (Unit; tt)
 open import Cubical.Relation.Nullary.Base using (Discrete)
 import Cubical.Data.Equality as Eq
 
@@ -55,14 +49,19 @@ module StUnique (Name : Type₀) (_≟_ : Discrete Name) where
   open StContext Name _≟_
   open Judgments Name _≟_
 
-  -- the erased checking slot: the motive says nothing at `chk`
+  -- `KU` denotes the erased checking slot: the motive says nothing at
+  -- `chk`, so a `chk` subderivation contributes no information.
   KU : TmG
   KU _ = Unit
 
-  -- the induction hypothesis at a synthesised type
+  -- `IHG Γ X` denotes the induction hypothesis at a synthesised type:
+  -- "any other synthesis of this term in `Γ` gives `X` back".
   IHG : Ctx → Ty → TmG
   IHG Γ X t = (B : Ty) → Infer Γ B t → TyEq X B
 
+  -- `UM` denotes the fold's motive: the hypothesis above at `syn`,
+  -- nothing at `chk`.  Stating it this way is what makes the induction
+  -- hypothesis arrive already at the right index.
   UM : Ix → Type₀
   UM ((syn , Γ , A) , t) = IHG Γ A t
   UM ((chk , Γ , C) , t) = Unit
@@ -71,6 +70,8 @@ module StUnique (Name : Type₀) (_≟_ : Discrete Name) where
   -- The three matching cases.
   -- ================================================================
 
+  -- two `var` derivations: the types agree because the LOOKUP is
+  -- unique.  No induction -- this is `lookupUnique` under one tensor.
   varvar : (Γ : Ctx) (A B : Ty)
          → (VarG (Lookup Γ A) & VarG (Lookup Γ B)) ⊢ Kty A B
   varvar Γ A B =
@@ -96,12 +97,27 @@ module StUnique (Name : Type₀) (_≟_ : Discrete Name) where
     merge2 appOp (appFam (IHG Γ (A₀ ⇒ᵗ A)) KU)
                  (appFam (Infer Γ (B₀ ⇒ᵗ B)) (Check Γ B₀)) (Kty A B)
            (λ m sp h →
-              Eq.pathToEq (⇒ᵗ-inj A₀ A B₀ B
-                            (h true .fst (B₀ ⇒ᵗ B) (h true .snd)) .snd))
+              Eq.pathToEq (⇒ᵗ-injʳ A₀ A B₀ B
+                            (h true .fst (B₀ ⇒ᵗ B) (h true .snd))))
 
   -- ================================================================
   -- The six impossible cases, and the dispatch.
+  --
+  -- Each is `Readable`'s disjointness of two head operations, carried
+  -- past the `⊕ᴰ Ty` that the `app` rule guesses over.  That carrying
+  -- is the only content the six have beyond the three lemmas upstream,
+  -- so it is named here once, publicly, in both variances.
   -- ================================================================
+
+  -- a refutation survives a GUESSED index on the right ...
+  ⊕ᴰ-⊥ʳ : (X : TmG) (P : Ty → TmG) (K : TmG)
+        → ((A₀ : Ty) → (X & P A₀) ⊢ ⊥G) → (X & ⊕ᴰ Ty P) ⊢ K
+  ⊕ᴰ-⊥ʳ X P K h = ⊥-E ∘g (⊕ᴰ-E h ∘g ⊕ᴰ-&-in Ty {A = X} {P = P})
+
+  -- ... and on the left
+  ⊕ᴰ-⊥ˡ : (X : TmG) (P : Ty → TmG) (K : TmG)
+        → ((A₀ : Ty) → (X & P A₀) ⊢ ⊥G) → (⊕ᴰ Ty P & X) ⊢ K
+  ⊕ᴰ-⊥ˡ X P K h = ⊕ᴰ-⊥ʳ X P K h ∘g &-swap
 
   module _ (Γ : Ctx) (A B : Ty) where
 
@@ -125,26 +141,26 @@ module StUnique (Name : Type₀) (_≟_ : Discrete Name) where
       N₂ : TmG
       N₂ = AnnG (Check Γ B) (⌈_⌉ {s = ty} B)
 
+      -- the six impossible pairings: `varApp-⊥`, `varAnn-⊥` and
+      -- `appAnn-⊥`, each with and without a guessed index and each in
+      -- both variances.  Nothing here is new about the representation.
       vp : (V₁ & P₂) ⊢ Kty A B
-      vp = ⊥-E ∘g (⊕ᴰ-E (λ _ → varApp-⊥) ∘g ⊕ᴰ-&-in Ty {A = V₁} {P = QP₂})
+      vp = ⊕ᴰ-⊥ʳ V₁ QP₂ (Kty A B) (λ _ → varApp-⊥)
 
       vn : (V₁ & N₂) ⊢ Kty A B
       vn = ⊥-E ∘g varAnn-⊥
 
       pv : (P₁ & V₂) ⊢ Kty A B
-      pv = ⊥-E ∘g (⊕ᴰ-E (λ _ → varApp-⊥)
-                   ∘g (⊕ᴰ-&-in Ty {A = V₂} {P = QP₁} ∘g &-swap))
+      pv = ⊕ᴰ-⊥ˡ V₂ QP₁ (Kty A B) (λ _ → varApp-⊥)
 
       nv : (N₁ & V₂) ⊢ Kty A B
       nv = ⊥-E ∘g (varAnn-⊥ ∘g &-swap)
 
       pn : (P₁ & N₂) ⊢ Kty A B
-      pn = ⊥-E ∘g (⊕ᴰ-E (λ _ → appAnn-⊥ ∘g &-swap)
-                   ∘g (⊕ᴰ-&-in Ty {A = N₂} {P = QP₁} ∘g &-swap))
+      pn = ⊕ᴰ-⊥ˡ N₂ QP₁ (Kty A B) (λ _ → appAnn-⊥ ∘g &-swap)
 
       np : (N₁ & P₂) ⊢ Kty A B
-      np = ⊥-E ∘g (⊕ᴰ-E (λ _ → appAnn-⊥ ∘g &-swap)
-                   ∘g ⊕ᴰ-&-in Ty {A = N₁} {P = QP₂})
+      np = ⊕ᴰ-⊥ʳ N₁ QP₂ (Kty A B) (λ _ → appAnn-⊥ ∘g &-swap)
 
       pp : (P₁ & P₂) ⊢ Kty A B
       pp = ⊕ᴰ-E (λ A₀ → ⊕ᴰ-E (λ B₀ → appapp Γ A B A₀ B₀)
@@ -154,7 +170,8 @@ module StUnique (Name : Type₀) (_≟_ : Discrete Name) where
       nn : (N₁ & N₂) ⊢ Kty A B
       nn = annann KU (Check Γ B) A B
 
-    -- the whole nine-way case analysis, by two four-way distributions
+    -- ONE step of the theorem: the whole nine-way case analysis, by two
+    -- four-way distributions of `&` over `⊕`
     uStep : (JStep (λ y s → UM (y , s)) (syn , Γ , A) & JStep Jμ (syn , Γ , B))
           ⊢ Kty A B
     uStep = ⊕-E (⊕-E (varvar Γ A B) (⊕-E vp vn ∘g dist&r))
@@ -166,10 +183,15 @@ module StUnique (Name : Type₀) (_≟_ : Discrete Name) where
   -- The theorem, by the generic fold.
   -- ================================================================
 
+  -- the algebra: at `syn`, unroll the SECOND derivation and dispatch;
+  -- at `chk` there is nothing to say
   uAlg : (x : NT) (t : Raw) → JStep (λ y s → UM (y , s)) x t → UM (x , t)
   uAlg (syn , Γ , A) t v B d = uStep Γ A B t (v , j-unroll (syn , Γ , B) t d)
   uAlg (chk , Γ , C) t v = tt
 
+  -- `synUnique Γ A B` denotes: two synthesis derivations of one term in
+  -- one context give EQUAL types, in the calculus' own equality of
+  -- types.  Equivalently, `Syn Γ` is a subsingleton in its index.
   synUnique : (Γ : Ctx) (A B : Ty) → (Infer Γ A & Infer Γ B) ⊢ Kty A B
   synUnique Γ A B t (d₁ , d₂) =
     fold UM (λ x m sh rc → uAlg x m (⟦J⟧ x m (sh , rc)))

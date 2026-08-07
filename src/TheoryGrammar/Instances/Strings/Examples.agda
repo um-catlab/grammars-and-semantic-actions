@@ -102,10 +102,29 @@ decEqS (a ∷ u) (b ∷ v) = both (decEqB a b) (decEqS u v)
 litProbe : (c : Bool) → Probe ⌈ c ∷ [] ⌉
 litProbe c w _ = decEqS w (c ∷ [])
 
+-- `Search` is gone: `parse` is now `toMaybe ∘g derives?`, i.e. the
+-- decision with its refutation forgotten, so both live in `Decide`.
 matchLit : (c : Bool) → Cover (MaybeG ⌈ c ∷ [] ⌉)
 matchLit c = probe→maybe ⌈ c ∷ [] ⌉ (litProbe c)
 
-open Search allRules matchLit
+allComplete : (P : NT) (r : Rule P) → r ∈L allRules P
+allComplete ntS (inl (c , ()))
+allComplete ntS (inr (ntS , _   , ()))
+allComplete ntS (inr (ntA , ntS , ()))
+allComplete ntS (inr (ntA , ntA , ()))
+allComplete ntS (inr (ntA , ntB , tt)) = here
+allComplete ntS (inr (ntB , _   , ()))
+allComplete ntA (inl (true  , Eq.refl)) = here
+allComplete ntA (inl (false , ()))
+allComplete ntA (inr (_ , _ , ()))
+allComplete ntB (inl (false , Eq.refl)) = here
+allComplete ntB (inl (true  , ()))
+allComplete ntB (inr (_ , _ , ()))
+
+-- `Decide` now takes the literal matcher as an internal PROBE, the same
+-- `litProbe` the parser's `matchLit` is built from -- not a metalanguage
+-- equality test.  One primitive (`decEqS`), two consumers.
+open Decide allRules allComplete litProbe
 
 -- Observing the parser.  `okA` (TheoryGrammar.SemanticAction) is the
 -- generic observer: it reads a `Result E A` at ANY error grammar, so
@@ -130,25 +149,6 @@ _ = refl
 -- ... and the DECISION.  `decide` returns a parse or a proof that none
 -- exists -- not merely a failure to find one.
 -- ==================================================================
-
-allComplete : (P : NT) (r : Rule P) → r ∈L allRules P
-allComplete ntS (inl (c , ()))
-allComplete ntS (inr (ntS , _   , ()))
-allComplete ntS (inr (ntA , ntS , ()))
-allComplete ntS (inr (ntA , ntA , ()))
-allComplete ntS (inr (ntA , ntB , tt)) = here
-allComplete ntS (inr (ntB , _   , ()))
-allComplete ntA (inl (true  , Eq.refl)) = here
-allComplete ntA (inl (false , ()))
-allComplete ntA (inr (_ , _ , ()))
-allComplete ntB (inl (false , Eq.refl)) = here
-allComplete ntB (inl (true  , ()))
-allComplete ntB (inr (_ , _ , ()))
-
--- `Decide` now takes the literal matcher as an internal PROBE, the same
--- `litProbe` the parser's `matchLit` is built from -- not a metalanguage
--- equality test.  One primitive (`decEqS`), two consumers.
-open Decide allRules allComplete litProbe
 
 -- ... and observing the DECISION with the SAME combinator, only at a
 -- different error grammar: `Dec⟨ A ⟩` is `Result (¬G A) A`, so

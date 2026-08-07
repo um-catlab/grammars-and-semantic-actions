@@ -1,21 +1,23 @@
 {-
-  THE RESIDUAL EVERY SUBSTRATE ALREADY HAS.
+  THE RESIDUAL EVERY POINTED SUBSTRATE ALREADY HAS.
 
-  A promodel owns one family of splittings for free: `split o m⃗`, the
-  canonical splitting of a tuple's own composite.  Fixing a slot `i` and
-  NAMING the complement (`Assembly`) turns those into a `Focus`, so
+  A promodel with a `LaxPoint` owns one family of splittings for free:
+  `split o m⃗`, of a tuple's own composite.  Fixing a slot `i` and NAMING
+  the complement (`Assembly`) turns those into a `Focus`, so
 
       (A ⊸ B) x  =  (rest) → A(rest) → B (op o (tuple x rest)).
 
-  NO HYPOTHESIS: `focus`, `plug` (⊸-elim at a chosen rest-tuple).  ONE
-  HYPOTHESIS -- `restJ`/`restJ-pt`, the rest argument is singleton-
-  inductive at `(a⃗ , pt)`, i.e. holding one NAMES its own tuple --
-  gives `unplug`, `⊸-β` (refl), `⊸-η` (funExt, the cost of equating two
-  functions) and the `Iso`.  Freeness, `unsplit` and `Fib .Split` itself
-  are UNUSED, so the laws hold over a quotient substrate as well.
+  NO FURTHER HYPOTHESIS: `focus`, `plug` (⊸-elim at a chosen rest-tuple).
+  ONE -- `restJ`/`restJ-pt`, the rest argument is singleton-inductive at
+  `(a⃗ , pt)`, i.e. holding one NAMES its own tuple -- gives `unplug`,
+  `⊸-β` (refl), `⊸-η` (funExt) and the `Iso`.  Freeness, `unsplit` and
+  `Fib .Split` are UNUSED, so the laws hold over a quotient substrate.
+
+  THE POINT IS THE PRICE.  A PARTIAL algebra has none, so heaps cannot
+  use `Canon` and must refocus `Split` directly.
 
   NOT proved: that this focus computes the residual of `⊗ˢ`.  Stated
-  precisely, with its refuted hypothesis, as `CONJECTURE` below.
+  with its refuted hypothesis as `CONJECTURE` below.
 -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.CanonicalFocus where
@@ -49,14 +51,23 @@ singJ-refl : ∀ {ℓM} {X : Type ℓ} {a : X} (M : (y : X) → y Eq.≡ a → T
              (m : M a Eq.refl) → singJ M m a Eq.refl ≡ m
 singJ-refl M m = refl
 
--- The only datum: how to reassemble a full tuple from the focused
--- element and a naming of the other slots.
+-- An `Assembly Fib o i` denotes a NAMING of the slots other than `i`,
+-- together with the way a full argument tuple is rebuilt from the
+-- focused element and a filling of those.  It is the only datum the
+-- whole file takes: no law is imposed, and `Canon` below turns any
+-- `Assembly` into a `Focus`.
 record Assembly {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                 (Fib : Fibered σ ℓX ℓP) (o : σ .ops) (i : σ .arities o)
   : Type (ℓ-max ℓS (ℓ-max ℓ (ℓ-max (ℓ-suc ℓ') ℓX))) where
   field
+    -- an index set for "the other slots" -- not required to be the
+    -- complement of `i`, nor even to miss it
     Rest   : Type ℓ'
+    -- ... naming which slot each of them is
     restOf : Rest → σ .arities o
+    -- ... and how a focused element plus a filling of the rest make a
+    -- tuple.  Nothing forces this to agree with `restOf` at `i`; the
+    -- laws that need it take it as `restJ` instead.
     tuple  : Fib .carrier (σ .sortOf o i)
            → ((r : Rest) → Fib .carrier (σ .sortOf o (restOf r)))
            → (a : σ .arities o) → Fib .carrier (σ .sortOf o a)

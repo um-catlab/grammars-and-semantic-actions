@@ -89,11 +89,15 @@ open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
 open import TheoryGrammar.Enumerable
 open import TheoryGrammar.Decidable.Enumerated
+open import TheoryGrammar.Decidable.Guarded
 
-open import TheoryGrammar.Instances.Spans.Graded public
+open import TheoryGrammar.Instances.Spans.Enumeration public
+open import TheoryGrammar.Instances.Spans.Schedule using (spanSched)
 
 -- the cut search, and the two abbreviations its hypothesis is stated in
-open DecEnum spanFib using (⊗at; Refutes; dec-⊗-cuts; slotMiss)
+open DecEnum  spanFib    using (⊗at; Refutes; dec-⊗-cuts; slotMiss)
+open DecGuard spanGraded
+  using (SortFam; ▷ᴬ; ▷ᴾ; ▷ᴬ→▷ᴾ; löbᵍ; dec-⊗▷ᴾ; resourceOf; module Tab)
 
 module CYK (V : Type₀)
            (unitR : V → ℕ → Type₀)          -- P derives the terminal at j
@@ -250,107 +254,118 @@ module CYK (V : Type₀)
                 (allComplete : (P : V) (r : Rule P) → r ∈L allRules P)
                 (termProbe   : (P : V) → Probe (UnitG P)) where
 
-    DecMot : G.Ix → Type₀
-    DecMot i = Dec⟨ Deriv (i .fst) ⟩ (i .snd)
+    -- ================================================================
+    -- THE CHART, AS A GRAMMAR.
+    --
+    -- The motive is `&ᴰ V (λ P → Dec⟨ Deriv P ⟩)` -- one grammar holding
+    -- the decision for EVERY nonterminal at the current span.  That is
+    -- the whole trick: an `Ix`-family (`V × Span → Type`) is not a
+    -- grammar and has no combinators, so a step written against one is
+    -- forced to be pointful.  A `&ᴰ` over the nonterminals IS a grammar,
+    -- so `▷ᴾ Chart ⊢ Chart` is a map of the calculus and every layer
+    -- below composes with `∘g`.
+    -- ================================================================
 
-    -- the terminal alternative, decided.  `Liftg` is the constant
-    -- former's coercion and `dec-map` transports the decision across it,
-    -- so this is a composite of terms.
+    Chart : SpanG
+    Chart = &ᴰ V (λ P → Dec⟨ Deriv P ⟩)
+
+    ChartF : SortFam ℓ-zero
+    ChartF _ = Chart
+
+    -- reading one nonterminal out of the chart
+    chartAt : (P : V) → Chart ⊢ Dec⟨ Deriv P ⟩
+    chartAt P = &ᴰ-E V {B = λ Q → Dec⟨ Deriv Q ⟩} P
+
+    -- the terminal alternative.  `Liftg` is the constant former's
+    -- coercion and `dec-map` transports the decision across it.
     decUnit : (P : V) → Probe (Liftg (UnitG P))
     decUnit P = dec-map (UnitG P) (Liftg (UnitG P)) liftg lowerg ∘g termProbe P
 
-    module _ (P : V) (i n : ℕ)
-             (rec : (j : G.Ix) → G.degIx j < n → DecMot j) where
+    -- ONE SLOT, from the chart at that slot.  A slot is a `&ᴰ Bool` of
+    -- the nonterminal and its resource certificate, so `dec-&ᴰ` decides
+    -- it from the two components -- the chart for the first, `probe-NE`
+    -- for the second.  A map, not an element.
+    decSlot : (Q : V) → Chart ⊢ Dec⟨ SlotG Q ⟩
+    decSlot Q =
+      dec-&ᴰ (λ b → G.⟦ NEslot Q b ⟧c Der)
+      ∘g &ᴰ-I {B = λ b → Dec⟨ G.⟦ NEslot Q b ⟧c Der ⟩}
+               λ { true  → chartAt Q
+                 ; false → dec-map NonEmpty (Liftg NonEmpty) liftg lowerg
+                           ∘g probe-NE ∘g ⊤-I }
 
-      private
-        s : Span
-        s = i , n
+    -- ================================================================
+    -- ... AND EVERYTHING BELOW IS A MAP.
+    --
+    -- The cut's resource test used to be written here by hand, as the
+    -- file's one non-`⊢` definition.  It is now DERIVED by
+    -- `resourceOf` from three inputs: `probe-NE` and `neOf`, which are
+    -- terms, and `neProper`, which is a law of the grading (`Spans.
+    -- Graded`) of the same kind as `deg<`.  Nothing in this module
+    -- mentions a cut.
+    -- ================================================================
 
-      module _ (Q T : V) (c : Cut n) where
+    -- a binary rule: scan the cuts, with the chart available LATER
+    decBin : (Q T : V) → ▷ᴾ ChartF ⊢ Dec⟨ ⊗ˢ cat (binSlots Q T) ⟩
+    decBin Q T =
+      dec-⊗▷ᴾ cat (binSlots Q T) ChartF
+             (λ s → allCuts (s .snd)) (λ s → allCutsComplete (s .snd))
+             (resourceOf cat (binSlots Q T) (λ _ → NonEmpty) (λ _ → probe-NE)
+                         (λ { true → neOf Q ; false → neOf T })
+                         neProper catAr catArComplete)
+             (spanDecAt cat (binSlots Q T))
+             λ { true → decSlot Q ; false → decSlot T }
 
-        private
-          sL sR : Span
-          sL = SpanParts cat s c true
-          sR = SpanParts cat s c false
+    decRule : (P : V) (r : Rule P) → ▷ᴾ ChartF ⊢ Dec⟨ RuleG P r ⟩
+    decRule P (inl _)           = decUnit P ∘g ⊤-I
+    decRule P (inr (Q , T , _)) = decBin Q T
 
-          CutDec : Type₀
-          CutDec = ⊗at cat (binSlots Q T) s c
-                 ⊎ Refutes cat (binSlots Q T) s c
+    -- one nonterminal's row: search the rules with `dec-⊕ᴰ`, then
+    -- transport the decision across the fixed point with `dec-map`
+    decNT : (P : V) → ▷ᴾ ChartF ⊢ Dec⟨ Deriv P ⟩
+    decNT P =
+      dec-map (Layer P) (Deriv P) (rollD P) (unrollD P)
+      ∘g dec-⊕ᴰ (Rule P) (RuleG P) (allRules P) (allComplete P)
+      ∘g &ᴰ-I {B = λ r → Dec⟨ RuleG P r ⟩} (decRule P)
 
-          -- an empty side refutes the cut, because `neOf` says the slot
-          -- sitting there certifies its own span to be non-empty.
-          -- `slotMiss` is the generic "a slot refuted refutes the cut";
-          -- its only argument is the term `neOf`, so nothing pointful is
-          -- written here.
-          missL : (¬G NonEmpty) sL → Refutes cat (binSlots Q T) s c
-          missL = slotMiss cat (binSlots Q T) s c true  NonEmpty (neOf Q)
+    -- THE LÖB STEP, a term of the calculus.  No index is matched, no
+    -- Agda function is handed to `löb`, and nothing below `decUnit` /
+    -- `spanResource` is an element rather than a map.
+    step : ▷ᴾ ChartF ⊢ Chart
+    step = &ᴰ-I {B = λ P → Dec⟨ Deriv P ⟩} decNT
 
-          missR : (¬G NonEmpty) sR → Refutes cat (binSlots Q T) s c
-          missR = slotMiss cat (binSlots Q T) s c false NonEmpty (neOf T)
+    -- ================================================================
+    -- ... AND THE CHART IS TABULATED.
+    --
+    -- `löbᵀ` is `löbᵍ` with the `later` supplied by a `DP.Chain` rather
+    -- than by re-descent: the same `step` above, solved against
+    -- `Spans.Schedule`'s enumeration of the subspans of the root.  The
+    -- ONLY thing that changes is that the answers so far are DATA --
+    -- forced once and projected -- so a long span consulting a short
+    -- one costs an address rather than a recomputation.
+    --
+    -- `DecGuard.löbᵀ≡` (via `DP.solveAt≡`) proves this is the same
+    -- answer `löbᵍ` gave, so no pinned test in `Tests` / `Bench` is a
+    -- check on semantics; they check the WIRING.
+    -- ================================================================
 
-          -- neither side empty: each side is then a PROPER part, and
-          -- `deg<` -- the grading's own field -- says a proper part is
-          -- strictly smaller, which is exactly what `▷` demands.  So
-          -- nothing here knows what a cut is; `cutL<` / `cutR<` / `neLen`
-          -- are used only to BUILD `spanGraded`, never to use it.  Each
-          -- slot is a `&ᴰ` of its nonterminal and its certificate,
-          -- decided by `dec-&ᴰ`.
-          slotDec : (R : V) (t : Span) → G.degIx (R , t) < n → NonEmpty t
-                  → Dec⟨ SlotG R ⟩ t
-          slotDec R t shorter ne =
-            dec-&ᴰ (λ b → G.⟦ NEslot R b ⟧c Der) t
-              λ { true  → rec (R , t) shorter
-                ; false → dec-yes (Liftg NonEmpty) t (liftg {A = NonEmpty} t ne) }
+    private module T = Tab ChartF
 
-          -- `decΠBool` is the arity-finiteness concession, the same one
-          -- `DecEnumerable.decAt` makes: the two slots sit at DIFFERENT
-          -- spans, so combining them is not a `&ᴰ` of the calculus.
-          both : NonEmpty sL → NonEmpty sR → CutDec
-          both neL neR =
-            decΠBool {B = λ a → binSlots Q T a (SpanParts cat s c a)}
-              (slotDec Q sL (spanGraded .deg< cat s c true  neR) neL)
-              (slotDec T sR (spanGraded .deg< cat s c false neL) neR)
+    chart : Cover Chart
+    chart = T.löbᵀ (λ _ → step) (spanSched T.Motive) tt
 
-        -- THE CUT, decided.  Two nested `dec-elim`s on the resource
-        -- probe -- an instance never matches a sum, it eliminates one.
-        decCut : CutDec
-        decCut =
-          dec-elim NonEmpty sL
-            (λ neL → dec-elim NonEmpty sR
-                       (λ neR → both neL neR)
-                       (λ k → inr (missR k))
-                       (probe-NE sR tt))
-            (λ k → inr (missL k))
-            (probe-NE sL tt)
+    -- THE UNTABULATED REFERENCE, kept for measurement and for reading.
+    -- `löbᵍ` solves the SAME `step`; `▷ᴬ→▷ᴾ` is the only glue, because
+    -- the degree later is the stronger one.  So the difference between
+    -- this and `chart` above is EXACTLY the representative of the
+    -- `later` -- a Π versus a table -- and nothing else, which is the
+    -- claim `DP`'s header makes and this pair of lines exhibits.
+    chartLöb : Cover Chart
+    chartLöb = löbᵍ ChartF (λ _ → step ∘g ▷ᴬ→▷ᴾ ChartF) tt
 
-      -- one rule, decided: the terminal alternative, or a search over
-      -- the cuts.  `allCuts` / `allCutsComplete` are the file's only
-      -- external residue, and they are an induction on a NUMBER.
-      decRule : (r : Rule P) → Dec⟨ RuleG P r ⟩ s
-      decRule (inl _)           = decUnit P s tt
-      decRule (inr (Q , T , _)) =
-        dec-⊗-cuts cat (binSlots Q T) s (allCuts n) (allCutsComplete n)
-                   (decCut Q T)
-
-      -- ... and the whole layer: search the rules with `dec-⊕ᴰ`, then
-      -- transport the decision across the fixed point with `dec-map`.
-      decStep : DecMot (P , s)
-      decStep =
-        dec-map (Layer P) (Deriv P) (rollD P) (unrollD P) s
-          (dec-⊕ᴰ (Rule P) (RuleG P) (allRules P) (allComplete P) s decRule)
-
-    -- THE LÖB STEP, as a named `▷ … ⊢ᴵ …` term: projections only, no
-    -- match on the index, and no Agda function smuggled into `löb`.
-    step : G.▷ DecMot G.⊢ᴵ DecMot
-    step i rec = decStep (i .fst) (i .snd .fst) (i .snd .snd) rec
-
-    decIx : (i : G.Ix) → DecMot i
-    decIx = G.löb step
-
-    -- THE PROCEDURE, as a term of the calculus: at every span, a parse
-    -- tree from P or a refutation of every parse tree from P.
+    -- THE PROCEDURE: at every span, a parse tree from P or a refutation
+    -- of every parse tree from P.  A composite of two terms.
     derives? : (P : V) → Probe (Deriv P)
-    derives? P s _ = decIx (P , s)
+    derives? P = chartAt P ∘g chart
 
     -- and it composes with the rest of the probe family, because it IS
     -- one of them -- e.g. "this span is a P or a Q"

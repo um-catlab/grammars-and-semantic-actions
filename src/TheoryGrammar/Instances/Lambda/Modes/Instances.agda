@@ -1,43 +1,40 @@
 {-
   THE FOUR MODES.
 
-  Each is `Core.Mode` at a context promodel and a leaf.  Nothing else
-  varies: `Uses`, `check`, `checkAST` and `accepts` are inherited.
+  Each is `Core.Mode` at a context promodel and a leaf, so each exports
+  `Uses`, `check`, `checkAST`, `accepts` and `acceptsLf` unchanged, and
+  supplies only `Lf` (its leaf grammar) and `decLf` (that leaf's
+  decision).  Nothing else varies:
 
-      ordered   Concat      (free monoid)            leaf  ⌈n⌉
-      linear    Interleave  (free comm. monoid)      leaf  ⌈n⌉
-      affine    Interleave  (the SAME promodel)     leaf  ⌈n⌉ ⊗ᶜ ⊤
-      relevant  Overlap     (+ idempotence)          leaf  ⌈n⌉
+      Ord   Concat      (free monoid)            Lf n = ⌈n⌉
+      Lin   Interleave  (free comm. monoid)      Lf n = ⌈n⌉
+      Aff   Interleave  (the SAME promodel)      Lf n = ⌈n⌉ ⊗ᶜ ⊤
+      Rel   Overlap     (+ idempotence)          Lf n = ⌈n⌉
 
-  So weakening is a MODALITY on the leaf (`- ⊗ᶜ ⊤`, "a variable may
-  consume slack"), while exchange and contraction are properties of the
-  promodel's `Split`.  That asymmetry is the one real finding: three of
-  the four modes are the same grammar at three promodels, and affine is
-  the same grammar at the linear promodel with one modality inserted.
+  So weakening is a MODALITY on the leaf ("a variable may consume
+  slack"), while exchange and contraction are properties of `Split`.
+  That asymmetry is the one real finding.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Modes.Instances where
 
-open import Cubical.Foundations.Prelude
-open import Cubical.Data.Bool hiding (_⊕_)
-open import Cubical.Data.Unit
 open import Cubical.Data.List using (List; []; _∷_)
 open import Cubical.Data.List.Properties using (discreteList)
+open import Cubical.Data.Unit
+open import Cubical.Foundations.Prelude
 open import Cubical.Relation.Nullary.Base using (Discrete)
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Fibered
 open import TheoryGrammar.Decidable
-open import TheoryGrammar.Decidable.Splittings
 open import TheoryGrammar.Decidable.Representable
-open import TheoryGrammar.Instances.Lambda.Modes.Ctx
-open import TheoryGrammar.Instances.Lambda.Modes.Core
 open import TheoryGrammar.Instances.Lambda.Modes.Concat
+open import TheoryGrammar.Instances.Lambda.Modes.Core
 open import TheoryGrammar.Instances.Lambda.Modes.Interleave
 open import TheoryGrammar.Instances.Lambda.Modes.Overlap
 
 module Modes (Name : Type₀) (_≟_ : Discrete Name) where
 
+  -- the one-name context: what a leaf must account for
   sing : Name → List Name
   sing n = n ∷ []
 
@@ -49,11 +46,12 @@ module Modes (Name : Type₀) (_≟_ : Discrete Name) where
   module Il = Interleave Name
   module Ov = Overlap Name
 
-  module CcR = DecRep (Cc.fib .carrier)
-  module IlR = DecRep (Il.fib .carrier)
-  module OvR = DecRep (Ov.fib .carrier)
-
   private
+    -- `dec-⌈⌉` needs the CARRIER and nothing else, and all three
+    -- promodels have the same one -- so ONE instance serves all four
+    -- modes, and the three bare leaves below are literally one term.
+    module Rep = DecRep {S = Unit} (λ _ → List Name)
+
     module OrdC = Core Name Cc.fib Cc.point Cc.dec sing
     module LinC = Core Name Il.fib Il.point Il.dec sing
     module RelC = Core Name Ov.fib Ov.point Ov.dec sing
@@ -68,7 +66,7 @@ module Modes (Name : Type₀) (_≟_ : Discrete Name) where
     Lf n = ⌈ sing n ⌉
 
     decLf : (n : Name) → ⊤G ⊢ Dec⟨ Lf n ⟩
-    decLf n = CcR.dec-⌈⌉ discreteCtx (sing n)
+    decLf n = Rep.dec-⌈⌉ discreteCtx (sing n)
 
     open Mode Lf decLf public
 
@@ -82,14 +80,14 @@ module Modes (Name : Type₀) (_≟_ : Discrete Name) where
     Lf n = ⌈ sing n ⌉
 
     decLf : (n : Name) → ⊤G ⊢ Dec⟨ Lf n ⟩
-    decLf n = IlR.dec-⌈⌉ discreteCtx (sing n)
+    decLf n = Rep.dec-⌈⌉ discreteCtx (sing n)
 
     open Mode Lf decLf public
 
   -- ================================================================
   -- AFFINE: the LINEAR promodel, with weakening as a leaf modality.
-  -- `⌈n⌉ ⊗ᶜ ⊤` is "a use of n, plus any slack" -- and slack is exactly
-  -- what weakening licenses.  Its decision is `dec-⊗ˢ` again.
+  -- `⌈n⌉ ⊗ᶜ ⊤` denotes "a use of n, plus any slack" -- and slack is
+  -- exactly what weakening licenses.  Its decision is the tensor's.
   -- ================================================================
   module Aff where
     open LinC public
@@ -98,10 +96,7 @@ module Modes (Name : Type₀) (_≟_ : Discrete Name) where
     Lf n = ⌈ sing n ⌉ ⊗ᶜ ⊤G
 
     decLf : (n : Name) → ⊤G ⊢ Dec⟨ Lf n ⟩
-    decLf n Γ _ =
-      Il.dec .dec-⊗ˢ mul (λ b → if b then ⌈ sing n ⌉ else ⊤G) Γ
-        λ { sp true  → IlR.dec-⌈⌉ discreteCtx (sing n) _ tt
-          ; sp false → dec-⊤ _ tt }
+    decLf n = dec-⊗ᶜ ⌈ sing n ⌉ ⊤G (Rep.dec-⌈⌉ discreteCtx (sing n)) dec-⊤
 
     open Mode Lf decLf public
 
@@ -115,6 +110,6 @@ module Modes (Name : Type₀) (_≟_ : Discrete Name) where
     Lf n = ⌈ sing n ⌉
 
     decLf : (n : Name) → ⊤G ⊢ Dec⟨ Lf n ⟩
-    decLf n = OvR.dec-⌈⌉ discreteCtx (sing n)
+    decLf n = Rep.dec-⌈⌉ discreteCtx (sing n)
 
     open Mode Lf decLf public

@@ -9,6 +9,10 @@
 
   Only `Split` changes -- `Uses`, `check` and `accepts` are inherited
   from `Modes/Core` unmodified, which is the whole claim.
+
+  DEFINES `Ctx`, `CSplit`/`CParts`, the promodel `fib` and point
+  `point`, the decision `decEnum`/`dec`, and the module `Trace` -- the
+  mode itself, with leaf `Lf n = ⌈n⌉` and no modality.
 -}
 open import Cubical.Foundations.Prelude
 

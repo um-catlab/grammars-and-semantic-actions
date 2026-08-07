@@ -6,6 +6,10 @@
   readability of the AST, it is what makes `parts` a projection instead
   of an inversion lemma, and it is a property of the promodel rather
   than of any grammar written over it.
+
+  Defines `Raw`, the sorted `Carrier`, the splitting families
+  `IsVar`/`IsApp`/`IsLam` and their projection `LParts`; assembles
+  `λFib` and `λPoint`, and proves the substrate law `λ-unsplit`.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Fibered where
@@ -35,15 +39,20 @@ module Terms (Name : Type₀) where
   Op appOp f = app (f true) (f false)
   Op lamOp f = lam (f true) (f false)
 
+  -- `IsVar t` DENOTES: "`t` is a variable", and CARRIES the name
   data IsVar : Raw → Type₀ where
     mkVar : (n : Name) → IsVar (var n)
 
+  -- `IsApp t` DENOTES: "`t` is an application", carrying both operands
   data IsApp : Raw → Type₀ where
     mkApp : (u v : Raw) → IsApp (app u v)
 
+  -- `IsLam t` DENOTES: "`t` is a lambda", carrying binder and body
   data IsLam : Raw → Type₀ where
     mkLam : (n : Name) (t : Raw) → IsLam (lam n t)
 
+  -- `LSplit o t` DENOTES: "the ways `t` decomposes as an `o`" -- of
+  -- which there is at most one, hence the three families above
   LSplit : (o : LOp) → Raw → Type₀
   LSplit varOp = IsVar
   LSplit appOp = IsApp

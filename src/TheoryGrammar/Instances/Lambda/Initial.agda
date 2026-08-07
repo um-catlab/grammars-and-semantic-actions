@@ -3,14 +3,15 @@
 
   `AllF` is the shape functor of `λSig` in the generic description
   language -- one alternative per operation, recursive slots at `Var`,
-  name slots constant.  `readback` is the ONE definition here that
-  recurses on `Raw`: it IS initiality, and `Modes/Fold.agda` derives
-  `indRaw` from it by the generic `fold`.
+  name slots constant.  `readback` is the ONE definition that recurses on
+  `Raw`: it IS initiality, and `Modes/Fold.agda` derives `indRaw` from it.
 
-  Both directions are proved: `⊤≅Everything` is an `Iso`, not a name.
-  The nonterminal index never moves (`lam` recurses at the SAME scope).
-  Scoping is `Scoped.agda`'s job; a moving index would cost `indRaw` its
-  definitional equation under a binder, which downstream motives need.
+  Both directions are proved -- `forget-readback`, `readback-unique`,
+  paired as the `Iso` `⊤≅Everything`.  The nonterminal index never moves
+  (`lam` recurses at the SAME scope): a moving index would cost `indRaw`
+  its definitional equation under a binder.  `VarA`/`AppA`/`LamA` are the
+  three tensors level-polymorphically, eliminated via `along-unsplit`;
+  `AllAlg` and `size!` are what downstream folds run.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Initial where
@@ -18,16 +19,17 @@ module TheoryGrammar.Instances.Lambda.Initial where
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.Isomorphism
 open import Cubical.Data.Bool hiding (_⊕_)
+open import Cubical.Data.List using (List; []; _∷_)
+open import Cubical.Data.Nat using (ℕ; suc; _+_)
 open import Cubical.Data.Sigma
 open import Cubical.Data.Sum using (inl; inr)
 open import Cubical.Data.Unit
-open import Cubical.Data.List using (List; []; _∷_)
-open import Cubical.Data.Nat using (ℕ; suc; _+_)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
+open import TheoryGrammar.Induction
 open import TheoryGrammar.Instances.Lambda.Signature
 open import TheoryGrammar.Instances.Lambda.Base
 open import TheoryGrammar.SemanticAction
@@ -39,8 +41,10 @@ module Initial (Name : Type₀) where
   Scope : Type₀
   Scope = List Name
 
-  -- nonterminals: one per scope, all at sort `tm`
-  open Ind λFib ℓ-zero Scope (λ _ → tm) public
+  -- nonterminals: one per scope, all at sort `tm`.  `Induct` is `Ind`
+  -- plus the DEPENDENT eliminator `indμ`, which `readback-unique` needs
+  -- and which is stated once, generically, in `TheoryGrammar.Induction`.
+  open Induct λFib ℓ-zero Scope (λ _ → tm) public
 
   private variable ℓM : Level
 
@@ -111,25 +115,28 @@ module Initial (Name : Type₀) where
   -- `DeBruijn.agda`'s header records for `⌈⌉-E`.
   -- ================================================================
 
-  private
-    onto : (P : TheoryTy ℓM tm) (o : LOp) (m : Raw) (sp : LSplit o m)
-         → P (Op o (LParts o m sp)) → P m
-    onto P o m sp = Eq.transport P (λ-unsplit o m sp)
+  -- `along-unsplit P o m sp` DENOTES: "a `P` of the reassembled parts is
+  -- a `P` of the thing they came from".  Not `private`: it is the whole
+  -- content of `λ-unsplit` as a rule, and it is what every eliminator
+  -- below is built from.
+  along-unsplit : (P : TheoryTy ℓM tm) (o : LOp) (m : Raw) (sp : LSplit o m)
+                → P (Op o (LParts o m sp)) → P m
+  along-unsplit P o m sp = Eq.transport P (λ-unsplit o m sp)
 
   VarA-E : {P : TheoryTy ℓM tm} → ((n : Name) → P (var n)) → VarA ℓM ⊢ P
   VarA-E {P = P} pv = ⊗ˢ-E varOp λ m sp _ →
-    onto P varOp m sp (pv (LParts varOp m sp tt))
+    along-unsplit P varOp m sp (pv (LParts varOp m sp tt))
 
   AppA-E : {P : TheoryTy ℓM tm}
          → ((u v : Raw) → P u → P v → P (app u v)) → AppA P ⊢ P
   AppA-E {P = P} pa = ⊗ˢ-E appOp {A = λ _ → P} {B = P} λ m sp h →
-    onto P appOp m sp
+    along-unsplit P appOp m sp
       (pa (LParts appOp m sp true) (LParts appOp m sp false) (h true) (h false))
 
   LamA-E : {P : TheoryTy ℓM tm}
          → ((n : Name) (t : Raw) → P t → P (lam n t)) → LamA P ⊢ P
   LamA-E {P = P} pl = ⊗ˢ-E lamOp {A = LamSlots P} {B = P}
-    λ m sp h → onto P lamOp m sp
+    λ m sp h → along-unsplit P lamOp m sp
       (pl (LParts lamOp m sp true) (LParts lamOp m sp false) (h false))
 
   -- PRIMITIVE (1 of 2): the container encoding respelled in the
@@ -193,18 +200,15 @@ module Initial (Name : Type₀) where
   forget-readback Γ t u = refl
 
   -- ================================================================
-  -- The other half: nothing else inhabits `μ AllF`.  `Inductive.agda`
-  -- exports only the NON-dependent `fold`, and this is a statement
-  -- about elements, so the dependent eliminator is spelled out here.
+  -- The other half: nothing else inhabits `μ AllF`.  That is a
+  -- statement ABOUT an element, so it is proved by `indμ` -- the
+  -- dependent eliminator, taken from `TheoryGrammar.Induction`.
   -- ================================================================
 
-  indμ : {ℓM : Level} (M : (i : Ix) → μ AllF i → Type ℓM)
-       → ((Γ : Scope) (m : Raw) (sh : Sh (AllF Γ) m)
-          (f : (p : Pos (AllF Γ) m sh) → μ AllF (nx (AllF Γ) m sh p))
-          → ((p : Pos (AllF Γ) m sh) → M _ (f p)) → M (Γ , m) (sup sh f))
-       → (i : Ix) (e : μ AllF i) → M i e
-  indμ M α (Γ , m) (sup sh f) = α Γ m sh f (λ p → indμ M α _ (f p))
-
+  -- PRIVATE, and deliberately so: unlike `along-unsplit`, none of these
+  -- is a lemma anyone could reuse.  `LamMot` mentions `readback` and
+  -- `supf` and states nothing outside the lam case of `readback-unique`;
+  -- `shLam0` is one particular shape; `supf` is `sup` eta-expanded.
   private
     supf : {Γ : Scope} {m : Raw} (sh : Sh (AllF Γ) m)
          → ((p : Pos (AllF Γ) m sh) → μ AllF (nx (AllF Γ) m sh p))

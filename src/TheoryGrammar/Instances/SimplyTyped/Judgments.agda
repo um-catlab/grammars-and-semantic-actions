@@ -1,7 +1,7 @@
 {-
   THE BIDIRECTIONAL JUDGMENTS, as ONE `μ` with TWO nonterminals.
 
-  The nonterminal index is `Mode × Ctx × Ty`, all at sort `tm`; so
+  The nonterminal index is `Mode × Ctx × Ty`, all at sort `tm`, so
   `Infer Γ A` and `Check Γ C` are two families of the same fixed point
   and the mode discipline is a property of the DESCRIPTION, not of a
   separate datatype:
@@ -9,68 +9,82 @@
     Infer  var    the name is bound in Γ, to the index type
            app    the function's type is A₀ ⇒ A for some GUESSED A₀,
                   whose argument is CHECKED
-           ann    the term is checked at the type sitting in the ty slot,
+           ann    the term is checked at the type in the `ty` slot,
                   which the representable `⌈ A ⌉` pins to the index
     Check  switch synthesis at the very same type
-           lam    only when the index type SPLITS as an arrow -- and the
-                  splitting comes from the promodel at sort `ty`, so no
-                  case analysis on `Ty` appears in the description
+           lam    only when the index type SPLITS as an arrow
 
-  That last point is what the third sort buys: `⊕e (IsArr C)` is the
-  promodel's own `Split arrOp C`, so the lambda rule is present exactly
-  when the checking type is an arrow, with `dom`/`cod` read off by
-  `parts` rather than by matching.
+  That last line is what the third sort buys: `⊕e (IsArr C)` IS the
+  promodel's own `Split arrOp C`, so the rule is present exactly when
+  the checking type is an arrow, with `dom`/`cod` read off by `parts`
+  and no case analysis on `Ty` anywhere in the description.
+
+  Two one-step unfoldings live here, side by side: `JStep`/`j-unroll`/
+  `j-roll` at either nonterminal, and -- for the synthesis mode only --
+  `SynStep`/`syn-out`/`syn-in`, which is `JStep` at `syn` with the
+  `⊕ᴰ Ty` pushed past the coproduct.  The second is what a decision
+  procedure needs, but it is a grammar isomorphism and decides nothing,
+  so it is stated where its sibling is rather than in `Check.agda`.
 
   PRIMITIVE: `⟦J⟧`/`⟦J⟧⁻`, the container encoding respelled in the
-  connectives.  They never match a term and never open a splitting.
+  connectives (they never match a term and never open a splitting), and
+  `varG-pull`, which reads a slot's index and republishes it at the
+  whole.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.SimplyTyped.Judgments where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
+open import Cubical.Data.List using (List; []; _∷_)
 open import Cubical.Data.Sigma
 open import Cubical.Data.Sum using (inl; inr)
-open import Cubical.Data.Unit
-open import Cubical.Data.List using (List; []; _∷_)
+open import Cubical.Data.Unit using (tt; tt*)
 open import Cubical.Relation.Nullary.Base using (Discrete)
 
 open import TheoryGrammar.Base
+open import TheoryGrammar.Distributive
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Instances.SimplyTyped.Signature
 open import TheoryGrammar.Instances.SimplyTyped.Fibered
 open import TheoryGrammar.Instances.SimplyTyped.Base
-open import TheoryGrammar.Instances.SimplyTyped.Readable
-open import TheoryGrammar.Instances.SimplyTyped.Types
 open import TheoryGrammar.Instances.SimplyTyped.Context
 
 module Judgments (Name : Type₀) (_≟_ : Discrete Name) where
 
   open StBase Name
-  open StReadable Name
-  open StTypes Name
   open StContext Name _≟_
 
+  -- `Mode` denotes the direction a judgment is read in: `syn` produces
+  -- its type, `chk` consumes it.
   data Mode : Type₀ where
     syn chk : Mode
 
+  -- `NT` denotes a nonterminal of the judgment grammar: a mode, the
+  -- context it is under, and the type it produces or consumes.
   NT : Type₀
   NT = Mode × Ctx × Ty
 
   -- both nonterminals live at sort `tm`
   open Ind stlcFib ℓ-zero NT (λ _ → tm) public
 
+  -- `InfTag`/`ChkTag` denote which RULE was used, one per alternative
+  -- of the corresponding nonterminal.
   data InfTag : Type₀ where
     tVar tApp tAnn : InfTag
 
   data ChkTag : Type₀ where
     tSwitch tLam : ChkTag
 
-  -- domain and codomain, read off a `ty`-splitting by `parts`
+  -- domain and codomain, read off a `ty`-splitting by `parts`.  Note
+  -- there is no `Ty → Maybe Ty`: the CALLER holds an `IsArr` witness,
+  -- so being an arrow is never re-established here.
   dom cod : {C : Ty} → IsArr C → Ty
   dom {C} sp = TParts arrOp C sp true
   cod {C} sp = TParts arrOp C sp false
 
+  -- `JF x` denotes the one-step rule set at nonterminal `x`, as a
+  -- container: a sum over rule tags of a tensor over that rule's slots.
   JF : (x : NT) → Functor tm
   JF (syn , Γ , A) = ⊕e InfTag λ
     { tVar → ⊗e varOp (λ _ → ⌜ Lookup Γ A ⌝)
@@ -87,15 +101,20 @@ module Judgments (Name : Type₀) (_≟_ : Discrete Name) where
                            ; false → Var (chk , (n , dom sa) ∷ Γ , cod sa) })
     }
 
+  -- `Jμ x` denotes the derivations at nonterminal `x`: the least fixed
+  -- point of `JF`, indexed by the term derived.
   Jμ : NT → TmG
   Jμ x t = μ JF (x , t)
 
+  -- `Infer Γ A` denotes "this term SYNTHESISES the type `A` in `Γ`";
+  -- `Check Γ C` denotes "this term CHECKS against `C` in `Γ`".
   Infer Check : Ctx → Ty → TmG
   Infer Γ A = Jμ (syn , Γ , A)
   Check Γ C = Jμ (chk , Γ , C)
 
-  -- the synthesis grammar: the indexed sum whose subsingleton-ness is
-  -- the whole question
+  -- `Syn Γ` denotes "this term synthesises SOME type in `Γ`", with the
+  -- type carried as the sum's index.  Its subsingleton-ness -- one
+  -- inhabited summand at most -- is the whole question (`Unique.agda`).
   Syn : Ctx → TmG
   Syn Γ = ⊕ᴰ Ty (Infer Γ)
 
@@ -103,6 +122,9 @@ module Judgments (Name : Type₀) (_≟_ : Discrete Name) where
   -- One unfolding, in the connectives.
   -- ================================================================
 
+  -- `JStep R x` denotes one layer of rules at `x`, with the recursive
+  -- occurrences replaced by `R`: the same content as `⟦ JF x ⟧`, said
+  -- in `⊕`/`⊕ᴰ`/`⊗ˢ` instead of shapes and positions.
   JStep : (NT → TmG) → NT → TmG
   JStep R (syn , Γ , A) =
       VarG (Lookup Γ A)
@@ -113,7 +135,10 @@ module Judgments (Name : Type₀) (_≟_ : Discrete Name) where
     ⊕ ⊕ᴰ (IsArr C) (λ sa → ⊕ᴰ Name (λ n →
         LamG (Nm n) (R (chk , (n , dom sa) ∷ Γ , cod sa))))
 
-  -- PRIMITIVE: the container encoding, respelled in the connectives
+  -- PRIMITIVE: the two respellings.  `⟦J⟧` denotes "read a container
+  -- layer as a layer of connectives" and `⟦J⟧⁻` the converse; together
+  -- they say the shape/position presentation and the connective
+  -- presentation of `JStep` are the same grammar.
   ⟦J⟧ : {M : Ix → Type₀} (x : NT) → ⟦ JF x ⟧ M ⊢ JStep (λ y t → M (y , t)) x
   ⟦J⟧ (syn , Γ , A) _ ((tVar , sp , sh) , _) = inl (sp , λ a → lower (sh a))
   ⟦J⟧ (syn , Γ , A) _ ((tApp , A₀ , sp , _) , rc) =
@@ -175,3 +200,74 @@ module Judgments (Name : Type₀) (_≟_ : Discrete Name) where
                  LamG (Nm n') (Check ((n' , dom sa') ∷ Γ) (cod sa')))} sa
         ∘g ⊕ᴰ-I Name
           {A = λ n' → LamG (Nm n') (Check ((n' , dom sa) ∷ Γ) (cod sa))} n))
+
+  -- ================================================================
+  -- THE SAME UNFOLDING FOR `Syn Γ`, with the ⊕ᴰ pushed inwards.
+  --
+  -- `JStep` says what ONE type's derivations look like; `SynStep` says
+  -- what SOME type's do, which is the shape a decision procedure can
+  -- recurse on -- at `var` the guessed type collapses into `Look Γ`,
+  -- and at `app` two nested guesses become one over `Ty × Ty`.  All of
+  -- it is grammar isomorphism; nothing here decides anything.
+  -- ================================================================
+
+  -- the three alternatives of `syn`, at a fixed synthesised type
+  QVar : Ctx → Ty → TmG
+  QVar Γ A = VarG (Lookup Γ A)
+
+  QApp' : Ctx → Ty → TmG
+  QApp' Γ A = ⊕ᴰ Ty (λ A₀ → AppG (Infer Γ (A₀ ⇒ᵗ A)) (Check Γ A₀))
+
+  QAnn : Ctx → Ty → TmG
+  QAnn Γ A = AnnG (Check Γ A) (⌈_⌉ {s = ty} A)
+
+  -- `QApp Γ (A₀ , A)` denotes the application rule with BOTH types
+  -- named at once, so that one `⊕ᴰ` guesses the pair
+  QApp : Ctx → Ty × Ty → TmG
+  QApp Γ AB = AppG (Infer Γ (AB .fst ⇒ᵗ AB .snd)) (Check Γ (AB .fst))
+
+  SynApp : Ctx → TmG
+  SynApp Γ = ⊕ᴰ (Ty × Ty) (QApp Γ)
+
+  SynAnn : Ctx → TmG
+  SynAnn Γ = ⊕ᴰ Ty (QAnn Γ)
+
+  -- `SynStep Γ` denotes one layer of `Syn Γ`: a variable bound
+  -- somewhere in `Γ`, an application, or an annotation.
+  SynStep : Ctx → TmG
+  SynStep Γ = VarG (Look Γ) ⊕ (SynApp Γ ⊕ SynAnn Γ)
+
+  -- internal: the ⊕ᴰ goes INTO the unary tensor by its functorial action
+  varG-push : (Γ : Ctx) → ⊕ᴰ Ty (QVar Γ) ⊢ VarG (Look Γ)
+  varG-push Γ = ⊕ᴰ-E λ A →
+    ⊗ˢ-map varOp {A = varFam (Lookup Γ A)} {B = varFam (Look Γ)}
+           (λ _ → ⊕ᴰ-I Ty {A = Lookup Γ} A)
+
+  -- PRIMITIVE: and out again.  This direction is NOT internal -- it
+  -- reads the index out of a slot and republishes it at the whole --
+  -- but for a UNARY operation it is only `Unit`'s η.
+  varG-pull : (Γ : Ctx) → VarG (Look Γ) ⊢ ⊕ᴰ Ty (QVar Γ)
+  varG-pull Γ t (sp , h) = h tt .fst , sp , λ _ → h tt .snd
+
+  -- internal: reindexing an iterated ⊕ᴰ along a product
+  appReindex : (Γ : Ctx) → ⊕ᴰ Ty (QApp' Γ) ⊢ SynApp Γ
+  appReindex Γ = ⊕ᴰ-E λ A → ⊕ᴰ-E λ A₀ → ⊕ᴰ-I (Ty × Ty) {A = QApp Γ} (A₀ , A)
+
+  appReindex⁻ : (Γ : Ctx) → SynApp Γ ⊢ ⊕ᴰ Ty (QApp' Γ)
+  appReindex⁻ Γ = ⊕ᴰ-E λ AB →
+      ⊕ᴰ-I Ty {A = QApp' Γ} (AB .snd)
+    ∘g ⊕ᴰ-I Ty {A = λ A₀ → AppG (Infer Γ (A₀ ⇒ᵗ AB .snd)) (Check Γ A₀)} (AB .fst)
+
+  syn-out : (Γ : Ctx) → Syn Γ ⊢ SynStep Γ
+  syn-out Γ =
+      ⊕-E (⊕-I₁ ∘g varG-push Γ)
+          (⊕-I₂ ∘g (⊕-E (⊕-I₁ ∘g appReindex Γ) ⊕-I₂ ∘g ⊕ᴰ-⊕-out Ty))
+    ∘g (⊕ᴰ-⊕-out Ty ∘g ⊕ᴰ-map Ty (λ A → j-unroll (syn , Γ , A)))
+
+  syn-in : (Γ : Ctx) → SynStep Γ ⊢ Syn Γ
+  syn-in Γ =
+      ⊕ᴰ-map Ty (λ A → j-roll (syn , Γ , A))
+    ∘g (⊕ᴰ-⊕-in Ty
+        ∘g ⊕-E (⊕-I₁ ∘g varG-pull Γ)
+               (⊕-I₂ ∘g (⊕ᴰ-⊕-in Ty
+                         ∘g ⊕-E (⊕-I₁ ∘g appReindex⁻ Γ) ⊕-I₂)))

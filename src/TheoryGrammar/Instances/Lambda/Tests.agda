@@ -15,14 +15,16 @@
 module TheoryGrammar.Instances.Lambda.Tests where
 
 open import Cubical.Foundations.Prelude
+-- NB: `Cubical.Relation.Nullary` is deliberately absent.  Nothing below
+-- observes into the metalanguage's `Dec`; the negative results are terms
+-- `¬G A`, and the only external type any test lands in is `Bool`.
 open import Cubical.Data.Bool hiding (_⊕_)
-open import Cubical.Data.Maybe using (Maybe; just; nothing)
-open import Cubical.Data.Unit
-open import Cubical.Data.List using ([]; _∷_; length)
-open import Cubical.Data.Nat using (ℕ; discreteℕ; snotz; injSuc)
 open import Cubical.Data.Empty as E using ()
-open import Cubical.Relation.Nullary.Base using (Dec; yes; no)
 open import Cubical.Data.FinData.Base renaming (zero to fzero; suc to fsuc)
+open import Cubical.Data.List using ([]; _∷_; length)
+open import Cubical.Data.Maybe using (Maybe; just; nothing)
+open import Cubical.Data.Nat using (ℕ; discreteℕ; snotz; injSuc)
+open import Cubical.Data.Unit
 
 open import TheoryGrammar.SemanticAction using (passes; _↦_; _at_)
 open import TheoryGrammar.Instances.Lambda
@@ -253,13 +255,10 @@ _ : passes (run opName at
              ∷ [] ))
 _ = refl
 
--- the positive certificate: being a lambda REFUTES being an application
+-- the positive certificate: being a lambda REFUTES being an application.
+-- The numbering is `Lambda.Readable.opTag`, not a second copy of it.
 lam≢app : lamOp ≡ appOp → E.⊥
-lam≢app p = snotz (injSuc (cong opTag p))
-  where opTag : LOp → ℕ
-        opTag varOp = 0
-        opTag appOp = 1
-        opTag lamOp = 2
+lam≢app = opTag-≢ λ p → snotz (injSuc p)
 
 lam-not-app : (⊗ˢ lamOp (λ _ → ⊤G)) ⊢ ¬G (⊗ˢ appOp (λ _ → ⊤G))
 lam-not-app = certifies opCase lamOp appOp lam≢app

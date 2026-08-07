@@ -11,33 +11,34 @@
   down, and the same two facts are proved about it -- it is decidable,
   and its index is unique.
 
-  Everything here is a composite; `dec-⌈⌉ⁿ` is the only place `Discrete
-  Name` is used, and it is used to BUILD an internal map.
+  Both proofs about `Look` -- `dec-Look` and `lookupUnique` -- are
+  point-free composites of the additive rules, and this file never looks
+  at the representation: it does not open `Readable` at all.  `dec-⌈⌉ⁿ`
+  is the only place `Discrete Name` is used, and it is used to BUILD an
+  internal map.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.SimplyTyped.Context where
 
 open import Cubical.Foundations.Prelude
-open import Cubical.Data.Sigma using (_×_; _,_)
 open import Cubical.Data.List using (List; []; _∷_)
-open import Cubical.Data.Unit
+open import Cubical.Data.Sigma using (_×_; _,_)
 open import Cubical.Relation.Nullary.Base using (Discrete)
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Fibered
 open import TheoryGrammar.Decidable
+open import TheoryGrammar.Fibered
 open import TheoryGrammar.Instances.SimplyTyped.Signature
 open import TheoryGrammar.Instances.SimplyTyped.Fibered
 open import TheoryGrammar.Instances.SimplyTyped.Base
-open import TheoryGrammar.Instances.SimplyTyped.Readable
 open import TheoryGrammar.Instances.SimplyTyped.Types
 
 module StContext (Name : Type₀) (_≟_ : Discrete Name) where
 
   open StBase Name
-  open StReadable Name
   open StTypes Name
 
+  -- `Ctx` denotes a typing context, innermost binding first.
   Ctx : Type₀
   Ctx = List (Name × Ty)
 
@@ -49,9 +50,12 @@ module StContext (Name : Type₀) (_≟_ : Discrete Name) where
   dec-⌈⌉ⁿ : (m : Name) → ⊤G ⊢ Dec⟨ Nm m ⟩
   dec-⌈⌉ⁿ = R.dec-⌈⌉ {s = nm} _≟_
 
+  -- `Kty`'s reflexivity, as a map out of `⊤` ...
   kty-refl : {s : TSort} (T : Ty) → ⊤G {s} ⊢ Kty T T
   kty-refl T _ _ = tyEq-refl T
 
+  -- ... and "two types equal to `T` are equal to each other", the form
+  -- `lookupUnique` consumes at a matching binding
   kty-glue : {s : TSort} (A B T : Ty) → (Kty {s} A T & Kty {s} B T) ⊢ Kty A B
   kty-glue A B T _ (e , f) = tyEq-trans A T B e (tyEq-sym B T f)
 
@@ -59,10 +63,16 @@ module StContext (Name : Type₀) (_≟_ : Discrete Name) where
   -- The two judgments about names.
   -- ================================================================
 
+  -- `Lookup Γ A` denotes "the name I am looking at is bound to `A` in
+  -- `Γ`".  A later binding carries a REFUTATION of every earlier name,
+  -- which is what makes shadowing deterministic.
   Lookup : Ctx → Ty → NmG
   Lookup []            A = ⊥G
   Lookup ((n , T) ∷ Γ) A = (Nm n & Kty A T) ⊕ (¬G Nm n & Lookup Γ A)
 
+  -- `Look Γ` denotes "the name I am looking at is bound in `Γ`, to
+  -- SOME type" -- and the type is the sum's index, so a derivation
+  -- carries it.
   Look : Ctx → NmG
   Look Γ = ⊕ᴰ Ty (Lookup Γ)
 
@@ -89,6 +99,8 @@ module StContext (Name : Type₀) (_≟_ : Discrete Name) where
   -- Decidable, by induction on the context.
   -- ================================================================
 
+  -- `dec-Look Γ` denotes "is this name bound in `Γ`?", answered inside
+  -- the calculus; a yes carries the type it is bound to.
   dec-Look : (Γ : Ctx) → ⊤G ⊢ Dec⟨ Look Γ ⟩
   dec-Look [] = dec-no (Look []) ∘g ⇒-I (look-nil ∘g &-E₂)
   dec-Look ((n , T) ∷ Γ) =

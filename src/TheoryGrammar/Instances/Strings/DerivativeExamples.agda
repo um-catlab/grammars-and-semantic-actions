@@ -101,19 +101,18 @@ _ = refl
 -- (a) a DFA: even number of `true`s.  The state is the parity so far.
 module Parity = DFA Bool (λ q c → if c then not q else q) (λ q → q)
 
-evens : List Bool → Bool
-evens w = Parity.accepts true w tt
+-- `Parity.accepts true` is ALREADY the program -- a term `⊤G ⊢ Δ Bool`.
+-- Naming it at `List Bool → Bool` would externalise it in a definition;
+-- `run` belongs in the `refl` line below and nowhere else.
+evens : ⊤G ⊢ Δ Bool
+evens = Parity.accepts true
 
-_ : evens [] ≡ true
-_ = refl
-
-_ : evens (true ∷ []) ≡ false
-_ = refl
-
-_ : evens (true ∷ true ∷ []) ≡ true
-_ = refl
-
-_ : evens (false ∷ true ∷ false ∷ true ∷ []) ≡ true
+_ : passes (run evens at
+             ( []                                 ↦ true
+             ∷ (true ∷ [])                        ↦ false
+             ∷ (true ∷ true ∷ [])                 ↦ true
+             ∷ (false ∷ true ∷ false ∷ true ∷ []) ↦ true
+             ∷ [] ))
 _ = refl
 
 -- (b) NOT a DFA -- any algebra will do, which is the point of defining
@@ -125,8 +124,12 @@ countAlg tt =
                               {B = λ _ → ℕ}
                               (λ _ _ h → suc (h false)) }
 
-_ : runAut scanLC scanCoalg countAlg tt (true ∷ false ∷ true ∷ []) tt ≡ 3
-_ = refl
+-- named at `Δ ℕ` for the same reason `evens` is named at `Δ Bool`
+countA : ⊤G ⊢ Δ ℕ
+countA m x = runAut scanLC scanCoalg countAlg tt m x , x
 
-_ : runAut scanLC scanCoalg countAlg tt [] tt ≡ 0
+_ : passes (run countA at
+             ( (true ∷ false ∷ true ∷ []) ↦ 3
+             ∷ []                         ↦ 0
+             ∷ [] ))
 _ = refl

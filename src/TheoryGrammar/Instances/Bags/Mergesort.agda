@@ -99,8 +99,13 @@ module MSort (le : A → A → Bool) where
                   ⊗E {P = λ _ → ⟦ MHalf ⟧c (λ _ → Bag)} {w = w}
                      (λ _ _ _ l r → merge (l true) (r true)) t }
 
-  mergesort : Bag → Bag
-  mergesort m = hyloC mfGuarded mcoalg malg (tt , m) tt
+  -- The plain sort, still as a TERM.  `Bag → Bag` in a definition has
+  -- already externalised; `Δ Bag` is the grammar carrying the answer and
+  -- `run` is the single exit, in a test.  (`malg`'s carrier is the
+  -- CONSTANT family `λ _ → Bag`, which is precisely why this version
+  -- needs `mergePerm` proved separately and `mergesortV` does not.)
+  msortP : ⊤G ⊢ Δ Bag
+  msortP m x = hyloC mfGuarded mcoalg malg (tt , m) tt , x
 
 -- ==================================================================
 -- MERGE AS AN INTERNAL TERM, and mergesort as a Cover.
@@ -151,7 +156,8 @@ module MSortV (le : A → A → Bool) where
   mergeAt s (a , pa) (b , pb) =
     merge a b , permTrans (mergePerm a b) (permMerge pa pb s)
 
-  -- the internal term
+  -- PRIMITIVE (phase 1): the internal term.  It matches the splitting,
+  -- which is what a primitive is; every use downstream composes it.
   mergeG : (Bagged ⊗' Bagged) ⊢ Bagged
   mergeG w ((u , v , s) , h) = mergeAt s (h true) (h false)
 

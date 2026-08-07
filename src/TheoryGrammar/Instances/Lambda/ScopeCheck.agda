@@ -1,28 +1,28 @@
 {-
-  The scope checker, as a map of the calculus:
+  The scope checker `check`, a map of the calculus at `DecScoped`:
 
       ⊤ ⊢ &ᴰ Scope (λ Δ → Scoped Δ ⊕ ¬G (Scoped Δ))
 
   "for every term and every scope, a scoping derivation or a refutation".
   Deciding in EVERY scope at once is forced: the scope grows while the
   term shrinks, so no single scope is an invariant of the recursion.
-  Instantiate at `[]` with `&ᴰ-E` to get closedness.
+  `closed?` instantiates it at `[]` with `&ᴰ-E`.
 
-  The algorithm: unfold one step (`sc-unroll`), decide the three
-  summands, recombine with `dec-⊕`, fold back (`sc-roll`).  Recursive
-  calls sit at `LParts o t sp a`, and `proper` is their descent proof.
+  The algorithm: unfold one step (`sc-unroll`), decide the three summands
+  -- via `dec-In`, itself built from `dec-⌈⌉` -- recombine with `dec-⊕`,
+  fold back (`sc-roll`).  Recursive calls sit at `LParts o t sp a`, and
+  `proper` is their descent proof.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.ScopeCheck where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
-open import Cubical.Data.Unit
 open import Cubical.Data.List using ([]; _∷_)
 open import Cubical.Data.Nat.Order using (_<_)
+open import Cubical.Data.Unit
 open import Cubical.Relation.Nullary.Base using (Discrete)
 
-open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.Decidable
 open import TheoryGrammar.View
@@ -60,9 +60,12 @@ module ScopeCheck (Name : Type₀) (_≟_ : Discrete Name) where
   -- under its view name -- coverage-checking a pattern and deciding a
   -- grammar are one notion, which is why no new combinator was needed.
   dec-In : (Γ : Scope) → Probe (In Γ)
-  dec-In []      = dec-no (In []) ∘g ⇒-I &-E₂
+  dec-In []      = dec-⊥
   dec-In (m ∷ Γ) = probe-⊕ ⌈ m ⌉ (In Γ) (dec-⌈⌉ m) (dec-In Γ)
 
+  -- `DecScoped t` DENOTES: "for EVERY scope, a scoping derivation of
+  -- `t` or a refutation".  Quantifying over all scopes is what makes it
+  -- an invariant of a recursion in which the scope grows.
   DecScoped : TmG
   DecScoped = &ᴰ Scope (λ Δ → Dec⟨ Scoped Δ ⟩)
 
@@ -93,7 +96,8 @@ module ScopeCheck (Name : Type₀) (_≟_ : Discrete Name) where
                  ; false → rec' _ (proper appOp t sp false) Δ }
 
       dLam : Dec⟨ Lm ⟩ t
-      dLam = dec-map (LamGᵈ (λ n → Scoped (n ∷ Δ))) Lm collapse⁻ collapse t
+      dLam = dec-map (LamGᵈ (λ n → Scoped (n ∷ Δ))) Lm
+                     lam-collapse⁻ lam-collapse t
                (dec-lamᵈ (λ n → Scoped (n ∷ Δ)) t λ sp →
                   rec' _ (proper lamOp t sp false) (LParts lamOp t sp true ∷ Δ))
 

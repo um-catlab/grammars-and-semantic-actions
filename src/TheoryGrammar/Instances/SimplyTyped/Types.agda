@@ -11,15 +11,19 @@
   supplying its own decision procedure through the same tensor rule the
   term sort uses.  (`Discrete Name` still is assumed -- names have no
   operations, so there is no tensor to decide.)
+
+  Defined here: `tyCast` (substitution), `tyEq-refl`/`-sym`/`-trans`,
+  `dec-⌈⌉ᵗ` (the decision), and the two facts about `Ty` that the
+  representable iso buys -- `base≢arr` and `⇒ᵗ-injˡ`/`⇒ᵗ-injʳ`.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.SimplyTyped.Types where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
-open import Cubical.Data.Sigma
-open import Cubical.Data.Unit
 open import Cubical.Data.Empty as E using ()
+open import Cubical.Data.Sigma
+open import Cubical.Data.Unit using (tt)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
@@ -38,6 +42,8 @@ module StTypes (Name : Type₀) where
   -- Substitution along a type equality IS the Yoneda elimination rule.
   -- ================================================================
 
+  -- `tyCast P A B e` denotes transport of a derivation along the type
+  -- equality `e`, as a MAP of the calculus: `⌈⌉-E`, the Yoneda lemma.
   tyCast : {s : TSort} (P : Ty → TheoryTy ℓ-zero s) (A B : Ty)
          → TyEq A B → P A ⊢ P B
   tyCast P A B = ⌈⌉-E {B = λ X → P X ⊢ P B} idg A
@@ -55,12 +61,17 @@ module StTypes (Name : Type₀) where
   -- The tuples that present `base` and `_⇒ᵗ_` as operations.
   -- ================================================================
 
+  -- `mBase`/`mArr A B` denote the SLOT TUPLES of the two type
+  -- constructors, so that `base` is `Op baseOp mBase` and `A ⇒ᵗ B` is
+  -- `Op arrOp (mArr A B)`.
   mBase : (a : TAr baseOp) → Carrier (TSortOf baseOp a)
   mBase ()
 
   mArr : Ty → Ty → (a : TAr arrOp) → Carrier (TSortOf arrOp a)
   mArr A B b = if b then A else B
 
+  -- `⌈⌉ᵗ o m⃗` denotes the slot family "each slot IS the corresponding
+  -- component of `m⃗`" -- the right-hand side of the representable iso.
   ⌈⌉ᵗ : (o : TOp) (m⃗ : (a : TAr o) → Carrier (TSortOf o a))
       → (a : TAr o) → TheoryTy ℓ-zero (TSortOf o a)
   ⌈⌉ᵗ o m⃗ a = ⌈ m⃗ a ⌉
@@ -71,6 +82,9 @@ module StTypes (Name : Type₀) where
   -- the type being tested is never pattern-matched.
   -- ================================================================
 
+  -- `dec-⌈⌉ᵗ A` denotes "is the type in front of me `A`?", answered
+  -- inside the calculus: a yes carries a `TyEq`, a no carries its
+  -- refutation.
   dec-⌈⌉ᵗ : (A : Ty) → ⊤G ⊢ Dec⟨ ⌈_⌉ {s = ty} A ⟩
   dec-⌈⌉ᵗ base C _ =
     dec-map (⊗ˢ baseOp (⌈⌉ᵗ baseOp mBase)) (⌈_⌉ {s = ty} base)
@@ -84,17 +98,36 @@ module StTypes (Name : Type₀) where
                  ; false → dec-⌈⌉ᵗ B (TParts arrOp C sp false) tt })
 
   -- ================================================================
-  -- Injectivity of the arrow, from `op-inj` -- i.e. from unique
-  -- readability plus `unsplit`, with no lemma of its own.
+  -- WHAT THE ISO BUYS ABOUT `Ty`, with no lemma of its own:
+  --
+  --   base≢arr  the two type constructors are DISJOINT.  `⌈⌉-into`
+  --             turns a type equality into an arrow-splitting of
+  --             `base`, and `Readable.baseArr-⊥` -- the `ty`
+  --             partition's `exclusive` -- refutes it.  No match on a
+  --             splitting appears; the representation is read only in
+  --             `Readable`.
+  --   ⇒ᵗ-slots  the two SLOT TUPLES agree, by `op-inj`, i.e. by unique
+  --             readability plus `unsplit`.  Injectivity in each
+  --             argument separately is one `funExt⁻` from it.
   -- ================================================================
 
-  -- and disjointness of the two type constructors, from the SAME iso:
-  -- `base` cannot split as an arrow because `IsBase` is not `IsArr`
   base≢arr : (A B : Ty) → TyEq base (A ⇒ᵗ B) → E.⊥
-  base≢arr A B e with ⌈⌉-into baseOp mBase (A ⇒ᵗ B) (tyEq-sym base (A ⇒ᵗ B) e)
-  ... | () , _
+  base≢arr A B e =
+    E.rec* (baseArr-⊥ {A = ⌈⌉ᵗ arrOp (mArr A B)} base
+             ((mkBase , λ ()) , ⌈⌉-into arrOp (mArr A B) base e))
 
+  ⇒ᵗ-slots : (A B A' B' : Ty)
+           → TyEq (A ⇒ᵗ B) (A' ⇒ᵗ B') → mArr A B ≡ mArr A' B'
+  ⇒ᵗ-slots A B A' B' = op-inj Split-isProp arrOp (mArr A B) (mArr A' B')
+
+  ⇒ᵗ-injˡ : (A B A' B' : Ty) → TyEq (A ⇒ᵗ B) (A' ⇒ᵗ B') → A ≡ A'
+  ⇒ᵗ-injˡ A B A' B' e = funExt⁻ (⇒ᵗ-slots A B A' B' e) true
+
+  ⇒ᵗ-injʳ : (A B A' B' : Ty) → TyEq (A ⇒ᵗ B) (A' ⇒ᵗ B') → B ≡ B'
+  ⇒ᵗ-injʳ A B A' B' e = funExt⁻ (⇒ᵗ-slots A B A' B' e) false
+
+  -- the two above, paired.  Every consumer in this instance wants one
+  -- half or the other; the pairing is kept only so that a caller who
+  -- wants both need not repeat the hypothesis.
   ⇒ᵗ-inj : (A B A' B' : Ty) → TyEq (A ⇒ᵗ B) (A' ⇒ᵗ B') → (A ≡ A') × (B ≡ B')
-  ⇒ᵗ-inj A B A' B' e =
-      funExt⁻ (op-inj Split-isProp arrOp (mArr A B) (mArr A' B') e) true
-    , funExt⁻ (op-inj Split-isProp arrOp (mArr A B) (mArr A' B') e) false
+  ⇒ᵗ-inj A B A' B' e = ⇒ᵗ-injˡ A B A' B' e , ⇒ᵗ-injʳ A B A' B' e

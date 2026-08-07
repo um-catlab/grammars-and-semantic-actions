@@ -9,6 +9,10 @@
   while `ITr` must walk the remainder of `v` by `right`s.  `bump` is that
   translation, and it is the reason the iso is proved rather than
   definitional.
+
+  DEFINES `⊥I`, the translations `toSplit3`/`fromSplit3`/`bump`, and the
+  two theorems `ordered≅` (on shuffles) and `orderedSplit≅` (on the
+  `appop` splittings of a word, which is the form the promodel uses).
 -}
 open import Cubical.Foundations.Prelude
 

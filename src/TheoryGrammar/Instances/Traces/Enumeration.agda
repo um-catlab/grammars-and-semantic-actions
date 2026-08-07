@@ -8,6 +8,11 @@
   neither about the calculus: it must be DECIDABLE (to know which
   `right` steps exist) and PROP-VALUED (so that the enumerated proof of
   a `right` step is THE proof, and completeness can name it).
+
+  DEFINES `decAll`/`isPropAll` (the side condition, decided and
+  propositional), `TrSp` and the enumeration `shuffles`, its
+  completeness `complete`, and the pair `enumSplit`/`enumComplete` that
+  is the ONLY interface `Traces/Decidable` consumes.
 -}
 open import Cubical.Foundations.Prelude
 
@@ -85,6 +90,9 @@ shuffles (x ∷ w) = leftsOf x (shuffles w) ++ rightsOf x (shuffles w)
 -- Completeness.
 -- ==================================================================
 
+-- Generic facts about `_∈L_`, owing nothing to traces; they belong
+-- beside `∈map` in `TheoryGrammar.Enumerable`, and are here only
+-- because this is the first file that needed them.
 ∈L-++ˡ : {X : Type₀} {a : X} {xs ys : List X} → a ∈L xs → a ∈L (xs ++ ys)
 ∈L-++ˡ here      = here
 ∈L-++ˡ (there p) = there (∈L-++ˡ p)

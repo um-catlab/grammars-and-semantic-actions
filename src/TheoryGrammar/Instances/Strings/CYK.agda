@@ -23,12 +23,14 @@ open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
 
 open import TheoryGrammar.Enumerable
+open import TheoryGrammar.Decidable.Guarded
 import TheoryGrammar.Decidable.Enumerated as DE
 open DE using (module DecEnum)
 open import TheoryGrammar.Instances.Strings.Enumeration Char public
 
 -- the cut search, and the two abbreviations its hypothesis is stated in
-open DecEnum strFib using (⊗at; Refutes; dec-⊗-cuts; slotMiss)
+open DecEnum  strFib    using (⊗at; Refutes; dec-⊗-cuts; slotMiss)
+open DecGuard strGraded using (SortFam; ▷ᴬ; löbᵍ; dec-⊗▷; resourceOf)
 
 -- `¬G_` and `Dec⟨_⟩` are the generic ones (`Decidable.Additive`, via
 -- `DecFib` in `Strings.Base`); this instance defines neither.
@@ -238,217 +240,100 @@ module Parser (V : Type₀)
   -- matcher, itself a term of the calculus.
   -- ================================================================
 
-  module Search (allRules : (P : V) → List (Rule P))
-                (matchLit : (c : Char) → Cover (MaybeG ⌈ c ∷ [] ⌉)) where
-
-    Mot : G.Ix → Type₀
-    Mot i = MaybeG (Deriv (i .fst)) (i .snd)
-
-    -- the terminal alternative, parsed; `Liftg` is the constant former's
-    -- coercion and `mapR` transports the parse across it
-    parseLit : (c : Char) → Cover (MaybeG (Liftg ⌈ c ∷ [] ⌉))
-    parseLit c = mapR ⊤G (Liftg ⌈ c ∷ [] ⌉) liftg ∘g matchLit c
-
-    module _ (P : V) (w : String)
-             (rec : (j : G.Ix) → G.degIx j < length w → Mot j) where
-
-      module _ (Q T : V) (sp : MonSplit appop w) where
-
-        private
-          u v : String
-          u = MonParts appop w sp true
-          v = MonParts appop w sp false
-
-          CutRes : Type₀
-          CutRes = ⊗at appop (binSlots Q T) w sp ⊎ Unit
-
-          -- a slot is its nonterminal together with the certificate that
-          -- makes its SIBLING a proper part.  Assembling the two is
-          -- `&ᴰ-I`, a term; only the certificate has to be supplied at a
-          -- point, which is why the elimination is `caseR-at`.
-          slotIn : (R : V) → (Deriv R & Liftg NonTrivial) ⊢ SlotG R
-          slotIn R = &ᴰ-I {B = λ b → G.⟦ NEslot R b ⟧c Der}
-                          λ { true → &-E₁ ; false → &-E₂ }
-
-          slotParse : (R : V) (t : String) → G.degIx (R , t) < length w
-                    → NonTrivial t → MaybeG (SlotG R) t
-          slotParse R t shorter nt =
-            caseR-at ⊤G (Deriv R) t
-              (λ d → just-I {A = SlotG R} t
-                            (slotIn R t (d , liftg {A = NonTrivial} t nt)))
-              (λ _ → nothing-I {A = SlotG R} {B = ⊤G} t tt)
-              (rec (R , t) shorter)
-
-          -- `deg<` -- the grading's own field -- is what says a proper
-          -- part is strictly smaller, so nothing here knows what a cut
-          -- is.  Same line as `Decide.both`.
-          both : NonTrivial u → NonTrivial v → CutRes
-          both nu nv =
-            findΠBool {B = λ a → binSlots Q T a (MonParts appop w sp a)} tt
-              (slotParse Q u (strGraded .deg< appop w sp true  nv) nu)
-              (slotParse T v (strGraded .deg< appop w sp false nu) nv)
-
-        -- THE CUT, parsed.  A trivial side cannot yield a parse, because
-        -- a slot carries `NonTrivial` for its own part (`neOf`); with
-        -- neither side trivial the recursive calls apply.
-        cutParse : CutRes
-        cutParse =
-          dec-elim NonTrivial u
-            (λ nu → dec-elim NonTrivial v
-                      (λ nv → both nu nv)
-                      (λ _ → inr tt)
-                      (probe-NT v tt))
-            (λ _ → inr tt)
-            (probe-NT u tt)
-
-      parseRule : (r : Rule P) → MaybeG (RuleG P r) w
-      parseRule (inl (c , _))     = parseLit c w tt
-      parseRule (inr (Q , T , _)) = findΣ tt (cutParse Q T) (cuts w)
-
-      parseStep : Mot (P , w)
-      parseStep =
-        mapR ⊤G (Deriv P) (rollD P) w
-          (maybe-⊕ᴰ (Rule P) (RuleG P) (allRules P) w parseRule)
-
-    -- THE LÖB STEP, as a named `▷ … ⊢ᴵ …` term.  No Agda function is
-    -- handed to `löb`, and no sum is eliminated by matching.
-    step : G.▷ Mot G.⊢ᴵ Mot
-    step i r = parseStep (i .fst) (i .snd) r
-
-    parseIx : (i : G.Ix) → Mot i
-    parseIx = G.löb step
-
-    -- the procedure, as a term of the calculus
-    parse : (P : V) → Cover (MaybeG (Deriv P))
-    parse P w _ = parseIx (P , w)
-
   -- ================================================================
-  -- THE DECISION.  `Dec⟨ Deriv P ⟩ = Deriv P ⊕ ¬G Deriv P`, decided by
-  -- `löb` whose step is a named `▷ … ⊢ᴵ …` term, and every layer of
-  -- that term is a combinator:
+  -- THE DECISION, as maps of the calculus.
   --
-  --     dec-map (Layer P) (Deriv P) (rollD P) (unrollD P)
-  --       ∘ dec-⊕ᴰ  (Rule P)          -- search the rules
-  --           ∘ per rule:
-  --               dec-map … ∘ litProbe c        -- the terminal
-  --               dec-⊗-cuts appop …            -- search the cuts
-  --                 ∘ per cut: dec-elim probe-NT …
-  --                     ∘ dec-&ᴰ                -- nonterminal + resource
+  -- The motive is `&ᴰ V (λ P → Dec⟨ Deriv P ⟩)` -- ONE GRAMMAR holding
+  -- the decision for every nonterminal at the current word.  An
+  -- `Ix`-family (`V × String → Type`) is not a grammar and has no
+  -- combinators, so a step written against one is forced to be
+  -- pointful; a `&ᴰ` over the nonterminals IS a grammar, so
+  -- `▷ᴬ Chart ⊢ Chart` is a term and every layer composes with `∘g`.
   --
-  -- The two searches -- over rules and over cuts -- are the SAME
-  -- combinator (`Enumerable.decΣ`, wrapped as `dec-⊕ᴰ` and
-  -- `dec-⊗-cuts`), because `⊕ᴰ` over the tags and `⊗ˢ` over the
-  -- splittings are both `Σ`s.
-  --
-  -- `dec-⊗-cuts` asks for a decision of each cut AS A WHOLE, not of
-  -- each slot separately, and that is what makes the guarded call
-  -- legal: a cut with a trivial side is refuted outright (by `neOf`,
-  -- since a slot certifies its own part non-trivial), and a cut with
-  -- neither side trivial has both sides PROPER, hence strictly shorter
-  -- by `deg<`.  See `Instances.Spans.CYK`, which is the same term over
-  -- the span theory.
+  -- This is `Instances.Spans.CYK.Decide` verbatim with `appop` for
+  -- `cat` and `NonTrivial` for `NonEmpty`; that the two are the same
+  -- term over two different theories is the point of the exercise.
   -- ================================================================
 
   module Decide (allRules    : (P : V) → List (Rule P))
                 (allComplete : (P : V) (r : Rule P) → r ∈L allRules P)
                 (litProbe    : (c : Char) → Probe ⌈ c ∷ [] ⌉) where
 
-    DecMot : G.Ix → Type₀
-    DecMot i = Dec⟨ Deriv (i .fst) ⟩ (i .snd)
+    Chart : Gr
+    Chart = &ᴰ V (λ P → Dec⟨ Deriv P ⟩)
 
-    -- the terminal alternative, decided.  `Liftg` is the constant
-    -- former's coercion and `dec-map` transports the decision across it.
+    ChartF : SortFam ℓ-zero
+    ChartF _ = Chart
+
+    chartAt : (P : V) → Chart ⊢ Dec⟨ Deriv P ⟩
+    chartAt P = &ᴰ-E V {B = λ Q → Dec⟨ Deriv Q ⟩} P
+
+    -- the terminal alternative; `Liftg` is the constant former's coercion
     decLit : (c : Char) → Probe (Liftg ⌈ c ∷ [] ⌉)
     decLit c = dec-map ⌈ c ∷ [] ⌉ (Liftg ⌈ c ∷ [] ⌉) liftg lowerg ∘g litProbe c
 
-    module _ (P : V) (w : String)
-             (rec : (j : G.Ix) → G.degIx j < length w → DecMot j) where
+    -- ONE SLOT: a `&ᴰ Bool` of the nonterminal and its resource
+    -- certificate, decided from the chart and `probe-NT`.
+    decSlot : (Q : V) → Chart ⊢ Dec⟨ SlotG Q ⟩
+    decSlot Q =
+      dec-&ᴰ (λ b → G.⟦ NEslot Q b ⟧c Der)
+      ∘g &ᴰ-I {B = λ b → Dec⟨ G.⟦ NEslot Q b ⟧c Der ⟩}
+               λ { true  → chartAt Q
+                 ; false → dec-map NonTrivial (Liftg NonTrivial) liftg lowerg
+                           ∘g probe-NT ∘g ⊤-I }
 
-      module _ (Q T : V) (sp : MonSplit appop w) where
+    -- a binary rule: scan the cuts, chart available LATER.  The cut's
+    -- resource test is DERIVED by `resourceOf` from `probe-NT` and
+    -- `neOf` (terms) plus `ntProper` (a law of the grading, like
+    -- `deg<`), so nothing here mentions a cut.
+    decBin : (Q T : V) → ▷ᴬ ChartF ⊢ Dec⟨ ⊗ˢ appop (binSlots Q T) ⟩
+    decBin Q T =
+      dec-⊗▷ appop (binSlots Q T) ChartF
+             cuts (enumComplete appop)
+             (resourceOf appop (binSlots Q T) (λ _ → NonTrivial) (λ _ → probe-NT)
+                         (λ { true → neOf Q ; false → neOf T })
+                         ntProper appAr appArComplete)
+             (λ m sp d → decΠBool (d true) (d false))   -- arity is finite
+             λ { true → decSlot Q ; false → decSlot T }
 
-        private
-          u v : String
-          u = MonParts appop w sp true
-          v = MonParts appop w sp false
+    decRule : (P : V) (r : Rule P) → ▷ᴬ ChartF ⊢ Dec⟨ RuleG P r ⟩
+    decRule P (inl (c , _))     = decLit c ∘g ⊤-I
+    decRule P (inr (Q , T , _)) = decBin Q T
 
-          CutDec : Type₀
-          CutDec = ⊗at appop (binSlots Q T) w sp
-                 ⊎ Refutes appop (binSlots Q T) w sp
+    decRow : (P : V) → ▷ᴬ ChartF ⊢ Dec⟨ Deriv P ⟩
+    decRow P =
+      dec-map (Layer P) (Deriv P) (rollD P) (unrollD P)
+      ∘g dec-⊕ᴰ (Rule P) (RuleG P) (allRules P) (allComplete P)
+      ∘g &ᴰ-I {B = λ r → Dec⟨ RuleG P r ⟩} (decRule P)
 
-          -- a trivial side refutes the cut, because `neOf` says the slot
-          -- sitting there certifies its own part to be non-trivial.
-          -- `slotMiss` is the generic "a slot refuted refutes the cut";
-          -- its only argument is the term `neOf`.
-          missL : (¬G NonTrivial) u → Refutes appop (binSlots Q T) w sp
-          missL = slotMiss appop (binSlots Q T) w sp true  NonTrivial (neOf Q)
+    -- THE LÖB STEP, a term.  No index matched, no Agda function fed to
+    -- `löb`, no element where a map belongs.
+    step : ▷ᴬ ChartF ⊢ Chart
+    step = &ᴰ-I {B = λ P → Dec⟨ Deriv P ⟩} decRow
 
-          missR : (¬G NonTrivial) v → Refutes appop (binSlots Q T) w sp
-          missR = slotMiss appop (binSlots Q T) w sp false NonTrivial (neOf T)
+    chart : Cover Chart
+    chart = löbᵍ ChartF (λ _ → step) tt
 
-          -- neither side trivial: each side is then a PROPER part, and
-          -- `deg<` -- the grading's own field -- says a proper part is
-          -- strictly smaller, which is exactly what `▷` demands.  So
-          -- `split3LenL<` / `split3LenR<` / `ntLen` are used only to
-          -- BUILD `strGraded`, never to use it.
-          slotDec : (R : V) (t : String) → G.degIx (R , t) < length w
-                  → NonTrivial t → Dec⟨ SlotG R ⟩ t
-          slotDec R t shorter nt =
-            dec-&ᴰ (λ b → G.⟦ NEslot R b ⟧c Der) t
-              λ { true  → rec (R , t) shorter
-                ; false → dec-yes (Liftg NonTrivial) t
-                                  (liftg {A = NonTrivial} t nt) }
-
-          -- `decΠBool` is the arity-finiteness concession, the same one
-          -- `DecEnumerable.decAt` makes: the two slots sit at DIFFERENT
-          -- words, so combining them is not a `&ᴰ` of the calculus.
-          both : NonTrivial u → NonTrivial v → CutDec
-          both nu nv =
-            decΠBool {B = λ a → binSlots Q T a (MonParts appop w sp a)}
-              (slotDec Q u (strGraded .deg< appop w sp true  nv) nu)
-              (slotDec T v (strGraded .deg< appop w sp false nu) nv)
-
-        -- THE CUT, decided.  Two nested `dec-elim`s on the resource
-        -- probe -- an instance never matches a sum, it eliminates one.
-        decCut : CutDec
-        decCut =
-          dec-elim NonTrivial u
-            (λ nu → dec-elim NonTrivial v
-                      (λ nv → both nu nv)
-                      (λ k → inr (missR k))
-                      (probe-NT v tt))
-            (λ k → inr (missL k))
-            (probe-NT u tt)
-
-      -- one rule, decided: the terminal alternative, or a search over
-      -- the cuts.  `cuts` / `enumComplete` are the file's only external
-      -- residue.
-      decRule : (r : Rule P) → Dec⟨ RuleG P r ⟩ w
-      decRule (inl (c , _))     = decLit c w tt
-      decRule (inr (Q , T , _)) =
-        dec-⊗-cuts appop (binSlots Q T) w (cuts w) (enumComplete appop w)
-                   (decCut Q T)
-
-      -- ... and the whole layer: search the rules with `dec-⊕ᴰ`, then
-      -- transport the decision across the fixed point with `dec-map`.
-      decStep : DecMot (P , w)
-      decStep =
-        dec-map (Layer P) (Deriv P) (rollD P) (unrollD P) w
-          (dec-⊕ᴰ (Rule P) (RuleG P) (allRules P) (allComplete P) w decRule)
-
-    -- the löb step, as a named term of the right type -- projections
-    -- only, no match on the index
-    step : G.▷ DecMot G.⊢ᴵ DecMot
-    step i r = decStep (i .fst) (i .snd) r
-
-    decIx : (i : G.Ix) → DecMot i
-    decIx = G.löb step
-
-    -- THE DECISION PROCEDURE, as a term of the calculus.  `Dec⟨ A ⟩` is
-    -- `Result (¬G A) A` (TheoryGrammar.Result), so this has the same
-    -- shape as `Search.parse` and is observed by the same `accepts?`.
-    derives? : (P : V) → ⊤G ⊢ Dec⟨ Deriv P ⟩
-    derives? P w _ = decIx (P , w)
+    derives? : (P : V) → Probe (Deriv P)
+    derives? P = chartAt P ∘g chart
 
     -- ... and the exclusion is free, so it packages as a `Decision`
     derivesDec : (P : V) → Decision (Deriv P) (¬G (Deriv P))
     derivesDec P = decDefault (Deriv P) (derives? P)
+
+    -- ================================================================
+    -- THE PARSER is the decision, FORGOTTEN.
+    --
+    -- `Dec⟨ A ⟩` is `Result (¬G A) A` and `MaybeG A` is `Result ⊤G A`,
+    -- so `toMaybe` -- `mapE ⊤-I`, uniform in the error grammar -- is the
+    -- whole of it.  The old `Search` module reimplemented the recursion
+    -- at `MaybeG`; it was pointful, and it was also redundant.
+    --
+    -- What is genuinely lost is that a parser needs no completeness
+    -- proof (`Result.maybe-⊕ᴰ` and `Enumerable.findΣ` still record
+    -- that), so this `parse` assumes more than it must.  It assumes it
+    -- INTERNALLY, which is the trade that matters here.
+    -- ================================================================
+
+    parse : (P : V) → Cover (MaybeG (Deriv P))
+    parse P = toMaybe (Deriv P) ∘g derives? P

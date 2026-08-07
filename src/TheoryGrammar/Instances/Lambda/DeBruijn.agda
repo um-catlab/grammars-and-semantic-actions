@@ -1,23 +1,27 @@
 {-
-  Elaboration to de Bruijn, as the generic `fold`.
+  Elaboration to de Bruijn (`DB`), as the generic `fold`.
 
-  Motive `(Γ , t) ↦ DB (length Γ)`.  There is no `Maybe`:
-  scope-correctness sits in the INDEX, so elaboration is total.  The
-  algebra is `⟦Sc⟧` followed by the elimination rules, one per
-  alternative; no clause looks at a term or at a shape.
+  Motive `Mot : (Γ , t) ↦ DB (length Γ)`.  There is no `Maybe`:
+  scope-correctness sits in the INDEX, so `toDB` is total.  Its algebra
+  `dbStepA` is `⟦Sc⟧` followed by the elimination rules, one per
+  alternative; no clause looks at a term or at a shape.  `toIxA` reads
+  the index off a scope membership.
+
+  Everything below is a SEMANTIC ACTION -- `Action A X = A ⊢ Δ X`, from
+  `TheoryGrammar.SemanticAction` -- and not a map into a hand-written
+  constant grammar `λ _ → X`.  That is what lets elaboration be composed
+  with a parser or a checker by the generic `runResult`, with no `Maybe`
+  spelled out at the use site and no mention of `Raw` there at all.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.DeBruijn where
 
 open import Cubical.Foundations.Prelude
-open import Cubical.Data.Sigma
+open import Cubical.Data.FinData.Base using (Fin) renaming (zero to fzero; suc to fsuc)
 open import Cubical.Data.List using ([]; _∷_; length)
 open import Cubical.Data.Nat using (ℕ; suc)
-open import Cubical.Data.Unit using (Unit; tt)
-open import Cubical.Data.Bool using (Bool; true; false; if_then_else_)
-open import Cubical.Data.FinData.Base using (Fin) renaming (zero to fzero; suc to fsuc)
+open import Cubical.Data.Sigma
 
-open import TheoryGrammar.Base
 open import TheoryGrammar.Instances.Lambda.Signature
 open import TheoryGrammar.Instances.Lambda.Base
 open import TheoryGrammar.Instances.Lambda.Scoped
@@ -27,18 +31,18 @@ module DeBruijn (Name : Type₀) where
   open LamBase Name
   open Wellscoped Name
 
+  -- `DB k` DENOTES: a lambda term with `k` free indices -- the target
+  -- of elaboration, and the only nameless representation here.
   data DB : ℕ → Type₀ where
     dvar : ∀ {k} → Fin k → DB k
     dapp : ∀ {k} → DB k → DB k → DB k
     dlam : ∀ {k} → DB (suc k) → DB k
 
-  -- Elaboration is a SEMANTIC ACTION -- `Action A X = A ⊢ Δ X`, from
-  -- TheoryGrammar.SemanticAction -- not a map into a hand-written
-  -- constant grammar `λ _ → X`.  That is what lets it be composed with
-  -- a parser or a checker by the GENERIC `runResult`, with no `Maybe`
-  -- spelled out at the use site and no mention of `Raw` there at all.
+  -- `toIxA Γ` DENOTES: "a proof that `n` occurs in `Γ` YIELDS the
+  -- position at which it occurs".  The evidence is not re-derived: the
+  -- index is read off the shape of the membership proof.
   --
-  -- Reading a de Bruijn index off a scope membership.  The hit branch
+  -- The hit branch
   -- DISCARDS the representable rather than eliminating it with `⌈⌉-E`:
   -- `⌈⌉-E` matches `Eq.refl`, and a witness built from `Discrete Name`
   -- via `pathToEq` does not reduce to `Eq.refl` in cubical.  The index
@@ -50,6 +54,8 @@ module DeBruijn (Name : Type₀) where
   toIxA (m ∷ Γ) = caseA (pureA (Fin (length (m ∷ Γ))) fzero)
                         (mapA fsuc (toIxA Γ))
 
+  -- the fold's motive: at nonterminal `(Γ , t)`, a de Bruijn term with
+  -- as many indices as `Γ` has names
   Mot : Ix → Type₀
   Mot i = Δ (DB (length (i .fst))) (i .snd)
 

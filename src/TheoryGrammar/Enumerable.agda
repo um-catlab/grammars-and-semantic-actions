@@ -95,3 +95,64 @@ findΠBool : {B : Bool → Type ℓA} {F : Type ℓ}
 findΠBool e (inr _) _       = inr e
 findΠBool e (inl _) (inr _) = inr e
 findΠBool e (inl x) (inl y) = inl λ { true → x ; false → y }
+
+-- ==================================================================
+-- THE Π, DECIDED -- and RETURNING THE OFFENDING INDEX.
+--
+-- `decΣ`'s dual.  The refuting branch hands back the `i` that failed,
+-- not merely a refutation of the product: a caller that has to turn
+-- "slot `a` cannot hold" into "the whole splitting is refuted" needs to
+-- know WHICH slot, and `No ((i : I) → B i)` has forgotten it.
+-- ==================================================================
+
+AllYes' : {I : Type ℓM} (B : I → Type ℓA) → List I → Type (ℓ-max ℓM ℓA)
+AllYes' B []       = Unit*
+AllYes' B (i ∷ is) = B i × AllYes' B is
+
+lookupYes' : {I : Type ℓM} {B : I → Type ℓA} (is : List I) (i : I)
+           → i ∈L is → AllYes' B is → B i
+lookupYes' (i ∷ is) .i here      (b , _) = b
+lookupYes' (_ ∷ is) i  (there p) (_ , r) = lookupYes' is i p r
+
+walkΠ : {I : Type ℓM} {B : I → Type ℓA}
+      → ((i : I) → B i ⊎ No (B i)) → (is : List I)
+      → AllYes' B is ⊎ (Σ[ i ∈ I ] No (B i))
+walkΠ d []       = inl tt*
+walkΠ d (i ∷ is) = here? (d i)
+  where
+    here? : _ → _
+    here? (inr k) = inr (i , k)
+    here? (inl b) = later? (walkΠ d is)
+      where later? : _ → _
+            later? (inl r) = inl (b , r)
+            later? (inr y) = inr y
+
+findΠ : {I : Type ℓM} {B : I → Type ℓA}
+      → (allI : List I) → ((i : I) → i ∈L allI)
+      → ((i : I) → B i ⊎ No (B i))
+      → ((i : I) → B i) ⊎ (Σ[ i ∈ I ] No (B i))
+findΠ allI complete d = out (walkΠ d allI)
+  where out : _ → _
+        out (inl all) = inl λ i → lookupYes' allI i (complete i) all
+        out (inr y)   = inr y
+
+-- membership through `++` and `concatMap` -- what a dependency
+-- enumeration needs in order to prove itself complete
+∈++ˡ : {X : Type ℓM} {x : X} {xs ys : List X} → x ∈L xs → x ∈L (xs ++ ys)
+∈++ˡ here      = here
+∈++ˡ (there p) = there (∈++ˡ p)
+
+∈++ʳ : {X : Type ℓM} {x : X} (xs : List X) {ys : List X} → x ∈L ys → x ∈L (xs ++ ys)
+∈++ʳ []       p = p
+∈++ʳ (_ ∷ xs) p = there (∈++ʳ xs p)
+
+-- `concatMap`, spelled out: the stdlib name is not exported here and
+-- the fold is what the membership proof recurses on anyway
+cmap : {X Y : Type ℓM} → (X → List Y) → List X → List Y
+cmap f []       = []
+cmap f (x ∷ xs) = f x ++ cmap f xs
+
+∈cmap : {X Y : Type ℓM} (f : X → List Y) {x : X} {xs : List X} {y : Y}
+      → x ∈L xs → y ∈L f x → y ∈L cmap f xs
+∈cmap f {xs = x ∷ xs} here      q = ∈++ˡ q
+∈cmap f {xs = z ∷ xs} (there p) q = ∈++ʳ (f z) (∈cmap f p q)

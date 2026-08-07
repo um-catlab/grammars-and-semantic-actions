@@ -2,9 +2,15 @@
   The connectives of the lambda theory: one tensor per operation, plus
   the whole generic combinator layer in one `open`.
 
-  Downstream modules open THIS, not `RulesFib`/`Decidable` directly.
-  `LamG` is the reason the theory is many-sorted: its two slots live in
-  different grammar sorts, so `if_then_else_` cannot express it.
+  Downstream modules get their combinators from HERE; they import
+  `Decidable` only for the RECORDS it asks them to build, which a
+  notation module cannot supply.  `LamG` is the reason the theory is
+  many-sorted: its two slots live in different grammar sorts, so
+  `if_then_else_` cannot express it.
+
+  Defines the two grammar sorts `TmG`/`NmG`, the three tensors
+  `VarG`/`AppG`/`LamG`, and their intro (`var-mk`/`app-mk`/`lam-mk`)
+  and elim (`var-elim`/`app-elim`/`lam-elim`) rules.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Base where
@@ -14,7 +20,6 @@ open import Cubical.Data.Bool hiding (_⊕_)
 open import Cubical.Data.Unit
 
 open import TheoryGrammar.Base
-open import TheoryGrammar.Fibered
 open import TheoryGrammar.RulesFib
 open import TheoryGrammar.Decidable
 open import TheoryGrammar.Instances.Lambda.Signature
@@ -27,18 +32,26 @@ module LamBase (Name : Type₀) where
   -- theory of decisions
   open DecFib λFib public
 
+  -- a grammar of TERMS: `Raw → Type`
   TmG : Type₁
-  TmG = TheoryTy ℓ-zero tm          -- Raw  → Type
+  TmG = TheoryTy ℓ-zero tm
 
+  -- a grammar of NAMES: `Name → Type`
   NmG : Type₁
-  NmG = TheoryTy ℓ-zero nm          -- Name → Type
+  NmG = TheoryTy ℓ-zero nm
 
+  -- `VarG P t` DENOTES: "`t` is a variable whose name satisfies `P`"
   VarG : NmG → TmG
   VarG P = ⊗ˢ varOp (λ _ → P)
 
+  -- `AppG A B t` DENOTES: "`t` is an application with an `A` in
+  -- function position and a `B` in argument position"
   AppG : TmG → TmG → TmG
   AppG A B = ⊗ˢ appOp (λ b → if b then A else B)
 
+  -- `LamG P A t` DENOTES: "`t` is a lambda whose bound name satisfies
+  -- `P` and whose body is an `A`".  The two slots are at DIFFERENT
+  -- sorts, which is why this cannot be `if_then_else_`.
   LamG : NmG → TmG → TmG
   LamG P A = ⊗ˢ lamOp (λ { true → P ; false → A })
 

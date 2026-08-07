@@ -6,6 +6,13 @@
   EQUATION, conditional on I, so it changes only the splittings.  The
   point stays TOTAL (concatenation), but only lax: `ITr Ind u v w` does not
   imply `u ++ v ≡ w` as soon as one pair is independent.
+
+  `ε'`/`_⊗'_`/`⊗-mk` are the instance's surface spelling of the
+  multiplicative, character for character what `Strings/Connectives` and
+  `Bags/Connectives` write; at this size they do not earn a file.
+
+  DEFINES `MonSplit`, `MonParts`, the promodel `trFib`, its lax point
+  `trPoint`, and the connectives `Gr`/`ε'`/`_⊗'_`/`⊗-mk`.
 -}
 open import Cubical.Foundations.Prelude
 
@@ -22,15 +29,18 @@ open import TheoryGrammar.Base
 open import TheoryGrammar.Theories.Monoid public
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.RulesFib
-open import TheoryGrammar.SemanticAction
 open import TheoryGrammar.Decidable.Tensor
 
 open import TheoryGrammar.Instances.Traces.Shuffle Letter public
 
+-- `MonSplit o w` DENOTES the ways w decomposes at o.  At `appop` that is
+-- a pair of factors TOGETHER WITH the shuffle exhibiting them, so the
+-- commutation is carried by the splitting and never re-derived.
 MonSplit : (o : MonOp) → Word → Type₀
 MonSplit nilop w = IsNil w
 MonSplit appop w = Σ[ u ∈ Word ] Σ[ v ∈ Word ] ITr Ind u v w
 
+-- `MonParts o w sp i` DENOTES the factor in slot i of the splitting sp.
 MonParts : (o : MonOp) (w : Word) → MonSplit o w → MonAr o → Word
 MonParts nilop w sp ()
 MonParts appop w (u , v , _) b = if b then u else v
@@ -43,7 +53,7 @@ trFib .parts     = MonParts
 -- The total point, separately.  Concatenation is total, so the split
 -- costs this instance nothing; what it buys is that the connectives
 -- never consult it -- which matters here, because the containment is
--- STRICT (see `Examples.laxStrict`).
+-- STRICT (see `Examples.swap-ab`).
 trPoint : LaxPoint trFib
 trPoint .op nilop _   = []
 trPoint .op appop f   = f true ++ f false
@@ -54,8 +64,15 @@ trPoint .parts-split appop f = funExt λ { false → refl ; true → refl }
 
 open DecFib trFib public
 
+-- `Gr` DENOTES a predicate on traces -- the only sort there is.
 Gr : Type₁
 Gr = TheoryTy ℓ-zero tt
+
+-- `_⊗'_`/`ε'` DENOTE separating conjunction and its unit: `(P ⊗' Q) w`
+-- says w shuffles into a P-factor and a Q-factor.  Fixity as at
+-- `Strings/Connectives` and `Bags/Connectives`, so the three instances
+-- parse alike.
+infixr 20 _⊗'_
 
 _⊗'_ : Gr → Gr → Gr
 P ⊗' Q = ⊗ˢ appop (λ b → if b then P else Q)

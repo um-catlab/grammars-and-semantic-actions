@@ -6,6 +6,11 @@
   strictly more factorisations than concatenation allows, strictly fewer
   than full interleaving.  The endpoint counts are forced -- `Ordered`
   and `Commutative` prove the enumerated types are `Split3` and `Ilv`.
+
+  DEFINES the alphabet `L3` with its `Ind`/`decInd`/`isPropInd`, the
+  three members `Ord`/`Part`/`Full` of the family, the counts (`refl`),
+  the strictness witnesses `swap-ab`/`no-swap-ac`, and the two endpoint
+  isos run on data.
 -}
 module TheoryGrammar.Instances.Traces.Examples where
 
@@ -109,14 +114,18 @@ _ = refl
 -- that is not independent.
 -- ==================================================================
 
-laxStrict : Part.ITr Ind (a ∷ []) (b ∷ []) (b ∷ a ∷ [])
-laxStrict = Part.right (tt , tt) (Part.left Part.nil)
+-- `ba` IS a shuffle of `a` and `b` ...
+swap-ab : Part.ITr Ind (a ∷ []) (b ∷ []) (b ∷ a ∷ [])
+swap-ab = Part.right (tt , tt) (Part.left Part.nil)
 
+-- ... while the point's answer at the same pair is `ab`, so the
+-- containment `u ++ v` ⊆ shuffles is strict.
 _ : (a ∷ []) ++ (b ∷ []) ≡ a ∷ b ∷ []
 _ = refl
 
-notIndep : Part.ITr Ind (a ∷ []) (c ∷ []) (c ∷ a ∷ []) → ⊥
-notIndep (Part.right (() , _) t)
+-- ... and the same swap is REFUTED at the dependent pair.
+no-swap-ac : Part.ITr Ind (a ∷ []) (c ∷ []) (c ∷ a ∷ []) → ⊥
+no-swap-ac (Part.right (() , _) t)
 
 -- ==================================================================
 -- The endpoint isos compute.

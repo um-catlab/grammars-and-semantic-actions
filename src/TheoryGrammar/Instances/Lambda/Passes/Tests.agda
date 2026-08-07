@@ -3,31 +3,35 @@
 
   Each `refl` needs the scope checker, the generic `μ`/`fold`, and the
   pass's own `⊕-E` branches all to reduce.  Every name below is a TERM
-  (`⊤G ⊢ Δ Bool`, `⊤G ⊢ Result _ (Δ Raw)`); `run` / `runΔ` appear only in
-  the `refl` lines -- externalising is the observation, not part of the
-  pipeline.  This file defines no reader and no constant grammar.
+  (`⊤G ⊢ Δ Bool`, `⊤G ⊢ Result _ (Δ Raw)`): `runClosed`, `runId`/
+  `runEta`/`runDead`, `renDB` and `subScoped!` all stay inside the
+  calculus, and `run`/`runΔ` appear only in the `refl` lines --
+  externalising is the OBSERVATION, not part of the pipeline, so `Bool`
+  and `Maybe` never occur in a statement.  This file defines no reader
+  and no constant grammar.
+
+  `noClosed`, `no-closed-open` and `no-sub` then re-read two of the
+  negative observations as refutations.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Passes.Tests where
 
-open import Cubical.Foundations.Prelude
-open import Cubical.Data.Unit
 open import Cubical.Data.Bool using (Bool; true; false)
-open import Cubical.Data.List using ([]; _∷_)
-open import Cubical.Data.Maybe using (Maybe; just; nothing)
-open import Cubical.Data.List using ([])
-open import Cubical.Data.Nat using (ℕ; discreteℕ)
 open import Cubical.Data.FinData.Base renaming (zero to fzero; suc to fsuc)
+open import Cubical.Data.List using ([]; _∷_)
+open import Cubical.Data.Maybe using (just; nothing)
+open import Cubical.Data.Nat using (ℕ; discreteℕ)
+open import Cubical.Foundations.Prelude
 
-open import TheoryGrammar.SemanticAction using (passes; _↦_; _at_)
 open import TheoryGrammar.CarrierMap
+open import TheoryGrammar.SemanticAction using (passes; _↦_; _at_)
 open import TheoryGrammar.Instances.Lambda
-open import TheoryGrammar.Instances.Lambda.Passes.Framework
+open import TheoryGrammar.Instances.Lambda.Passes.Dead
 open import TheoryGrammar.Instances.Lambda.Passes.Decide
 open import TheoryGrammar.Instances.Lambda.Passes.Eta
-open import TheoryGrammar.Instances.Lambda.Passes.Dead
-open import TheoryGrammar.Instances.Lambda.Passes.Rename
+open import TheoryGrammar.Instances.Lambda.Passes.Framework
 open import TheoryGrammar.Instances.Lambda.Passes.Inline
+open import TheoryGrammar.Instances.Lambda.Passes.Rename
 
 open Lambda ℕ discreteℕ
 open PassKit ℕ
@@ -112,7 +116,7 @@ _ = refl
 -- ==================================================================
 -- `subScoped?` : the scope checker TRANSPORTED along substitution, by
 -- `CarrierMap.Along.pullTerm`.  It is still a map out of `⊤`, only at a
--- reindexed world -- so the generic `accepts?` reads it unchanged, and
+-- reindexed world -- so the generic `okA` reads it unchanged, and
 -- what the test says is that transporting a decision commutes with
 -- deciding the transported thing.
 -- ==================================================================

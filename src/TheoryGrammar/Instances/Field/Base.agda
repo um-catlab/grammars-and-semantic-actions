@@ -2,18 +2,29 @@
   A GENUINELY PARTIAL THEORY: 𝔽₃ WITH INVERSION.
 
   `Fibered` already IS the notion of a partial algebra -- `Split o m`
-  lists the decompositions of `m` and nothing forces a tuple to compose.
-  A field is the smallest natural theory that needs this: `inv` is
-  undefined at 0.  Here that is not a side condition, it is
+  lists the decompositions of `m`, and nothing forces a tuple to
+  compose.  A field is the smallest natural theory that needs this:
+  `inv` is undefined at 0, and here that is not a side condition but
 
       Split invOp f0  =  ⊥.
 
-  Carrier 𝔽₃ = {f0,f1,f2}: `inv` is then the identity on the nonzero
-  part, so every table reduces and the tests are `refl`.
+  On 𝔽₃ = {f0,f1,f2} `inv` is the identity off zero, so every table
+  reduces and the tests are `refl`.
 
-  PRIMITIVE (matching the representation): `_+𝔽_`, `_·𝔽_`, `inv`, `Nz`,
-  `IsZero`, `IsUnit`, `FldSplit`, `FldParts`.  Nothing else in
-  `Instances/Field/` may match on 𝔽.
+  The ring fragment is the same promodel restricted along `ιR`, which is
+  what makes "the ring fragment has a point, the field does not" a
+  statement about ONE promodel.  `restrictSig`/`restrictFib` used to be
+  defined here even though they are generic and `Heap/Located` uses them
+  too; they are now `TheoryGrammar.Restrict`'s, and this file is only a
+  CLIENT of them.
+
+  DEFINES `𝔽`, `Slot`, the tables `_+𝔽_`/`_·𝔽_`/`inv`, the predicates
+  `IsZero`/`IsUnit`/`Nz`, the signature `fldSig` and promodel `fldFib`,
+  and the ring fragment `rngSig`/`rngFib`/`rngPoint`/`rngHonest`.
+
+  PRIMITIVE: `_+𝔽_`, `_·𝔽_`, `inv`, `Nz`, `IsZero`, `IsUnit`,
+  `FldSplit`, `FldParts`.  Nothing else in `Instances/Field/` may match
+  on 𝔽.
 -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Instances.Field.Base where
@@ -26,6 +37,7 @@ import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
+open import TheoryGrammar.Restrict using (restrictSig; restrictFib)
 
 private variable ℓS ℓ ℓ' ℓ₂ ℓX ℓP : Level
 
@@ -41,6 +53,9 @@ data Slot : Type₀ where
 -- The carrier and its tables.  PRIMITIVE.
 -- ==================================================================
 
+-- `𝔽` DENOTES the three-element field ℤ/3, written additively as
+-- {0,1,2}.  Three constructors rather than `Fin 3` so every table below
+-- is a closed match and reduces.
 data 𝔽 : Type₀ where
   f0 f1 f2 : 𝔽
 
@@ -65,18 +80,24 @@ f2 ·𝔽 f2 = f1
 
 -- Recursive predicates, as in `Ring/Base`: every case split happens on
 -- the element itself, so they compute.
+
+-- `IsZero m` DENOTES "m is the additive unit": inhabited exactly at f0,
+-- and it is what `Split zeroOp` reads.
 IsZero : 𝔽 → Type₀                       -- PRIMITIVE
 IsZero f0 = Unit
 IsZero f1 = ⊥
 IsZero f2 = ⊥
 
+-- `IsUnit m` DENOTES "m is the multiplicative unit": inhabited exactly
+-- at f1, and it is what `Split oneOp` reads.
 IsUnit : 𝔽 → Type₀                       -- PRIMITIVE
 IsUnit f0 = ⊥
 IsUnit f1 = Unit
 IsUnit f2 = ⊥
 
--- THE DOMAIN OF `inv`, as a type family.  This one predicate is the
--- whole of the partiality.
+-- `Nz m` DENOTES THE DOMAIN OF `inv` -- "m ≠ 0", as a type family
+-- rather than a side condition.  This one predicate is the whole of the
+-- partiality: `Split invOp` is literally it.
 Nz : 𝔽 → Type₀                           -- PRIMITIVE
 Nz f0 = ⊥
 Nz f1 = Unit
@@ -142,6 +163,9 @@ FldSplit oneOp  m = IsUnit m
 FldSplit mulOp  m = Σ[ x ∈ 𝔽 ] Σ[ y ∈ 𝔽 ] (x ·𝔽 y Eq.≡ m)
 FldSplit invOp  m = Nz m
 
+-- `FldParts o m sp i` DENOTES the argument sitting in slot i of the
+-- splitting `sp` of m.  At `invOp` that argument is `inv m sp` -- the
+-- splitting IS the proof that `inv` is defined there, so no case on 𝔽.
 FldParts : (o : FldOp) (m : 𝔽) → FldSplit o m → FldAr o → 𝔽   -- PRIMITIVE
 FldParts zeroOp m sp ()
 FldParts addOp  m (x , y , _) lhs = x
@@ -155,27 +179,6 @@ fldFib : Fibered fldSig ℓ-zero ℓ-zero
 fldFib .carrier _ = 𝔽
 fldFib .Split     = FldSplit
 fldFib .parts     = FldParts
-
--- ==================================================================
--- RESTRICTION ALONG AN INJECTION OF OPERATIONS.  A promodel for a
--- signature is one for any sub-signature, by composition -- no data is
--- invented, so `Split` and `parts` are literally reused.  This is what
--- makes "the ring fragment has a total point, the field does not" a
--- statement about ONE promodel rather than two unrelated ones.
--- ==================================================================
-
-module _ {S : Type ℓS} (σ : SortedSig S ℓ ℓ') {O : Type ℓ₂} (ι : O → σ .ops) where
-
-  restrictSig : SortedSig S ℓ₂ ℓ'
-  restrictSig .ops          = O
-  restrictSig .arities o    = σ .arities (ι o)
-  restrictSig .sortOf o a   = σ .sortOf (ι o) a
-  restrictSig .resultSort o = σ .resultSort (ι o)
-
-  restrictFib : Fibered σ ℓX ℓP → Fibered restrictSig ℓX ℓP
-  restrictFib Fib .carrier  = Fib .carrier
-  restrictFib Fib .Split o  = Fib .Split (ι o)
-  restrictFib Fib .parts o  = Fib .parts (ι o)
 
 -- ==================================================================
 -- The ring fragment: the same promodel, four operations.

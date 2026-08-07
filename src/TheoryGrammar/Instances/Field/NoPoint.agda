@@ -6,14 +6,30 @@
   i.e. that some `Fibered` in the library has NO `LaxPoint` at all,
   while the same promodel restricted to a sub-signature has one.
 
-  The refutation is entirely internal down to the last step: it is
-  `Domain.no-point` applied to `dom-inv⊢nonzero`, i.e. to the calculus
-  theorem "being in the domain of inv refutes being zero".
+  The refutation is entirely internal down to the last step: it is the
+  SLOTWISE `Domain.no-point` applied to `dom-inv⊢nonzero`, the calculus
+  theorem "being in the domain of inv refutes being zero".  Slotwise
+  suffices only because `invOp` is unary, so tuple and slot coincide;
+  `Field/Joint` redoes it through the joint lemma that survives at a
+  heap, and gets the same statement back.
 
   Also here: `⊗ˢ o ⊤` is the IMAGE, not the domain.  `zeroOp` is TOTAL
   and its image is still a proper subgrammar (`no-img-zero`), so
   "`⊗ˢ o ⊤ = ⊤`" is strictly stronger than totality; the exact
   condition is `Covering`.
+
+  DEFINES `fillsInv`, `noFieldPoint` (+ `noFieldPoint-explicit`),
+  `ringFragmentPoint`, the ring-side totality `dom-add-total`/
+  `dom-mul-total` and surjectivity `img-add`/`img-mul`/`coverAdd`/
+  `coverMul`/`cover-add-again`, and the five refutations `no-dom-inv`,
+  `no-img-inv`, `no-img-zero`, `no-img-one`, `no-cover-zero`.
+
+  READING THE `no-` NAMES.  Throughout this directory `no-X-o` is
+  `(⊤G ⊢ X o) → ⊥` -- "the grammar `X o` is NOT the unit" -- and NOT
+  "`X o` is empty".  `no-img-zero` is the sharp case: `ImgR zeroR` is
+  inhabited (at f0), just not everywhere.  The prefix is the tree-wide
+  spelling for a refutation (`no-point`, `no-slotwise-L/R`,
+  `noHeapPoint`), which is why it is kept rather than respelled here.
 -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Instances.Field.NoPoint where
@@ -26,8 +42,8 @@ import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
+open import TheoryGrammar.Domain
 open import TheoryGrammar.Instances.Field.Base
-open import TheoryGrammar.Instances.Field.Domain
 open import TheoryGrammar.Instances.Field.Partial
 
 -- ==================================================================
@@ -35,6 +51,8 @@ open import TheoryGrammar.Instances.Field.Partial
 --     point would have to make its domain grammar ⊤.
 -- ==================================================================
 
+-- `Fills o i` DENOTES a way to complete a tuple around slot i.  At the
+-- unary `invOp` "the other slots" is empty, so padding is the identity.
 fillsInv : Fills invOp tt
 fillsInv .pad x _ = x
 fillsInv .pad-i x = refl

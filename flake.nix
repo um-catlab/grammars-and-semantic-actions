@@ -75,6 +75,25 @@
             overlay
           ];
         };
+
+        # Typst toolchain for `doc/`.  Kept flake-local on purpose: nothing
+        # typst-related is installed globally, so the version that builds the
+        # docs is the one pinned in flake.lock.
+        #
+        # NOTE: deliberately plain `typst`, not `typst.withPackages`.
+        # `withPackages` works for dependency-free packages (curryst,
+        # ctheorems), but it cannot supply `fletcher`: nixpkgs puts
+        # `cetz 0.3.4` inside fletcher's closure while shipping
+        # `oxifmt 1.0.0` next to it, and cetz 0.3.4 imports `oxifmt 0.2.1`
+        # by exact version.  Typst then tries to install the missing version
+        # into the read-only store and fails.  Left to resolve `@preview`
+        # itself, typst fetches the exact pins into its own cache and
+        # everything -- fletcher included -- builds.
+        #
+        # Cost: the first `typst compile` needs the network.  If you ever
+        # want that closed, vendor the packages under `doc/packages/` and
+        # pass `--package-path`; `withPackages` is not the lever.
+        typstEnv = pkgs.typst;
       in
       {
         packages = {
@@ -93,11 +112,18 @@
           nativeBuildInputs = [
             pkgs.agdaWithCubicalCategoricalLogic
             pkgs.haskellPackages.fix-whitespace
+
+            # Docs.  `tinymist` is the LSP server; Emacs finds it through
+            # envrc/direnv rather than from a global profile, so it exists
+            # only inside this shell.
+            typstEnv
+            pkgs.tinymist
           ];
 
           shellHook = ''
             echo "grammars-and-semantic-actions dev shell"
-            echo "  agda: $(agda --version 2>/dev/null | head -n1)"
+            echo "  agda:  $(agda --version 2>/dev/null | head -n1)"
+            echo "  typst: $(typst --version 2>/dev/null | head -n1)"
           '';
         };
       }

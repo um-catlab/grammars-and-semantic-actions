@@ -1,17 +1,22 @@
 {-
   THE SIGNATURE OF CONTEXTS: one sort, one binary operation.
 
-  A substructural MODE is a promodel over this signature -- i.e. a choice
-  of how a context splits when a node consumes it -- and nothing else.
-  The four modes below share this signature and differ only in `Split`
-  (and, for affine, in one leaf modality).
+  DENOTES: the shape of "a context is consumed by a node".  A
+  substructural MODE is a promodel over this signature -- a choice of
+  which decompositions count -- and nothing else.  The four modes share
+  this signature and differ only in `Split` (and, for affine, in one
+  leaf modality).
+
+    CtxOp   the operations: `mul`, "consume a context in two parts"
+    CtxAr   its arity, `Bool`: the two parts, named `true` and `false`
+    ctxSig  the two, packaged one-sorted
 -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Instances.Lambda.Modes.Ctx where
 
+open import Cubical.Data.Bool using (Bool)
+open import Cubical.Data.Unit using (Unit; tt)
 open import Cubical.Foundations.Prelude
-open import Cubical.Data.Bool
-open import Cubical.Data.Unit
 
 open import TheoryGrammar.Base
 

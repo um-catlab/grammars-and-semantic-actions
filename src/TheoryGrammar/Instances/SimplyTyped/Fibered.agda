@@ -14,8 +14,7 @@ module TheoryGrammar.Instances.SimplyTyped.Fibered where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
-open import Cubical.Data.Unit
-open import Cubical.Data.Empty using (⊥)
+open import Cubical.Data.Unit using (tt)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
@@ -24,29 +23,40 @@ open import TheoryGrammar.Instances.SimplyTyped.Signature
 
 infixr 20 _⇒ᵗ_
 
+-- `Ty` denotes a simple type over one base type.
 data Ty : Type₀ where
   base : Ty
   _⇒ᵗ_ : Ty → Ty → Ty
 
+-- `IsBase C` denotes the ways `C` is a `base` node -- one when it is,
+-- none otherwise.
 data IsBase : Ty → Type₀ where
   mkBase : IsBase base
 
+-- `IsArr C` denotes the ways `C` is an arrow node.  The constructor
+-- CARRIES the domain and codomain, so a witness is already the
+-- decomposition and nothing has to be re-derived from `C`.
 data IsArr : Ty → Type₀ where
   mkArr : (A B : Ty) → IsArr (A ⇒ᵗ B)
 
 module Terms (Name : Type₀) where
 
+  -- `Raw` denotes an annotated lambda AST, with no scoping or typing
+  -- discipline imposed.
   data Raw : Type₀ where
     var : Name → Raw
     app : Raw → Raw → Raw
     lam : Name → Raw → Raw
     ann : Raw → Ty → Raw
 
+  -- `Carrier s` denotes the WORLDS of sort `s`: a grammar at sort `s`
+  -- is a family over exactly this.
   Carrier : TSort → Type₀
   Carrier nm = Name
   Carrier tm = Raw
   Carrier ty = Ty
 
+  -- `Op o m⃗` denotes the `o`-node assembled from the tuple `m⃗`.
   Op : (o : TOp) → ((a : TAr o) → Carrier (TSortOf o a)) → Carrier (TResult o)
   Op varOp  f = var (f tt)
   Op appOp  f = app (f true) (f false)
@@ -55,6 +65,8 @@ module Terms (Name : Type₀) where
   Op baseOp f = base
   Op arrOp  f = f true ⇒ᵗ f false
 
+  -- `Is<Op> t` denotes the ways `t` is an `<op>` node, and its
+  -- constructor carries the slots -- as `IsArr` does at the `ty` sort.
   data IsVar : Raw → Type₀ where
     mkVar : (n : Name) → IsVar (var n)
 
@@ -67,6 +79,7 @@ module Terms (Name : Type₀) where
   data IsAnn : Raw → Type₀ where
     mkAnn : (t : Raw) (A : Ty) → IsAnn (ann t A)
 
+  -- `TSplit o m` denotes the ways `m` is an `o`-node ...
   TSplit : (o : TOp) → Carrier (TResult o) → Type₀
   TSplit varOp  = IsVar
   TSplit appOp  = IsApp
@@ -75,6 +88,8 @@ module Terms (Name : Type₀) where
   TSplit baseOp = IsBase
   TSplit arrOp  = IsArr
 
+  -- ... and `TParts o m sp` denotes the tuple of slots that `sp` says
+  -- `m` is built from.  It reads the witness, never `m`.
   TParts : (o : TOp) (m : Carrier (TResult o)) → TSplit o m
          → (a : TAr o) → Carrier (TSortOf o a)
   TParts varOp  _ (mkVar n)   _     = n

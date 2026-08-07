@@ -105,6 +105,7 @@ open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
+open import TheoryGrammar.SemanticAction using (Case; passes; _↦_; _at_)
 
 open import TheoryGrammar.Instances.Dirichlet.Graded public
 
@@ -569,5 +570,7 @@ parse12 =
 -- ... and reading it back through the specification-valued algebra
 -- produces the list of primes, with its own proof that they multiply
 -- back to 12.  Both halves compute.
-_ : factorise (0 , (12 , tt)) parse12 .fst ≡ prime2 ∷ prime2 ∷ prime3 ∷ []
+_ : passes ( factorise (0 , (12 , tt)) parse12 .fst
+               ↦ (prime2 ∷ prime2 ∷ prime3 ∷ [])
+           ∷ [] )
 _ = refl

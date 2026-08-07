@@ -1,27 +1,27 @@
 {-
   Well-scoped terms, as the generic `μ`.
 
-  No bespoke datatype: `Scoped` is `Ind.μ` at a description in the
-  generic functor language, with the SCOPE as the nonterminal index, so
+  No bespoke datatype: `Scoped` is `Ind.μ` at `ScopedF`, a description in
+  the generic functor language, with the SCOPE as nonterminal index -- so
   the binder's action on the scope lives entirely in the index of the
-  recursive occurrence.
+  recursive occurrence.  `Scope` and its membership grammar `In` are here.
 
   `⟦Sc⟧`/`⟦Sc⟧⁻` is the one primitive: the container encoding respelled
-  in the connectives.  It never matches a term and never opens a
-  splitting -- `sp` passes through abstractly -- so it is a change of
-  notation, not a proof.  Everything after it is composition.
+  in the connectives (the one-step form `Step`).  It never matches a term
+  and never opens a splitting -- `sp` passes through abstractly -- so it
+  is a change of notation, not a proof.  Everything after it composes:
+  `sc-unroll`/`sc-roll` and the rules `sc-var`/`sc-app`/`sc-lam`.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Scoped where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
+open import Cubical.Data.List using (List; []; _∷_)
 open import Cubical.Data.Sigma
 open import Cubical.Data.Sum using (inl; inr)
 open import Cubical.Data.Unit
-open import Cubical.Data.List using (List; []; _∷_)
 
-open import TheoryGrammar.Base
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Instances.Lambda.Signature
 open import TheoryGrammar.Instances.Lambda.Base
@@ -33,9 +33,10 @@ module Wellscoped (Name : Type₀) where
   Scope : Type₀
   Scope = List Name
 
-  -- A scope IS a grammar over names, built from the internal
-  -- connectives: `⊥G` at the empty scope, `⊕` with a representable at
-  -- an extension.  So it is eliminated by `⊕-E`/`⊥-E` like anything else.
+  -- `In Γ n` DENOTES: "`n` occurs in the scope `Γ`".  A scope IS a
+  -- grammar over names, built from the internal connectives: `⊥G` at
+  -- the empty scope, `⊕` with a representable at an extension.  So it
+  -- is eliminated by `⊕-E`/`⊥-E` like anything else.
   In : Scope → NmG
   In []      = ⊥G
   In (m ∷ Γ) = ⌈ m ⌉ ⊕ In Γ
@@ -58,9 +59,14 @@ module Wellscoped (Name : Type₀) where
                                        ; false → Var (n ∷ Γ) })
     }
 
+  -- `Scoped Γ t` DENOTES: "`t` is a term all of whose free names occur
+  -- in `Γ`" -- a scoping DERIVATION, not a yes/no.
   Scoped : Scope → TmG
   Scoped Γ t = μ ScopedF (Γ , t)
 
+  -- `Step M Γ t` DENOTES: "`t` is scoped in `Γ` BY ONE RULE, with the
+  -- immediate subterms taken from `M`" -- the three rules as a sum, so
+  -- `Scoped` is its least fixed point.
   Step : (Scope → TmG) → Scope → TmG
   Step M Γ =   VarG (In Γ)
              ⊕ (AppG (M Γ) (M Γ)
