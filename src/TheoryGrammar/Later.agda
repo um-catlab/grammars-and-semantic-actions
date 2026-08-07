@@ -34,6 +34,30 @@ module WFLater {ℓI ℓR : Level} {I : Type ℓI} (_≺_ : I → I → Type ℓ
       → ((i : I) → ▷ A i → A i) → (i : I) → A i
   löb {A = A} step = WFI.induction ≺-wf λ i rec → step i (λ j q → rec j q)
 
+  -- ================================================================
+  -- löb IS THE UNIQUE FIXED POINT.
+  --
+  -- `löb step` solves `f i = step i (λ j _ → f j)`, and it is the ONLY
+  -- solution.  Both facts are generic in the order -- no signature, no
+  -- theory, no grading -- and together they are what makes anything
+  -- defined by löb canonical rather than merely one choice among many.
+  -- ================================================================
+
+  löb-unfold : {ℓM : Level} {A : I → Type ℓM} (step : (i : I) → ▷ A i → A i)
+             → (i : I) → löb step i ≡ step i (λ j _ → löb step j)
+  löb-unfold step = WFI.induction-compute ≺-wf (λ i rec → step i (λ j q → rec j q))
+
+  löb-unique : {ℓM : Level} {A : I → Type ℓM} (step : (i : I) → ▷ A i → A i)
+               (f : (i : I) → A i)
+             → ((i : I) → f i ≡ step i (λ j _ → f j))
+             → (i : I) → f i ≡ löb step i
+  löb-unique step f hf = WFI.induction ≺-wf go
+    where
+      go : (i : I) → ((j : I) → j ≺ i → f j ≡ löb step j) → f i ≡ löb step i
+      go i ih = hf i
+              ∙ cong (step i) (funExt λ j → funExt λ q → ih j q)
+              ∙ sym (löb-unfold step i)
+
 -- A FINER order gives a WEAKER modality: fewer `j ≺ i` means fewer
 -- assumptions available in the löb step.  So `Later/Infix`'s `▷ⁱ` --
 -- the proper-substring order -- is IMPLIED by the graded `▷`, since a

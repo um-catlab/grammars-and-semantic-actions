@@ -201,11 +201,35 @@ module HyloM {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   module _ {F : (x : X) → Functor (xs x)} (lc : LocallyContractive F)
            {A B : Fam} (c : Coalgᴳ F A) (α : Algᴳ F B) where
 
+    hyloStep : (i : Ix) → ▷ (λ j → ⌞ A ⌟ j → ⌞ B ⌟ j) i → (⌞ A ⌟ i → ⌞ B ⌟ i)
+    hyloStep (x , m) rec a = α x m (lc x m rec (c x m a))
+
     hyloLC : (x : X) → A x ⊢ B x
-    hyloLC x m =
-      löb {A = λ i → ⌞ A ⌟ i → ⌞ B ⌟ i}
-          (λ { (x' , m') rec a → α x' m' (lc x' m' rec (c x' m' a)) })
-          (x , m)
+    hyloLC x m = löb hyloStep (x , m)
+
+    -- ================================================================
+    -- THE UNIVERSAL PROPERTY, for every theory.
+    --
+    -- `hyloLC` satisfies the hylomorphism equation, and it is the ONLY
+    -- map that does.  Both come straight from `löb`'s own unfolding and
+    -- uniqueness (`Later.agda`), which are generic in the ORDER, so
+    -- these are generic in the theory.
+    --
+    -- This is what makes a program written as a hylo canonical: its
+    -- value depends on the coalgebra and the algebra, and on nothing
+    -- else about how the recursion was arranged.  For a scanner out of
+    -- ⊤ that says the answer depends on the DECOMPOSITION chosen -- and
+    -- that residual dependence is real, which is exactly the caveat a
+    -- commutative theory runs into.
+    -- ================================================================
+
+    hyloLC-unfold : (i : Ix) → löb hyloStep i ≡ hyloStep i (λ j _ → löb hyloStep j)
+    hyloLC-unfold = löb-unfold hyloStep
+
+    hyloLC-unique : (h : (i : Ix) → ⌞ A ⌟ i → ⌞ B ⌟ i)
+                  → ((i : Ix) → h i ≡ hyloStep i (λ j _ → h j))
+                  → (i : Ix) → h i ≡ löb hyloStep i
+    hyloLC-unique = löb-unique hyloStep
 
   -- ================================================================
   -- THE GENERIC ▷-APP.  A `later` may be consumed at any position of a
