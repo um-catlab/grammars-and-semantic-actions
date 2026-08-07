@@ -138,7 +138,7 @@ Not a plan — a measurement against the 21 modules currently in
 | Par | 2 | `Par` (`Allˢ`) | **done** |
 | SemanticAction | 2 | `SemanticAction` | **done** |
 | Yoneda | 2 | `Representable` (`⌈⌉-UP`) | **done** |
-| Later | 7 | `Graded` (`▷`, `löb`, `hyloC`) | **partial** — `Box`, `Infix` not ported |
+| Later | 7 | `Graded` (`WFLater`, `hyloC`) | **done** — `Infix` subsumed, see below |
 | Subgrammar | 2 | `Subgrammar` (`Compr`) | **done** |
 | Derivative | 3 | `Derivative` (`δ`, `DerivTensor`) | **done** |
 | SequentialUnambiguity | 5 | `Instances/Strings/SeqUnambig` | **core done** |
@@ -278,9 +278,29 @@ hypothesis rather than on volume.
    β was already `refl` upstream; η was not, and is here by Σ's η. The
    equational phrasing is still available (`toEqn`/`ofEqn`) — it just
    costs `hPropExt` once, in one place, instead of at every use site.
-6. **`Later/{Box,Infix}`.** `Infix` is the two-sided order — the CYK
-   shape — and is the one worth having, since it is what the bag
-   instance would want.
+6. ~~**`Later/{Box,Infix}`**~~ — **resolved, and the earlier note here
+   was wrong.** It claimed `Infix` was "the one worth having". It is
+   not: `▷ⁱ` is built on the *proper-substring* order, which is
+   strictly **finer** than `Graded`'s degree order (a proper infix is
+   shorter, but not every shorter string is an infix). A finer order
+   means fewer `j ≺ i`, hence **fewer** assumptions in the löb step —
+   so `▷ⁱ` is *implied* by the graded `▷`, not the other way round.
+   `▷-mono` in `Graded.agda` proves exactly this, and
+   `Instances/Strings/CYK.agda` is the evidence: it was built on
+   `Guarded` and never needed an infix modality.
+
+   What *was* worth doing is the TODO in `Graded.agda`'s own header —
+   "the order can be made abstract later". Done: `WFLater` takes a
+   relation and its well-foundedness and defines `▷`/`next`/`löb`
+   without ever mentioning the degree. The graded order is now one
+   instance (`open WFLater _≺_ ≺-wf public`, so every downstream name
+   is unchanged), and upstream's `Later/Ordered` — generic in a
+   `WFOrder`, instantiated at the suffix and infix orders — is another.
+   This is what unblocks a lexicographic instance if one is ever
+   needed.
+
+   `Box` is the cofree comonad of the modality and is not required by
+   anything in this tree.
 
 Three things are *stated but unbuilt*, and they matter more than any of
 the above:
