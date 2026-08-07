@@ -187,7 +187,66 @@ target at *different* sorts — has exactly the same definitional β/η as the s
 
 ---
 
-## 10. Open
+## 10. Partial theories
+
+The `Fibered` / `LaxPoint` split makes partiality expressible: `Fibered` alone (carrier,
+`Split`, `parts`) **is** the notion of a partial algebra — `Split o m` says which
+decompositions exist, and nothing requires that every tuple composes. Two instances exercise
+the two different senses of "partial".
+
+### Partial operations — `Instances/Field/`
+
+- `Instances/Field/NoPoint.agda:49` `noFieldPoint : LaxPoint fldFib → ⊥`. **A theory the
+  framework can express that provably admits no total operation.** The obstruction is
+  *located*, not merely present: `rngPoint : LaxPoint rngFib` is the same carrier, splittings
+  and parts with `invOp` deleted, so the failure is attributable to the partial operation.
+- `img-inv≡nonzero : ⊗ˢ invOp ⊤ ⊣⊢ ¬G ⌈ f0 ⌉` — **both directions**. Invertibility *is*
+  internal nonzeroness, not merely implies it. `dec-invOp : ⊤G ⊢ Dec⟨ ⊗ˢ invOp ⊤ ⟩` makes the
+  domain a genuine internal decision carrying its exclusion.
+- **CORRECTION, worth stating loudly.** `⊗ˢ o ⊤` is the **image**, not the domain of
+  definition, and the right condition for `⊤G ⊢ ⊗ˢ o ⊤` is **surjectivity, not totality**.
+  Counterexample proved: `NoPoint.agda:129` `no-img-zero` — `zeroOp` is a *total* constant
+  (it lives in the fragment that has a `LaxPoint`) and its image is still proper. Any total
+  constant refutes "image is ⊤ iff total". The real domain of definition lives one sort over,
+  as `Domˢ o i` at `sortOf o i`, and *that* one is clean: a `LaxPoint` forces
+  `⊤G ⊢ Domˢ o i` at every fillable slot.
+- **Nothing in the multiplicative layer breaks under partiality.** `⊗ˢ`, `MultiHomˢ`,
+  `curryˢ`/`uncurryˢ`, β/η, `⊸ˢ`, `⊸ᶠ`, `⊗ˢ-map` mention only `Split`/`parts` and applied to
+  a partial operation unchanged. What degrades is *inhabitation*: `⊗ˢ invOp A` is empty at
+  `f0` for every `A`, so precisely the map the refutation kills is the unavailable one.
+  `⊸ᶠ` degrades dually and harmlessly — it quantifies over `SplitAt x`, so it is vacuously
+  `⊤` there.
+
+### Partial equations — `Instances/Traces/`
+
+Trace monoids: total operation, *conditional* commutativity. The carrier is not quotiented;
+the commutation goes into `Split`, exactly as `Bags` already does.
+
+- **Interpolation, proved as real `Iso`s against the originals** (`Strings.Base` and
+  `Bags.Base` are imported and aliased, not restated): `Traces/Ordered.agda:66`
+  `ITr ⊥I ≅ Split3`, `Traces/Commutative.agda:61` `ITr ⊤I ≅ Ilv`. **The two existing resource
+  substrates are the endpoints of one family.**
+- The endpoints fail *differently*. `⊤`/`Ilv` is constructor-for-constructor, the only
+  discrepancy a nested `Unit` whose uniqueness is `refl` by η. `⊥`/`Split3` is a genuine shape
+  mismatch — `Split3` stops at one `nil` when the left factor runs out, `ITr` must still walk
+  the rest by `right`s — packaged as `bump`, which identifies the indices **with no transport**.
+  Neither direction needed `Eq.J`, `subst`, or a dimension variable.
+- Exhibited numerically: the word `abc` gives **4 < 5 < 8** factorisations under ordered,
+  partially commutative, and fully commutative relations.
+- **`Uses` from `Modes/Core.agda`, unchanged, instantiated here is a partially commutative
+  substructural logic** strictly between ordered and linear. With 0⌣1 independent and 2
+  independent of nothing: `λ0.λ1. x1 x0` accepted, `λ0.λ2. x2 x0` rejected. Same term, same
+  grammar, one substrate — the independence relation decides.
+- Cost of the conditional equation: **nothing downstream of `Split`**. `Fibered`, `LaxPoint`,
+  `⊗ˢ`/`⊸ᶠ` β/η, `DecEnumerable`, `DecSplittings` and the whole mode were reused verbatim.
+  The costs are localised in the *enumeration*: two side hypotheses on `I` (decidable,
+  propositional — Strings needs neither because shape implies them, Bags because they are
+  vacuous) and one `subst` on a Path in `Enumeration.pickIn`, which sits entirely on the
+  refutation side so nothing reduces through it.
+
+---
+
+## 11. Open
 
 - `Decidable/Splittings.agda:30` `DecSplittings` is the right shape — the *conclusion* of
   `dec-⊗` as an interface, with unique readability and enumerability as two routes into it.

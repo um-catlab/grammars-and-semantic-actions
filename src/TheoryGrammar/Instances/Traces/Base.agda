@@ -4,13 +4,13 @@
 
   Same signature as `Strings` and `Bags` -- partial commutation is an
   EQUATION, conditional on I, so it changes only the splittings.  The
-  point stays TOTAL (concatenation), but only lax: `ITr I u v w` does not
+  point stays TOTAL (concatenation), but only lax: `ITr Ind u v w` does not
   imply `u ++ v ≡ w` as soon as one pair is independent.
 -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Traces.Base
-  (Letter : Type₀) (I : Letter → Letter → Type₀) where
+  (Letter : Type₀) (Ind : Letter → Letter → Type₀) where
 
 open import Cubical.Data.Sigma
 open import Cubical.Data.Bool hiding (_⊕_; _≤_)
@@ -29,7 +29,7 @@ open import TheoryGrammar.Instances.Traces.Shuffle Letter public
 
 MonSplit : (o : MonOp) → Word → Type₀
 MonSplit nilop w = IsNil w
-MonSplit appop w = Σ[ u ∈ Word ] Σ[ v ∈ Word ] ITr I u v w
+MonSplit appop w = Σ[ u ∈ Word ] Σ[ v ∈ Word ] ITr Ind u v w
 
 MonParts : (o : MonOp) (w : Word) → MonSplit o w → MonAr o → Word
 MonParts nilop w sp ()
@@ -48,7 +48,7 @@ trPoint : LaxPoint trFib
 trPoint .op nilop _   = []
 trPoint .op appop f   = f true ++ f false
 trPoint .split nilop f = tt
-trPoint .split appop f = f true , f false , itrApp I (f true) (f false)
+trPoint .split appop f = f true , f false , itrApp Ind (f true) (f false)
 trPoint .parts-split nilop f = funExt λ ()
 trPoint .parts-split appop f = funExt λ { false → refl ; true → refl }
 
@@ -63,5 +63,5 @@ P ⊗' Q = ⊗ˢ appop (λ b → if b then P else Q)
 ε' : Gr
 ε' = ⊗ˢ nilop (λ ())
 
-⊗-mk : {P Q : Gr} {u v w : Word} → ITr I u v w → P u → Q v → (P ⊗' Q) w
+⊗-mk : {P Q : Gr} {u v w : Word} → ITr Ind u v w → P u → Q v → (P ⊗' Q) w
 ⊗-mk {u = u} {v} s p q = (u , v , s) , λ { true → p ; false → q }

@@ -17,6 +17,7 @@ module TheoryGrammar.Instances.Field.Partial where
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Sigma
 open import Cubical.Data.Unit
+open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
@@ -44,7 +45,7 @@ Nonzero : Gr
 Nonzero = ¬G ⌈ f0 ⌉
 
 dec-inv : ⊤G ⊢ (Imgˢ invOp ⊕ ⌈ f0 ⌉)          -- PRIMITIVE
-dec-inv f0 _ = ⊕-I₂ {A = Imgˢ invOp} {B = ⌈ f0 ⌉} f0 Eq.refl
+dec-inv f0 _ = ⊕-I₂ {B = ⌈ f0 ⌉} {A = Imgˢ invOp} f0 Eq.refl
 dec-inv f1 _ = ⊕-I₁ {A = Imgˢ invOp} {B = ⌈ f0 ⌉} f1 (tt , λ _ → tt)
 dec-inv f2 _ = ⊕-I₁ {A = Imgˢ invOp} {B = ⌈ f0 ⌉} f2 (tt , λ _ → tt)
 
@@ -56,13 +57,13 @@ dec-inv f2 _ = ⊕-I₁ {A = Imgˢ invOp} {B = ⌈ f0 ⌉} f2 (tt , λ _ → tt)
 -- ==================================================================
 
 img-inv⊢nonzero : Imgˢ invOp ⊢ Nonzero
-img-inv⊢nonzero m (sp , _) e = Eq.J (λ n _ → ⊥G n) (nz-transport e sp) e
+img-inv⊢nonzero m (sp , _) e = E.rec (nz-transport e sp)
 
 -- ... and the converse, which is where the primitive is spent.  Note
 -- the sum is eliminated with `⊕-E-at`, never matched.
 nonzero⊢img-inv : Nonzero ⊢ Imgˢ invOp
 nonzero⊢img-inv m k =
-  ⊕-E-at (Imgˢ invOp) ⌈ f0 ⌉ m (λ x → x) (λ e → ⊥-E m (k e)) (dec-inv m tt)
+  ⊕-E-at (Imgˢ invOp) ⌈ f0 ⌉ m (λ x → x) (λ e → ⊥-E {A = Imgˢ invOp} m (k e)) (dec-inv m tt)
 
 -- THE DOMAIN OF DEFINITION OF inv, INTERNALLY: exactly the nonzero
 -- elements.
@@ -78,7 +79,7 @@ img-inv≡nonzero = img-inv⊢nonzero , nonzero⊢img-inv
 
 dom-inv⊢nonzero : Domˢ invOp tt ⊢ Nonzero
 dom-inv⊢nonzero x (m , sp , e) ze =
-  ⊥-E x (Eq.J (λ n _ → ⊥G n) (nz-transport ze (nz-transport e (inv-nz m sp))) ze)
+  E.rec (nz-transport ze (nz-transport e (inv-nz m sp)))
 
 nonzero⊢dom-inv : Nonzero ⊢ Domˢ invOp tt
 nonzero⊢dom-inv x k = x , sp , inv-fix x sp
@@ -96,7 +97,7 @@ dom-inv≡nonzero = dom-inv⊢nonzero , nonzero⊢dom-inv
 
 invDecision : Decision (Imgˢ invOp) ⌈ f0 ⌉
 invDecision .decide  = dec-inv
-invDecision .exclude = contra ∘⊢ &-I (img-inv⊢nonzero ∘⊢ &-E₁) &-E₂ ∘⊢ &-swap
+invDecision .exclude = ⇒-app ∘⊢ &-I (img-inv⊢nonzero ∘⊢ &-E₁) &-E₂
 
 dec-invOp : ⊤G ⊢ Dec⟨ Imgˢ invOp ⟩
 dec-invOp = toDec invDecision

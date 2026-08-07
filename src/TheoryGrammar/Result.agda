@@ -44,14 +44,14 @@ open import TheoryGrammar.Rules
 open import TheoryGrammar.Decidable.Additive
 open import TheoryGrammar.Distributive
 
-private variable ℓS ℓ ℓ' ℓX ℓA ℓB ℓC ℓD ℓE ℓE' ℓY : Level
+private variable ℓS ℓ ℓ' ℓX ℓA ℓB ℓC ℓD ℓE ℓE' ℓY ℓZ : Level
 
 
 module Res {S : Type ℓS} (Car : S → Type ℓX) where
 
   open CarrierNotation Car
   open RulesCarrier Car
-  open DecAdd Car using (¬G_; Dec⟨_⟩; &-swap; contra; Complement; Decision)
+  open DecAdd Car using (¬G_; Dec⟨_⟩; &-swap; contra; Complement; Decision; ⊕-E-at; ⊕-E-atᴰ)
   open Dist Car using (dist&r)
 
   private variable
@@ -83,6 +83,18 @@ module Res {S : Type ℓS} (Car : S → Type ℓX) where
   caseR : {E : TheoryTy ℓE s} {A : TheoryTy ℓA s} {C : TheoryTy ℓC s}
         → A ⊢ C → E ⊢ C → Result E A ⊢ C
   caseR = ⊕-E
+
+  -- ... and the POINTWISE elimination, for exactly the reason
+  -- `Decidable.Additive.dec-elim` exists: a branch may need data that
+  -- lives at ONE world -- a recursive call at THIS subterm, a
+  -- certificate about THIS part -- and `caseR`'s branches quantify over
+  -- the index.  `Result E A` is `A ⊕ E`, so this is `⊕-E-at` renamed;
+  -- nothing new is assumed, only the quantifier is moved.  Instances
+  -- call it and never match `inl`/`inr` themselves.
+  caseR-at : (E : TheoryTy ℓE s) (A : TheoryTy ℓA s) (m : Car s)
+             {Z : Type ℓZ}
+           → (A m → Z) → (E m → Z) → Result E A m → Z
+  caseR-at E A m = ⊕-E-at A E m
 
   -- ================================================================
   -- The monad, in the success variable.
@@ -143,6 +155,25 @@ module Res {S : Type ℓS} (Car : S → Type ℓX) where
     altList k Y (y ∷ ys) f = altR (f y) (altList k Y ys f)
 
   -- ================================================================
+  -- THE INDEXED SUM, SEARCHED.  The parser's counterpart of
+  -- `Decidable.Listable.dec-⊕ᴰ`, and strictly weaker: `dec-⊕ᴰ` needs
+  -- the list COMPLETE, because refuting `⊕ᴰ Y A` means refuting every
+  -- tag.  Here failure carries `E` and claims nothing, so the list is a
+  -- search SPACE and completeness never appears.
+  --
+  -- A composite of `altList`, `mapR` and `&ᴰ-E`: no `⊎`, no recursion
+  -- of its own.
+  -- ================================================================
+
+  altList-⊕ᴰ : (E : TheoryTy ℓE s) (j : (E & E) ⊢ E)
+               (Y : Type ℓY) (A : Y → TheoryTy ℓA s)
+             → (&ᴰ Y (λ y → Result E (A y)) ⊢ E) → List Y
+             → &ᴰ Y (λ y → Result E (A y)) ⊢ Result E (⊕ᴰ Y A)
+  altList-⊕ᴰ E j Y A k ys =
+    altList E (⊕ᴰ Y A) j k Y ys
+      λ y → mapR E (⊕ᴰ Y A) (⊕ᴰ-I Y {A = A} y) ∘⊢ &ᴰ-E Y y
+
+  -- ================================================================
   -- SEQUENCING, additively.  Two parsers at the same world, and both
   -- must succeed.  (The MULTIPLICATIVE sequencing -- one parser per
   -- slot of an operation -- is `Result.Fib` below, since it needs a
@@ -193,6 +224,13 @@ module Res {S : Type ℓS} (Car : S → Type ℓX) where
   altListM : (A : TheoryTy ℓA s) {X : TheoryTy ℓB s} (Y : Type ℓY)
            → List Y → (Y → X ⊢ MaybeG A) → X ⊢ MaybeG A
   altListM A Y ys f = altList ⊤G A &-E₁ ⊤-I Y ys f
+
+  -- the option-typed indexed sum: a parse for SOME rule.  `dec-⊕ᴰ`
+  -- with the completeness hypothesis deleted, which is exactly what a
+  -- parser may delete.
+  maybe-⊕ᴰ : (Y : Type ℓY) (A : Y → TheoryTy ℓA s) → List Y
+           → &ᴰ Y (λ y → MaybeG (A y)) ⊢ MaybeG (⊕ᴰ Y A)
+  maybe-⊕ᴰ Y A = altList-⊕ᴰ ⊤G &-E₁ Y A ⊤-I
 
   -- (2) failure carrying a refutation.  NOT a new definition:
   private

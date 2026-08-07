@@ -214,72 +214,112 @@ module Parser (V : Type₀)
             ; (true  , (false , ()))
             ; (false , (false , ())) }
 
-  -- THE PARSER.  `allRules` says the grammar is finite; `matchLit` is
-  -- the literal matcher, itself a term of the calculus.
+  -- ================================================================
+  -- THE PARSER.  The SAME term as `Decide` below, at the error grammar
+  -- `⊤G` instead of `¬G _`, and with every completeness hypothesis
+  -- deleted:
+  --
+  --     mapR ⊤G (Deriv P) (rollD P)
+  --       ∘ maybe-⊕ᴰ (Rule P) …          -- search the rules   (Result)
+  --           ∘ per rule:
+  --               mapR … ∘ matchLit c            -- the terminal
+  --               findΣ (cuts w) …               -- search the cuts
+  --                 ∘ per cut: dec-elim probe-NT …
+  --                     ∘ findΠBool               -- the two slots
+  --
+  -- `findΣ` / `findΠBool` are `decΣ` / `decΠBool` with the refutations
+  -- dropped (`TheoryGrammar.Enumerable`), and `maybe-⊕ᴰ` is `dec-⊕ᴰ`
+  -- with the completeness proof dropped.  A parser may drop them
+  -- because it claims nothing when it fails; a decision may not.  That
+  -- is the entire difference between `parse` and `derives?`, and it now
+  -- shows up in which arguments the two take.
+  --
+  -- `allRules` says the grammar is finite; `matchLit` is the literal
+  -- matcher, itself a term of the calculus.
+  -- ================================================================
+
   module Search (allRules : (P : V) → List (Rule P))
-                (matchLit : (c : Char) → ⊤G ⊢ MaybeG ⌈ c ∷ [] ⌉) where
+                (matchLit : (c : Char) → Cover (MaybeG ⌈ c ∷ [] ⌉)) where
 
     Mot : G.Ix → Type₀
     Mot i = MaybeG (Deriv (i .fst)) (i .snd)
 
-    -- Alternation and the search over a finite list of alternatives are
-    -- `TheoryGrammar.Result`'s `altM` / `altListM`, at the error grammar
-    -- `⊤G`.  They used to be spelled out here as `orElse` / `alt2` /
-    -- two `List` folds; nothing about them was specific to CYK.
+    -- the terminal alternative, parsed; `Liftg` is the constant former's
+    -- coercion and `mapR` transports the parse across it
+    parseLit : (c : Char) → Cover (MaybeG (Liftg ⌈ c ∷ [] ⌉))
+    parseLit c = mapR ⊤G (Liftg ⌈ c ∷ [] ⌉) liftg ∘g matchLit c
 
-    module _ (P : V) (w : String) (rec : G.▷ Mot (P , w)) where
+    module _ (P : V) (w : String)
+             (rec : (j : G.Ix) → G.degIx j < length w → Mot j) where
 
-      -- the constant grammar at this world, which is what a step of the
-      -- SEMANTIC löb below is forced to work at -- see the FIXME
-      Here : Gr
-      Here _ = Deriv P w
+      module _ (Q T : V) (sp : MonSplit appop w) where
 
-      search : {Y : Type₀} → List Y → (Y → Mot (P , w)) → Mot (P , w)
-      search {Y = Y} ys f = altListM Here Y ys (λ y _ _ → f y) w tt
+        private
+          u v : String
+          u = MonParts appop w sp true
+          v = MonParts appop w sp false
 
-      tryCut : (Q T : V) → binR P Q T → MonSplit appop w → Mot (P , w)
-      tryCut Q T pf (u , v , s) = go (decNT u tt) (decNT v tt)
-        where
-          go : (NonTrivial ⊕ ⌈ [] ⌉) u → (NonTrivial ⊕ ⌈ [] ⌉) v → Mot (P , w)
-          go (inl neu) (inl nev) =
-            join (rec (Q , u) (split3LenL< s (ntLen nev)))
-                 (rec (T , v) (split3LenR< s (ntLen neu)))
-            where join : Mot (Q , u) → Mot (T , v) → Mot (P , w)
-                  join (inl tq) (inl tT) = inl (node pf s neu nev tq tT)
-                  join _        _        = inr tt
-          go _ _ = inr tt
+          CutRes : Type₀
+          CutRes = ⊗at appop (binSlots Q T) w sp ⊎ Unit
 
-      tryCuts : (Q T : V) → binR P Q T → List (MonSplit appop w) → Mot (P , w)
-      tryCuts Q T pf cs = search cs (tryCut Q T pf)
+          -- a slot is its nonterminal together with the certificate that
+          -- makes its SIBLING a proper part.  Assembling the two is
+          -- `&ᴰ-I`, a term; only the certificate has to be supplied at a
+          -- point, which is why the elimination is `caseR-at`.
+          slotIn : (R : V) → (Deriv R & Liftg NonTrivial) ⊢ SlotG R
+          slotIn R = &ᴰ-I {B = λ b → G.⟦ NEslot R b ⟧c Der}
+                          λ { true → &-E₁ ; false → &-E₂ }
 
-      tryRule : Rule P → Mot (P , w)
-      tryRule (inl (c , pf))     = fromLit (matchLit c w tt)
-        where fromLit : MaybeG ⌈ c ∷ [] ⌉ w → Mot (P , w)
-              fromLit (inl q) = inl (leaf c pf q)
-              fromLit (inr _) = inr tt
-      tryRule (inr (Q , T , pf)) = tryCuts Q T pf (cuts w)
+          slotParse : (R : V) (t : String) → G.degIx (R , t) < length w
+                    → NonTrivial t → MaybeG (SlotG R) t
+          slotParse R t shorter nt =
+            caseR-at ⊤G (Deriv R) t
+              (λ d → just-I {A = SlotG R} t
+                            (slotIn R t (d , liftg {A = NonTrivial} t nt)))
+              (λ _ → nothing-I {A = SlotG R} {B = ⊤G} t tt)
+              (rec (R , t) shorter)
 
-      tryRules : List (Rule P) → Mot (P , w)
-      tryRules rs = search rs tryRule
+          -- `deg<` -- the grading's own field -- is what says a proper
+          -- part is strictly smaller, so nothing here knows what a cut
+          -- is.  Same line as `Decide.both`.
+          both : NonTrivial u → NonTrivial v → CutRes
+          both nu nv =
+            findΠBool {B = λ a → binSlots Q T a (MonParts appop w sp a)} tt
+              (slotParse Q u (strGraded .deg< appop w sp true  nv) nu)
+              (slotParse T v (strGraded .deg< appop w sp false nu) nv)
 
-    -- FIXME (phase violation).  This is a SEMANTIC löb: the step is an
-    -- Agda function, not a `▷ Mot ⊢ᴵ Mot` term, so `tryRules` /
-    -- `tryCut` / `orElse` below eliminate sums by matching instead of
-    -- by `⊕-E`.  The reference idiom is `fixP` in
-    -- Grammar/Parser/RecursiveDescent.agda, whose step IS a term.
-    --
-    -- What is missing is the generic analogue of
-    --   ▷-app-NE : ⟨¬Nullable B⟩ → (B ⊗ ⊤) & ▷ A ⊢ B ⊗ A
-    -- (Grammar/Later/Properties.agda), which is what lets a `▷` be
-    -- consumed INSIDE a tensor.  `TheoryGrammar.Graded` exposes `löb`
-    -- but not that rule, so no point-free step can be written yet.
-    -- Adding it is the fix; `hyloC` is the alternative, and needs `⅋e`
-    -- because parsing must consider ALL splittings, not choose one.
+        -- THE CUT, parsed.  A trivial side cannot yield a parse, because
+        -- a slot carries `NonTrivial` for its own part (`neOf`); with
+        -- neither side trivial the recursive calls apply.
+        cutParse : CutRes
+        cutParse =
+          dec-elim NonTrivial u
+            (λ nu → dec-elim NonTrivial v
+                      (λ nv → both nu nv)
+                      (λ _ → inr tt)
+                      (probe-NT v tt))
+            (λ _ → inr tt)
+            (probe-NT u tt)
+
+      parseRule : (r : Rule P) → MaybeG (RuleG P r) w
+      parseRule (inl (c , _))     = parseLit c w tt
+      parseRule (inr (Q , T , _)) = findΣ tt (cutParse Q T) (cuts w)
+
+      parseStep : Mot (P , w)
+      parseStep =
+        mapR ⊤G (Deriv P) (rollD P) w
+          (maybe-⊕ᴰ (Rule P) (RuleG P) (allRules P) w parseRule)
+
+    -- THE LÖB STEP, as a named `▷ … ⊢ᴵ …` term.  No Agda function is
+    -- handed to `löb`, and no sum is eliminated by matching.
+    step : G.▷ Mot G.⊢ᴵ Mot
+    step i r = parseStep (i .fst) (i .snd) r
+
     parseIx : (i : G.Ix) → Mot i
-    parseIx = G.löb λ { (P , w) rec → tryRules P w rec (allRules P) }
+    parseIx = G.löb step
 
     -- the procedure, as a term of the calculus
-    parse : (P : V) → ⊤G ⊢ MaybeG (Deriv P)
+    parse : (P : V) → Cover (MaybeG (Deriv P))
     parse P w _ = parseIx (P , w)
 
   -- ================================================================

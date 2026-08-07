@@ -28,13 +28,14 @@ Indep = Letter → Letter → Type₀
 -- predicate, not an indexed family, so every case split below happens on
 -- the word itself and no clause needs higher-dimensional unification.
 IndepAll : Indep → Word → Letter → Type₀
-IndepAll I []      x = Unit
-IndepAll I (y ∷ u) x = I y x × IndepAll I u x
+IndepAll Ind []      x = Unit
+IndepAll Ind (y ∷ u) x = Ind y x × IndepAll Ind u x
 
-data ITr (I : Indep) : Word → Word → Word → Type₀ where
-  nil   : ITr I [] [] []
-  left  : ∀ {x u v w} → ITr I u v w → ITr I (x ∷ u) v (x ∷ w)
-  right : ∀ {x u v w} → IndepAll I u x → ITr I u v w → ITr I u (x ∷ v) (x ∷ w)
+data ITr (Ind : Indep) : Word → Word → Word → Type₀ where
+  nil   : ITr Ind [] [] []
+  left  : ∀ {x u v w} → ITr Ind u v w → ITr Ind (x ∷ u) v (x ∷ w)
+  right : ∀ {x u v w} → IndepAll Ind u x → ITr Ind u v w
+        → ITr Ind u (x ∷ v) (x ∷ w)
 
 IsNil : Word → Type₀
 IsNil []      = Unit
@@ -42,10 +43,10 @@ IsNil (_ ∷ _) = ⊥
 
 -- Concatenation is always a shuffle: once the left factor is exhausted
 -- the side condition is vacuous, so no independence is ever consulted.
-itrNil : (I : Indep) (v : Word) → ITr I [] v v
-itrNil I []      = nil
-itrNil I (x ∷ v) = right tt (itrNil I v)
+itrNil : (Ind : Indep) (v : Word) → ITr Ind [] v v
+itrNil Ind []      = nil
+itrNil Ind (x ∷ v) = right tt (itrNil Ind v)
 
-itrApp : (I : Indep) (u v : Word) → ITr I u v (u ++ v)
-itrApp I []      v = itrNil I v
-itrApp I (x ∷ u) v = left (itrApp I u v)
+itrApp : (Ind : Indep) (u v : Word) → ITr Ind u v (u ++ v)
+itrApp Ind []      v = itrNil Ind v
+itrApp Ind (x ∷ u) v = left (itrApp Ind u v)

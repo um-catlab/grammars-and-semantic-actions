@@ -12,7 +12,7 @@ open import Cubical.Data.Unit
 open import Cubical.Data.List
 open import Cubical.Data.Empty using (⊥*)
 
-private variable ℓM ℓA : Level
+private variable ℓ ℓM ℓA : Level
 
 data _∈L_ {X : Type ℓM} (x : X) : List X → Type ℓM where
   here  : {xs : List X} → x ∈L (x ∷ xs)
@@ -66,3 +66,32 @@ decΠBool : {B : Bool → Type ℓA}
 decΠBool (inr k) _        = inr λ f → k (f true)
 decΠBool (inl _) (inr k)  = inr λ f → k (f false)
 decΠBool (inl x) (inl y)  = inl λ { true → x ; false → y }
+
+-- ==================================================================
+-- THE SAME SEARCHES, WHEN FAILURE CARRIES NO REFUTATION.
+--
+-- `decΣ` needs the list COMPLETE, because refuting the Σ means
+-- refuting every index and completeness is what turns "none listed
+-- works" into that.  A PARSER only has to find one witness, so it needs
+-- no completeness at all -- the list is a search SPACE, a parameter of
+-- the algorithm, and nothing is claimed when it runs out.
+--
+-- That asymmetry is the whole difference between `parse` and
+-- `derives?`, and stating both here makes it visible in the types
+-- rather than in a comment: `findΣ` takes a `List`, `decΣ` takes a list
+-- AND a proof about it.
+-- ==================================================================
+
+findΣ : {I : Type ℓM} {B : I → Type ℓA} {F : Type ℓ}
+      → F → ((i : I) → B i ⊎ F) → List I → (Σ[ i ∈ I ] B i) ⊎ F
+findΣ e d []       = inr e
+findΣ e d (i ∷ is) = pick (d i)
+  where pick : _ → _
+        pick (inl b) = inl (i , b)
+        pick (inr _) = findΣ e d is
+
+findΠBool : {B : Bool → Type ℓA} {F : Type ℓ}
+          → F → B true ⊎ F → B false ⊎ F → ((b : Bool) → B b) ⊎ F
+findΠBool e (inr _) _       = inr e
+findΠBool e (inl _) (inr _) = inr e
+findΠBool e (inl x) (inl y) = inl λ { true → x ; false → y }

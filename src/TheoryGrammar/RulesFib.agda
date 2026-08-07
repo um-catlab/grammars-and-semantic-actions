@@ -97,10 +97,10 @@ module RulesF {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX
   -- DEFINED in `TheoryGrammar.Result` (additively; it never mentioned
   -- the operations) and only re-exported here, where instances look.
   open Res (Fib .carrier) public
-    using (Result; ok; err; caseR; bindR; mapR; mapE; joinR; catchR;
-           orElseR; altR; altList; bothR;
+    using (Result; ok; err; caseR; caseR-at; bindR; mapR; mapE; joinR; catchR;
+           orElseR; altR; altList; altList-⊕ᴰ; bothR;
            MaybeG; just-I; nothing-I; MaybeG-E;
-           orElseM; altM; altListM; runCover; toMaybe)
+           orElseM; altM; altListM; maybe-⊕ᴰ; runCover; toMaybe)
 
   -- the empty and singleton branches of a decomposition, as a grammar:
   -- `⊕ᴰ` over the carrier is how you say "for some element".

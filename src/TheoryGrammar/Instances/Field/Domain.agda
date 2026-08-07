@@ -33,7 +33,8 @@ module DomainOf {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ �
   open RulesF Fib public
   open DecAdd (Fib .carrier) public using (¬G_; Dec⟨_⟩; dec-yes; dec-no;
     ⊕-E-at; ⊕-E-atᴰ; dec-elim; Complement; Decision; decide; exclude;
-    ¬G-excludes; largest; toDec; contra; &-swap; ¬G-map)
+    ¬G-excludes; largest; toDec; contra; &-swap; ¬G-map; dec-map;
+    dec-&; dec-⊕; dec-¬)
 
   -- ================================================================
   -- The two grammars.

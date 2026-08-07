@@ -142,7 +142,7 @@ Not a plan — a measurement against the 21 modules currently in
 | Subgrammar | 2 | `Subgrammar` (`Compr`) | **done** |
 | Derivative | 3 | `Derivative` (`δ`, `DerivTensor`) | **done** |
 | SequentialUnambiguity | 5 | `Instances/Strings/SeqUnambig` | **core done** |
-| **Greedy** | 2 | — | **not started**; needs Levi |
+| Greedy | 2 | `Instances/Strings/Greedy` | **Base done**; `Automata` open |
 | RegularExpression | 2 | `Instances/Strings/RegExp` | **done** |
 | Coinductive | 4 | `Inductive` (`ν`, `unfold`) | **core done**; `coind` open |
 | String, External | 12 | — | *replaced*, not ported |
@@ -209,7 +209,16 @@ hypothesis rather than on volume.
      projection, never unify two heads. `Greedy` will hit this
      constantly, so it is worth knowing up front.
 
-   `Greedy` (2 files) is what remains of the group.
+   `Greedy/Base` is now `Instances/Strings/Greedy`, and it stays a
+   string instance for the reason bucket 3 gives: there is no
+   "leftmost" for bags. What ported for *free* is the residual it
+   needs — "a G-parse of `w ++ v`, as a grammar in `v`" is exactly the
+   **derivative with the left slot pinned to `w`** instead of to a
+   single character. `Derivʷ` is `ActOf` at a different rest-tuple and
+   `actʷ-β` is `refl`; nothing new is defined. That is the `Assembly`
+   parameter earning its keep for the third time.
+
+   `Greedy/Automata` (188 lines) is what remains of the group.
 3. ~~**`RegularExpression`**~~ — **done**, and bucket 3's classification
    of it as *string-specific* was right: the derivative-based matcher
    recurses on the carrier, which is not something `Fibered` provides.

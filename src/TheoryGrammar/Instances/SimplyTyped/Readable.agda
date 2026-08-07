@@ -7,10 +7,11 @@
   `⊗-refute` and `⊗-merge`; `unsplit` alone gives `⌈⌉-into`/`⌈⌉-from`,
   and with `Split-isProp` also `op-inj`.
 
-  PRIMITIVE inventory of this file: `Split-isProp`, `⊗-decSplit`,
-  `stDecSlots`, and the three pairwise disjointness facts.  Everything
-  the rest of the instance uses about the representation comes from
-  here.
+  PRIMITIVE inventory of this file: `Split-isProp`, the two partitions
+  (`tmCase`/`tyCase`, one per sort) and `stDecSlots`.  `⊗-decSplit` is
+  NOT among them any more -- it is `View.decBranch` at the partitions,
+  as in `Lambda.Readable`.  Everything the rest of the instance uses
+  about the representation comes from here.
 -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.SimplyTyped.Readable where
@@ -19,6 +20,7 @@ open import Cubical.Foundations.Prelude
 open import Cubical.Data.Bool hiding (_⊕_)
 import Cubical.Data.Bool.Properties as B
 open import Cubical.Data.Unit
+open import Cubical.Data.Sum using (_⊎_; inl; inr)
 open import Cubical.Data.Empty as E using (⊥; ⊥*)
 
 open import TheoryGrammar.Base
@@ -33,7 +35,7 @@ open import TheoryGrammar.Instances.SimplyTyped.Base
 module StReadable (Name : Type₀) where
 
   open StBase Name
-  open Views stlcFib using (Cover; Complete; total; exclusive; completeCase; certifies; fromUnique)
+  open Views stlcFib using (Cover; Complete; total; exclusive; completeCase; certifies; fromUnique; decBranch)
 
   -- PRIMITIVE.  At most one splitting, at either result sort.
   Split-isProp : (o : TOp) (m : Carrier (TResult o)) (p q : TSplit o m) → p ≡ q
@@ -60,84 +62,6 @@ module StReadable (Name : Type₀) where
   merge2 o A B C body = ⊗ˢ-E o {A = λ a → A a & B a} {B = C} body ∘g ⊗-merge o A B
 
   -- PRIMITIVE.  And it is decidable whether there is one, internally.
-  ⊗-decSplit : (o : TOp) → ⊤G ⊢ Dec⟨ ⊗ˢ o (λ _ → ⊤G) ⟩
-  ⊗-decSplit varOp  (var n)   _ = dec-yes (⊗ˢ varOp  (λ _ → ⊤G)) _ (mkVar n   , λ _ → tt)
-  ⊗-decSplit varOp  (app _ _) _ = dec-no  (⊗ˢ varOp  (λ _ → ⊤G)) _ λ { (() , _) }
-  ⊗-decSplit varOp  (lam _ _) _ = dec-no  (⊗ˢ varOp  (λ _ → ⊤G)) _ λ { (() , _) }
-  ⊗-decSplit varOp  (ann _ _) _ = dec-no  (⊗ˢ varOp  (λ _ → ⊤G)) _ λ { (() , _) }
-  ⊗-decSplit appOp  (var _)   _ = dec-no  (⊗ˢ appOp  (λ _ → ⊤G)) _ λ { (() , _) }
-  ⊗-decSplit appOp  (app u v) _ = dec-yes (⊗ˢ appOp  (λ _ → ⊤G)) _ (mkApp u v , λ _ → tt)
-  ⊗-decSplit appOp  (lam _ _) _ = dec-no  (⊗ˢ appOp  (λ _ → ⊤G)) _ λ { (() , _) }
-  ⊗-decSplit appOp  (ann _ _) _ = dec-no  (⊗ˢ appOp  (λ _ → ⊤G)) _ λ { (() , _) }
-  ⊗-decSplit lamOp  (var _)   _ = dec-no  (⊗ˢ lamOp  (λ _ → ⊤G)) _ λ { (() , _) }
-  ⊗-decSplit lamOp  (app _ _) _ = dec-no  (⊗ˢ lamOp  (λ _ → ⊤G)) _ λ { (() , _) }
-  ⊗-decSplit lamOp  (lam n t) _ = dec-yes (⊗ˢ lamOp  (λ _ → ⊤G)) _ (mkLam n t , λ _ → tt)
-  ⊗-decSplit lamOp  (ann _ _) _ = dec-no  (⊗ˢ lamOp  (λ _ → ⊤G)) _ λ { (() , _) }
-  ⊗-decSplit annOp  (var _)   _ = dec-no  (⊗ˢ annOp  (λ _ → ⊤G)) _ λ { (() , _) }
-  ⊗-decSplit annOp  (app _ _) _ = dec-no  (⊗ˢ annOp  (λ _ → ⊤G)) _ λ { (() , _) }
-  ⊗-decSplit annOp  (lam _ _) _ = dec-no  (⊗ˢ annOp  (λ _ → ⊤G)) _ λ { (() , _) }
-  ⊗-decSplit annOp  (ann t A) _ = dec-yes (⊗ˢ annOp  (λ _ → ⊤G)) _ (mkAnn t A , λ _ → tt)
-  ⊗-decSplit baseOp base      _ = dec-yes (⊗ˢ baseOp (λ _ → ⊤G)) _ (mkBase    , λ _ → tt)
-  ⊗-decSplit baseOp (_ ⇒ᵗ _)  _ = dec-no  (⊗ˢ baseOp (λ _ → ⊤G)) _ λ { (() , _) }
-  ⊗-decSplit arrOp  base      _ = dec-no  (⊗ˢ arrOp  (λ _ → ⊤G)) _ λ { (() , _) }
-  ⊗-decSplit arrOp  (A ⇒ᵗ B)  _ = dec-yes (⊗ˢ arrOp  (λ _ → ⊤G)) _ (mkArr A B , λ _ → tt)
-
-  -- `Bool`'s own dependent eliminator, under the name it earns here:
-  -- assemble a two-slot family from its two slots.  Not a decision.
-  private
-    mkSlots : {P : Bool → Type₀} → P true → P false → (b : Bool) → P b
-    mkSlots = B.elim
-
-  -- Slotwise decisions combine.  Matches on the OPERATION, never on a
-  -- term and never on a sum: each alternative names its slots and hands
-  -- them to `Precise`'s `decSlots¹`/`decSlots²`.  `baseOp` is the
-  -- degenerate case -- an empty arity has nothing to combine, so the
-  -- answer is always yes.
-  stDecSlots : (o : TOp) (A : (a : TAr o) → TheoryTy ℓ-zero (TSortOf o a))
-               (m : Carrier (TResult o)) (sp : TSplit o m)
-             → ((a : TAr o) → Dec⟨ A a ⟩ (TParts o m sp a))
-             → Dec⟨ ⊗ˢ o A ⟩ m
-  stDecSlots varOp  A m sp h = decSlots¹ varOp A m sp tt (λ x _ → x) (h tt)
-  stDecSlots baseOp A m sp h = dec-yes (⊗ˢ baseOp A) m (sp , λ ())
-  stDecSlots appOp  A m sp h =
-    decSlots² appOp A m sp true false mkSlots (h true) (h false)
-  stDecSlots lamOp  A m sp h =
-    decSlots² lamOp A m sp true false mkSlots (h true) (h false)
-  stDecSlots annOp  A m sp h =
-    decSlots² annOp A m sp true false mkSlots (h true) (h false)
-  stDecSlots arrOp  A m sp h =
-    decSlots² arrOp A m sp true false mkSlots (h true) (h false)
-
-  stDR : DecReadable stlcFib ℓ-zero
-  stDR .splitProp = Split-isProp
-  stDR .decSplit  = ⊗-decSplit
-  stDR .decSlots  = stDecSlots
-
-  open DecTensor stDR public using (dec-⊗)
-
-  -- PRIMITIVE.  Distinct operations at the same result sort have
-  -- disjoint images.  Only the three `tm` pairs the inference rules can
-  -- confuse are needed.
-  var∤app : (t : Raw) → IsVar t → IsApp t → ⊥
-  var∤app _ (mkVar _) ()
-
-  var∤ann : (t : Raw) → IsVar t → IsAnn t → ⊥
-  var∤ann _ (mkVar _) ()
-
-  app∤ann : (t : Raw) → IsApp t → IsAnn t → ⊥
-  app∤ann _ (mkApp _ _) ()
-
-  -- ... lifted to the tensors, which is how they get used: two
-  -- derivations of the same term cannot use different head operations
-  varApp-⊥ : {P : NmG} {A B : TmG} → (VarG P & AppG A B) ⊢ ⊥G
-  varApp-⊥ t (x , y) = E.rec (var∤app t (x .fst) (y .fst))
-
-  varAnn-⊥ : {P : NmG} {A : TmG} {Q : TyG} → (VarG P & AnnG A Q) ⊢ ⊥G
-  varAnn-⊥ t (x , y) = E.rec (var∤ann t (x .fst) (y .fst))
-
-  appAnn-⊥ : {A B : TmG} {C : TmG} {Q : TyG} → (AppG A B & AnnG C Q) ⊢ ⊥G
-  appAnn-⊥ t (x , y) = E.rec (app∤ann t (x .fst) (y .fst))
-
   -- ================================================================
   -- THE OPERATIONS PARTITION THE CARRIER -- ONCE PER SORT.
   --
@@ -202,3 +126,133 @@ module StReadable (Name : Type₀) where
       discrim : Cover (⊕ᴰ TyOp tyB)
       discrim base     _ = oBase , (mkBase  , λ _ → tt)
       discrim (A ⇒ᵗ B) _ = oArr  , (mkArr A B , λ _ → tt)
+
+  -- ================================================================
+  -- ... and therefore `⊗-decSplit` is DERIVED, as in `Lambda.Readable`.
+  --
+  -- The comparison `decBranch` asks for is `(P z ⊢ P y) ⊎ (y ≢ z)`, not
+  -- `Discrete`: on the diagonal it must be `idg`, since a `subst` there
+  -- would block reduction for every consumer generic in the world.  The
+  -- off-diagonal half is uniform by encode-decode -- `TmCode y z` is
+  -- `⊥` off the diagonal, so `tmEncode y z` IS the disequality and no
+  -- arithmetic on tags appears.
+  -- ================================================================
+
+  private
+    TmCode : TmOp → TmOp → Type₀
+    TmCode oVar oVar = Unit
+    TmCode oApp oApp = Unit
+    TmCode oLam oLam = Unit
+    TmCode oAnn oAnn = Unit
+    TmCode _    _    = ⊥
+
+    tmRefl : (y : TmOp) → TmCode y y
+    tmRefl oVar = tt
+    tmRefl oApp = tt
+    tmRefl oLam = tt
+    tmRefl oAnn = tt
+
+    tmEncode : (y z : TmOp) → y ≡ z → TmCode y z
+    tmEncode y z p = subst (TmCode y) p (tmRefl y)
+
+    TyCode : TyOp → TyOp → Type₀
+    TyCode oBase oBase = Unit
+    TyCode oArr  oArr  = Unit
+    TyCode _     _     = ⊥
+
+    tyRefl : (y : TyOp) → TyCode y y
+    tyRefl oBase = tt
+    tyRefl oArr  = tt
+
+    tyEncode : (y z : TyOp) → y ≡ z → TyCode y z
+    tyEncode y z p = subst (TyCode y) p (tyRefl y)
+
+  cmpTm : (y z : TmOp) → (tmB z ⊢ tmB y) ⊎ (y ≡ z → ⊥)
+  cmpTm oVar oVar = inl idg
+  cmpTm oApp oApp = inl idg
+  cmpTm oLam oLam = inl idg
+  cmpTm oAnn oAnn = inl idg
+  cmpTm oVar oApp = inr (tmEncode oVar oApp)
+  cmpTm oVar oLam = inr (tmEncode oVar oLam)
+  cmpTm oVar oAnn = inr (tmEncode oVar oAnn)
+  cmpTm oApp oVar = inr (tmEncode oApp oVar)
+  cmpTm oApp oLam = inr (tmEncode oApp oLam)
+  cmpTm oApp oAnn = inr (tmEncode oApp oAnn)
+  cmpTm oLam oVar = inr (tmEncode oLam oVar)
+  cmpTm oLam oApp = inr (tmEncode oLam oApp)
+  cmpTm oLam oAnn = inr (tmEncode oLam oAnn)
+  cmpTm oAnn oVar = inr (tmEncode oAnn oVar)
+  cmpTm oAnn oApp = inr (tmEncode oAnn oApp)
+  cmpTm oAnn oLam = inr (tmEncode oAnn oLam)
+
+  cmpTy : (y z : TyOp) → (tyB z ⊢ tyB y) ⊎ (y ≡ z → ⊥)
+  cmpTy oBase oBase = inl idg
+  cmpTy oArr  oArr  = inl idg
+  cmpTy oBase oArr  = inr (tyEncode oBase oArr)
+  cmpTy oArr  oBase = inr (tyEncode oArr  oBase)
+
+  -- the two partitions, dispatched by which sort the operation lands at
+  ⊗-decSplit : (o : TOp) → ⊤G ⊢ Dec⟨ ⊗ˢ o (λ _ → ⊤G) ⟩
+  ⊗-decSplit varOp  = decBranch cmpTm tmCase oVar
+  ⊗-decSplit appOp  = decBranch cmpTm tmCase oApp
+  ⊗-decSplit lamOp  = decBranch cmpTm tmCase oLam
+  ⊗-decSplit annOp  = decBranch cmpTm tmCase oAnn
+  ⊗-decSplit baseOp = decBranch cmpTy tyCase oBase
+  ⊗-decSplit arrOp  = decBranch cmpTy tyCase oArr
+
+
+  -- `Bool`'s own dependent eliminator, under the name it earns here:
+  -- assemble a two-slot family from its two slots.  Not a decision.
+  private
+    mkSlots : {P : Bool → Type₀} → P true → P false → (b : Bool) → P b
+    mkSlots = B.elim
+
+  -- Slotwise decisions combine.  Matches on the OPERATION, never on a
+  -- term and never on a sum: each alternative names its slots and hands
+  -- them to `Precise`'s `decSlots¹`/`decSlots²`.  `baseOp` is the
+  -- degenerate case -- an empty arity has nothing to combine, so the
+  -- answer is always yes.
+  stDecSlots : (o : TOp) (A : (a : TAr o) → TheoryTy ℓ-zero (TSortOf o a))
+               (m : Carrier (TResult o)) (sp : TSplit o m)
+             → ((a : TAr o) → Dec⟨ A a ⟩ (TParts o m sp a))
+             → Dec⟨ ⊗ˢ o A ⟩ m
+  stDecSlots varOp  A m sp h = decSlots¹ varOp A m sp tt (λ x _ → x) (h tt)
+  stDecSlots baseOp A m sp h = dec-yes (⊗ˢ baseOp A) m (sp , λ ())
+  stDecSlots appOp  A m sp h =
+    decSlots² appOp A m sp true false mkSlots (h true) (h false)
+  stDecSlots lamOp  A m sp h =
+    decSlots² lamOp A m sp true false mkSlots (h true) (h false)
+  stDecSlots annOp  A m sp h =
+    decSlots² annOp A m sp true false mkSlots (h true) (h false)
+  stDecSlots arrOp  A m sp h =
+    decSlots² arrOp A m sp true false mkSlots (h true) (h false)
+
+  stDR : DecReadable stlcFib ℓ-zero
+  stDR .splitProp = Split-isProp
+  stDR .decSplit  = ⊗-decSplit
+  stDR .decSlots  = stDecSlots
+
+  open DecTensor stDR public using (dec-⊗)
+
+  -- PRIMITIVE.  Distinct operations at the same result sort have
+  -- disjoint images.  Only the three `tm` pairs the inference rules can
+  -- confuse are needed.
+  var∤app : (t : Raw) → IsVar t → IsApp t → ⊥
+  var∤app _ (mkVar _) ()
+
+  var∤ann : (t : Raw) → IsVar t → IsAnn t → ⊥
+  var∤ann _ (mkVar _) ()
+
+  app∤ann : (t : Raw) → IsApp t → IsAnn t → ⊥
+  app∤ann _ (mkApp _ _) ()
+
+  -- ... lifted to the tensors, which is how they get used: two
+  -- derivations of the same term cannot use different head operations
+  varApp-⊥ : {P : NmG} {A B : TmG} → (VarG P & AppG A B) ⊢ ⊥G
+  varApp-⊥ t (x , y) = E.rec (var∤app t (x .fst) (y .fst))
+
+  varAnn-⊥ : {P : NmG} {A : TmG} {Q : TyG} → (VarG P & AnnG A Q) ⊢ ⊥G
+  varAnn-⊥ t (x , y) = E.rec (var∤ann t (x .fst) (y .fst))
+
+  appAnn-⊥ : {A B : TmG} {C : TmG} {Q : TyG} → (AppG A B & AnnG C Q) ⊢ ⊥G
+  appAnn-⊥ t (x , y) = E.rec (app∤ann t (x .fst) (y .fst))
