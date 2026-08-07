@@ -36,6 +36,7 @@ module TheoryGrammar.Derivative where
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.Isomorphism
 open import Cubical.Data.Sigma
+open import Cubical.Data.Sum using (_⊎_; inl; inr)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
@@ -147,6 +148,57 @@ module Deriv {S : Type ℓS} (X : S → Type ℓX) {s t : S} (act : X s → X t)
   Π→Σ : {A : TheoryTy ℓA s} (y : X t)
       → Fibre y → Πact A y → Σact A y
   Π→Σ y (x , e) h = x , e , h x e
+
+  -- ================================================================
+  -- WHAT THE TRIPLE BUYS.
+  --
+  -- (1) It EXPLAINS the refl laws below.  `δ` has a left adjoint, so it
+  --     preserves limits (⊤, &, &ᴰ, ⇒); it has a right adjoint, so it
+  --     preserves colimits (⊥, ⊕, ⊕ᴰ).  Those are exactly the seven
+  --     laws proved by `refl` in `δ-laws`.  They were not a coincidence
+  --     of precomposition being pointwise -- they are adjointness.
+  --
+  -- (2) The adjoints preserve on their own side, and this is the part
+  --     that is new rather than a re-reading.  `Σact` is a left adjoint
+  --     so it preserves COPRODUCTS; `Πact` is a right adjoint so it
+  --     preserves PRODUCTS.  Neither preserves the other side, and that
+  --     asymmetry is real: `Σact (A & B)` is strictly stronger than
+  --     `Σact A & Σact B` when the fibre has more than one point, since
+  --     the left says ONE peeling witnesses both.
+  --
+  -- (3) Read as parsers: `Σact` is the MAY semantics ("some
+  --     decomposition works") and `Πact` the MUST ("every decomposition
+  --     does").  For a free theory they agree.  For a commutative one
+  --     they are two genuinely different parsers, and until now only
+  --     the `Σ` one had a name.
+  -- ================================================================
+
+  -- Πact preserves products, on the nose in both directions.
+  Πact-& : {A : TheoryTy ℓA s} {B : TheoryTy ℓB s} (y : X t)
+         → Iso (Πact (A & B) y) ((Πact A & Πact B) y)
+  Πact-& y .Iso.fun h       = (λ x e → h x e .fst) , (λ x e → h x e .snd)
+  Πact-& y .Iso.inv (f , g) = λ x e → f x e , g x e
+  Πact-& y .Iso.sec _ = refl
+  Πact-& y .Iso.ret _ = refl
+
+  -- Σact preserves coproducts.
+  Σact-⊕ : {A : TheoryTy ℓA s} {B : TheoryTy ℓB s} (y : X t)
+         → Iso (Σact (A ⊕ B) y) ((Σact A ⊕ Σact B) y)
+  Σact-⊕ y .Iso.fun (x , e , inl a) = inl (x , e , a)
+  Σact-⊕ y .Iso.fun (x , e , inr b) = inr (x , e , b)
+  Σact-⊕ y .Iso.inv (inl (x , e , a)) = x , e , inl a
+  Σact-⊕ y .Iso.inv (inr (x , e , b)) = x , e , inr b
+  Σact-⊕ y .Iso.sec (inl _) = refl
+  Σact-⊕ y .Iso.sec (inr _) = refl
+  Σact-⊕ y .Iso.ret (_ , _ , inl _) = refl
+  Σact-⊕ y .Iso.ret (_ , _ , inr _) = refl
+
+  -- The MAY/MUST comparison in the other direction is free: one
+  -- peeling that works is, in particular, evidence at that peeling.
+  -- (The converse is `Σ→Π`, and needs unambiguity.)
+  Σact-& : {A : TheoryTy ℓA s} {B : TheoryTy ℓB s} (y : X t)
+         → Σact (A & B) y → (Σact A & Σact B) y
+  Σact-& y (x , e , (a , b)) = (x , e , a) , (x , e , b)
 
   -- ================================================================
   -- THEOREM.  `δ` commutes with EVERY additive connective, on the nose.
