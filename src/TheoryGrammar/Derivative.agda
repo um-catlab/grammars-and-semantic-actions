@@ -36,6 +36,7 @@ module TheoryGrammar.Derivative where
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.Isomorphism
 open import Cubical.Data.Sigma
+import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
@@ -69,6 +70,83 @@ module Deriv {S : Type ℓS} (X : S → Type ℓX) {s t : S} (act : X s → X t)
             (g : C ⊢ D) (f : B ⊢ C)
           → δ-map (g ∘⊢ f) ≡ (δ-map g ∘⊢ δ-map f)
   δ-map-∘ g f = refl
+
+  -- ================================================================
+  -- THE ADJOINT TRIPLE.   Σ_act  ⊣  δ  ⊣  Π_act
+  --
+  -- `δ` is precomposition, and precomposition between families of types
+  -- always has BOTH adjoints -- Σ and Π over the FIBRES of the action.
+  -- So the derivative's famous left adjoint (tensor with a
+  -- representable) and its "amazing" right adjoint are not monoid
+  -- facts: they exist for every theory and every action, and this is
+  -- the whole construction.
+  --
+  --   Σact A y = Σ[ x ] (act x ≡ y) × A x   -- y arises by acting on an A
+  --   δ    B x = B (act x)                  -- the world after acting
+  --   Πact A y = (x) → act x ≡ y → A x      -- EVERY way y could arise
+  --
+  -- WHAT THEY SAY ABOUT RESOURCES.  The fibre of `act` at `y` is the set
+  -- of ways to peel one step off `y`.  So `Σact` is EXISTENTIAL over
+  -- that set and `Πact` is UNIVERSAL over it, and the two differ exactly
+  -- as much as the peeling is ambiguous:
+  --
+  --   * strings -- fibres are subsingletons, since `c ∷ v = w` pins `v`.
+  --     Σ and Π agree where either is inhabited; peeling is
+  --     deterministic; "views from the left" is available.
+  --   * bags -- the fibre at `m` for "remove an x" has one element per
+  --     occurrence.  `Σact` says SOME removal leaves an A, `Πact` says
+  --     EVERY removal does.  These genuinely differ.
+  --
+  -- `fibreContr→Σ≃Π` below makes that precise: the two adjoints coincide
+  -- exactly when the fibres are contractible -- which is the pointwise
+  -- form of `Free`, and the reason freeness is what "views from the
+  -- left" turns on.
+  --
+  -- Equalities are `Eq.≡` so both adjunctions COMPUTE: matching
+  -- `Eq.refl` collapses the fibre and every unit/counit below is refl.
+  -- ================================================================
+
+  Σact : TheoryTy ℓA s → TheoryTy (ℓ-max ℓX ℓA) t
+  Σact A y = Σ[ x ∈ X s ] ((act x Eq.≡ y) × A x)
+
+  Πact : TheoryTy ℓA s → TheoryTy (ℓ-max ℓX ℓA) t
+  Πact A y = (x : X s) → act x Eq.≡ y → A x
+
+  -- the fibre: the ways `y` can be peeled by this action
+  Fibre : X t → Type ℓX
+  Fibre y = Σ[ x ∈ X s ] (act x Eq.≡ y)
+
+  -- Σact ⊣ δ
+  Σ⊣δ : {A : TheoryTy ℓA s} {B : TheoryTy ℓB t} → Iso (Σact A ⊢ B) (A ⊢ δ B)
+  Σ⊣δ .Iso.fun f x a = f (act x) (x , Eq.refl , a)
+  Σ⊣δ .Iso.inv g _ (x , Eq.refl , a) = g x a
+  Σ⊣δ .Iso.sec _ = refl
+  Σ⊣δ .Iso.ret f = funExt λ _ → funExt λ { (x , Eq.refl , a) → refl }
+
+  -- δ ⊣ Πact -- the amazing right adjoint
+  δ⊣Π : {A : TheoryTy ℓA s} {B : TheoryTy ℓB t} → Iso (δ B ⊢ A) (B ⊢ Πact A)
+  δ⊣Π .Iso.fun f _ b x Eq.refl = f x b
+  δ⊣Π .Iso.inv g x b = g (act x) b x Eq.refl
+  δ⊣Π .Iso.sec g = funExt λ _ → funExt λ _ → funExt λ _ → funExt λ { Eq.refl → refl }
+  δ⊣Π .Iso.ret _ = refl
+
+  -- ... and the gap between the two adjoints is exactly the ambiguity
+  -- of the peeling.  Splitting the comparison in two is more telling
+  -- than an Iso, because the two halves are the two halves of freeness:
+  --
+  --   Σ→Π needs the fibre to be a PROPOSITION  -- uniqueness
+  --   Π→Σ needs the fibre to be INHABITED      -- existence
+  --
+  -- Contractible = both = free.  Compare `scanμ` (existence, always)
+  -- and `Free` (uniqueness, per theory): the same split, one level up.
+  Σ→Π : {A : TheoryTy ℓA s} (y : X t)
+      → isProp (Fibre y) → Σact A y → Πact A y
+  Σ→Π {A = A} y pr (x , e , a) x' e' =
+    subst (λ f → A (f .fst)) (pr (x , e) (x' , e')) a
+
+  Π→Σ : {A : TheoryTy ℓA s} (y : X t)
+      → Fibre y → Πact A y → Σact A y
+  Π→Σ y (x , e) h = x , e , h x e
 
   -- ================================================================
   -- THEOREM.  `δ` commutes with EVERY additive connective, on the nose.
