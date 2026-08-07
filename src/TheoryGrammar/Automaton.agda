@@ -86,3 +86,50 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
          → LocallyContractive F → Scanner F → Algᴳ F A
          → (x : X) → ⊤G ⊢ A x
   runAut lc sc α x = hyloLC lc sc α x ∘⊢ ⊤ᴳ-I
+
+  -- ================================================================
+  -- ⊤ ≅ μ(shape), the generic replacement for `⊤ ≅ String`.
+  --
+  -- PORTING.md lists this as stated-but-unbuilt, and says the blocker
+  -- is that `μ` cannot be a motive at `ℓSh`.  It can be avoided: `löb`
+  -- is level-polymorphic, so building the parse DIRECTLY by löb never
+  -- mentions `⟦_⟧c` and never meets the constraint.  Only `shapeOf` is
+  -- needed from the scanner -- the payloads are trivial, since the
+  -- coalgebra is carried by ⊤.
+  --
+  -- EXISTENCE is unconditional: any theory with a decomposition axiom
+  -- and a guarded description can parse every element.
+  --
+  -- UNIQUENESS is `Free`, and it is exactly what distinguishes theories.
+  -- Strings have it -- a word decomposes into characters one way.  Bags
+  -- do not -- a multiset comes apart in |m|! orders -- and THAT is the
+  -- commutative-theory caveat, finally stated as a property rather than
+  -- as a warning: `runAut`'s answer depends on the scanner precisely
+  -- when the theory is not free.
+  -- ================================================================
+
+  scanμ : {F : (x : X) → Functor (xs x)} → ((x : X) → Guarded (F x))
+        → Scanner F → (x : X) → ⊤G ⊢ μᴳ F x
+  scanμ {F = F} gF sc x m _ = go (x , m)
+    where
+      go : (i : Ix) → μ F i
+      go = löb λ { (x' , m') rec →
+             sup (shapeOf (F x') m' (sc x' m' tt*))
+                 (λ p → rec _ (gF x' m' _ p)) }
+
+  Free : ((x : X) → Functor (xs x)) → Type _
+  Free F = (i : Ix) → isContr (μ F i)
+
+  -- given freeness, the parse is unique ...
+  free→isProp : {F : (x : X) → Functor (xs x)} → Free F
+              → (i : Ix) (s t : μ F i) → s ≡ t
+  free→isProp fr i = isContr→isProp (fr i)
+
+  -- ... and in particular INDEPENDENT OF THE SCANNER, which is the
+  -- caveat discharged.
+  scanμ-scanner-irrelevant :
+      {F : (x : X) → Functor (xs x)} → Free F
+    → (gF : (x : X) → Guarded (F x)) (sc sc' : Scanner F)
+    → (x : X) (m : GS .fib .carrier (xs x)) (u : ⊤G m)
+    → scanμ gF sc x m u ≡ scanμ gF sc' x m u
+  scanμ-scanner-irrelevant fr gF sc sc' x m u = free→isProp fr (x , m) _ _

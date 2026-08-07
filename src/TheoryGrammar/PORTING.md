@@ -342,10 +342,21 @@ hypothesis rather than on volume.
 Three things are *stated but unbuilt*, and they matter more than any of
 the above:
 
-- `⊤ ≅ μ(shape)` as the generic replacement for `⊤ ≅ String`. The
-  decomposition axiom exists per-instance (`charCase`, `bagCase`); what
-  is missing is the generic `μ` of the shape functor, forded so
-  `resultSort o` is not a stuck index.
+- ~~`⊤ ≅ μ(shape)`~~ — **built** (`Automaton.agda`), and the stated
+  blocker turned out to be avoidable. It said `μ` cannot be a motive at
+  `ℓSh`. True, but irrelevant: `löb` is level-polymorphic, so building
+  the parse *directly* by löb never mentions `⟦_⟧c` and never meets the
+  constraint. Only `shapeOf` is needed from the scanner, since the
+  coalgebra is carried by ⊤ and its payloads are trivial.
+
+  `scanμ` gives **existence unconditionally**: any theory with a
+  decomposition axiom and a guarded description parses every element.
+  `Free F = ∀ i → isContr (μ F i)` is **uniqueness**, and it is exactly
+  what separates theories — strings have it, bags do not (a multiset
+  comes apart in `|m|!` orders). So the commutative-theory caveat is
+  now a property rather than a warning:
+  `scanμ-scanner-irrelevant` says the parse is independent of the
+  scanner *precisely when the theory is free*.
 - `⊗ ⊣ ⊸` as a single `Iso`. Both sides have definitional β/η
   *separately*; making them definitionally inverse to each other needs
   the promodel's focused and unfocused splittings to be definitionally
