@@ -330,6 +330,38 @@ module HyloM {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
     μ≅ν i .Iso.sec = μ→ν-ν→μ i
     μ≅ν i .Iso.ret = ν→μ-μ→ν i
 
+    -- ================================================================
+    -- HOW TO USE THE COINCIDENCE, in any theory.
+    --
+    -- Define by CORECURSION; reason by INDUCTION.
+    --
+    -- A coalgebra is a PRODUCER -- a parser, a scanner, an unfold --
+    -- and it is usually the natural way to write a program: you say how
+    -- to take one step, not how to bottom out.  `νunfold` runs it, but
+    -- its result is an infinite object, and the only native way to
+    -- reason about those is bisimulation.
+    --
+    -- Transporting along `μ≅ν` lands the SAME program in `μ`, where
+    -- ordinary structural induction applies and `fold-unique` is
+    -- available.  So `ana` below is "write it coinductively, get a
+    -- finite structure back", and it is the general form of what
+    -- `Automaton.scanμ` does for the ⊤-coalgebra specifically.
+    --
+    -- The other direction of use is that initiality and finality have
+    -- become ONE universal property.  `fold-unique` is structural and
+    -- cheap; `ν-η` is the same statement transported.  Anything proved
+    -- of a fold now holds of the corresponding unfold, for free.
+    --
+    -- What makes all of this available is guardedness alone -- no
+    -- hypothesis on the theory, and no pragma.
+    -- ================================================================
+
+    ana : {ℓM : Level} (M : Ix → Type ℓM)
+          (γ : (x : X) (m : GS .fib .carrier (xs x)) → M (x , m)
+             → Σ[ sh ∈ Sh (F x) m ] ((p : Pos (F x) m sh) → M (nx (F x) m sh p)))
+        → (i : Ix) → M i → μ F i
+    ana M γ i a = ν→μ i (νunfold M γ i a)
+
   -- ================================================================
   -- THE GENERIC ▷-APP.  A `later` may be consumed at any position of a
   -- GUARDED description, because guardedness is precisely the
