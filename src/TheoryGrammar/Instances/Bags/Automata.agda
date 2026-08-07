@@ -35,6 +35,7 @@ open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
+open import TheoryGrammar.Theories.MonoidStar
 
 open import TheoryGrammar.Instances.Bags.Sorted A public
 
@@ -45,41 +46,31 @@ open import TheoryGrammar.Instances.Bags.Sorted A public
 bagAtom : Gr
 bagAtom = ⊕ᴰ A (λ x → ⌈ x ∷ [] ⌉)
 
-ScanSlot : Bool → Functor tt
-ScanSlot true  = ⌜ bagAtom ⌝
-ScanSlot false = Var tt
+-- The description and its guardedness are NOT bag-specific: they are
+-- the generic monoid star at this atom.  `MonStar` is opened
+-- selectively so its `Guard` re-export does not collide with the one
+-- the Bags chain already applied.
+open MonStar bagGraded using (starSlot; starF; starGuarded; ProperBody)
 
-ScanAlt : Bool → Functor tt
-ScanAlt true  = ⌜ ε' ⌝
-ScanAlt false = ⊗e appop ScanSlot
+ScanSlot : Bool → Functor tt
+ScanSlot = starSlot bagAtom
 
 ScanF : Unit → Functor tt
-ScanF _ = ⊕e Bool ScanAlt
+ScanF = starF bagAtom
 
 -- ==================================================================
--- (2) guardedness: an atom is a non-trivial resource, so the recursive
--- slot sits at a strictly smaller degree.  Point-free, and the same
--- three lines as at strings.
+-- (2) guardedness -- the ONE bag-specific line: an atom is a proper
+-- resource.  Everything else comes from the generic layer.
 -- ==================================================================
 
 atomNN : bagAtom ⊢ NonTrivial
 atomNN = ⊕ᴰ-E λ x → ⌈⌉-E (x , ⊗-mk (left nil) Eq.refl tt)
 
-scanGuarded : (x : Unit) → Guarded (ScanF x)
-scanGuarded tt = <⊕e Bool ScanAlt alt
-  where
-    go : (m : Bag) (sp : MonSplit appop m)
-         (sh : (a : Bool) → Sh (ScanSlot a) (MonParts appop m sp a))
-         (a : Bool) (p : Pos (ScanSlot a) _ (sh a))
-       → degIx (nx (ScanSlot a) _ (sh a) p) < length m
-    go m sp sh true ()
-    go m (u , v , s) sh false p =
-      slotProper appop m (u , v , s) false (≤Var tt)
-                 (atomNN u (lower (sh true))) (sh false) p
+atomProper : ProperBody bagAtom
+atomProper m sp a = atomNN _ a
 
-    alt : (b : Bool) → Guarded (ScanAlt b)
-    alt true  = <⌜⌝ ε'
-    alt false = ⊗-guard appop ScanSlot go
+scanGuarded : (x : Unit) → Guarded (ScanF x)
+scanGuarded = starGuarded bagAtom atomProper
 
 -- ==================================================================
 -- (3) ⊤'s coalgebra -- `bagCase`, which already existed, in the
