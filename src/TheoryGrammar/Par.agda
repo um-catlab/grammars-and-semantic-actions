@@ -46,6 +46,35 @@ module ParS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
   Allˢ o A m = (sp : Fib .Split o m)
            → ((a : σ .arities o) → A a (Fib .parts o m sp a))
 
+  -- ================================================================
+  -- ⊗ˢ AND Allˢ ARE Σ AND Π OVER THE SAME FIBRE.
+  --
+  -- Their bodies are identical; only the quantifier over `Split o m`
+  -- differs.  That is not a coincidence of spelling -- it says the
+  -- promodel's splitting relation is an ACCESSIBILITY STRUCTURE on
+  -- worlds, and these two connectives are its base-change adjoints,
+  -- exactly as `Σact`/`Πact` (TheoryGrammar.Derivative) are for an
+  -- action.  The difference is only that an action is a FUNCTION and a
+  -- splitting is a RELATION, so `δ` -- the middle functor of the triple
+  -- -- exists in the first case and not the second.
+  --
+  -- This also gives `DecReadable`'s `splitProp` a home.  "At most one
+  -- decomposition" is precisely the condition under which the Σ and the
+  -- Π agree, so unique readability is not an ad-hoc decidability
+  -- hypothesis: it is the statement that this accessibility structure
+  -- is a PROPOSITION, and hence that `⊗` already IS its own `All`.
+  -- Compare `Derivative.Σ→Π`, which is the same map for an action.
+  -- ================================================================
+
+  ⊗ˢ→Allˢ : (o : σ .ops)
+            {A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a)}
+            (m : Fib .carrier (σ .resultSort o))
+          → isProp (Fib .Split o m)
+          → ⊗ˢ o A m → Allˢ o A m
+  ⊗ˢ→Allˢ o {A = A} m pr (sp , h) sp' =
+    subst (λ s → (a : σ .arities o) → A a (Fib .parts o m s a)) (pr sp sp') h
+
+
   module _ (o : σ .ops)
            (A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a)) where
 
