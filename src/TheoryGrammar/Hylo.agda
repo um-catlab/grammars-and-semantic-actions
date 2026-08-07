@@ -232,6 +232,55 @@ module HyloM {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
     hyloLC-unique = löb-unique hyloStep
 
   -- ================================================================
+  -- INITIAL/FINAL COINCIDENCE -- the guarded fixed-point theorem.
+  --
+  -- A contractive functor has a UNIQUE fixed point, so its initial
+  -- algebra and its final coalgebra coincide.  Both comparison maps are
+  -- generic in the theory and short, and each is exactly one of the two
+  -- recursion principles:
+  --
+  --   μ→ν  is a FOLD.  Needs no hypothesis at all -- every finite tree
+  --        is in particular an infinite one.  Note it goes through the
+  --        raw container `fold`, not `foldC`, which is what keeps it
+  --        level-polymorphic: `foldC` pins its motive at `ℓSh` and `ν F`
+  --        lives at `ℓμ`.
+  --
+  --   ν→μ  is a LÖB.  This is the direction with content: it says a
+  --        ν-element is FINITE, and contractivity is exactly the reason.
+  --        The `<` proof löb demands at each recursive position is the
+  --        guardedness witness, handed over unchanged.
+  -- ================================================================
+
+  μ→ν : {F : (x : X) → Functor (xs x)} → (i : Ix) → μ F i → ν F i
+  μ→ν {F = F} = fold (ν F) λ x m sh f → νinto (x , m) (sh , f)
+
+  module _ {F : (x : X) → Functor (xs x)} (gF : (x : X) → Guarded (F x)) where
+
+    ν→μStep : (i : Ix) → ▷ (λ j → ν F j → μ F j) i → (ν F i → μ F i)
+    ν→μStep (x , m) rec t =
+      sup (t .shOf) (λ p → rec _ (gF x m (t .shOf) p) (t .nxOf p))
+
+    ν→μ : (i : Ix) → ν F i → μ F i
+    ν→μ = löb ν→μStep
+
+    -- ONE ROUND TRIP IS PROVABLE, and it is the μ one: recursion on the
+    -- finite tree, with `löb-unfold` supplying the single step.
+    ν→μ-μ→ν : (i : Ix) (t : μ F i) → ν→μ i (μ→ν i t) ≡ t
+    ν→μ-μ→ν (x , m) (sup sh f) =
+      funExt⁻ (löb-unfold ν→μStep (x , m)) (μ→ν (x , m) (sup sh f))
+      ∙ cong (sup sh) (funExt λ p → ν→μ-μ→ν _ (f p))
+
+    -- THE OTHER ROUND TRIP IS NOT, and it is the same wall as `coind`.
+    -- `μ→ν ∘ ν→μ ≡ id` on `ν F` is a statement about infinite objects:
+    -- it has to be proved by copattern, and the corecursive call lands
+    -- under `funExt`, which is not a guard.  So the coincidence is
+    -- established here as a RETRACTION -- μ F is a retract of ν F,
+    -- generically -- and upgrading it to an isomorphism needs exactly
+    -- the coinductive uniqueness that `Inductive.agda` declines to
+    -- assume with a `{-# TERMINATING #-}`.  Initiality is cheap,
+    -- finality is not; this is the third place that shows up.
+
+  -- ================================================================
   -- THE GENERIC ▷-APP.  A `later` may be consumed at any position of a
   -- GUARDED description, because guardedness is precisely the
   -- strictness the `later` demands.  This is the analogue of
