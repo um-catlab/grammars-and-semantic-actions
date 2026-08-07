@@ -110,14 +110,13 @@ to exist.
 
 ## Remaining work
 
-- `μ` of the shape functor, forded so `resultSort o` is not a stuck
-  index — then `⊤ ≅ μ(shape)` as the generic replacement for `⊤ ≅ String`.
-- The `⊗ ⊣ ⊸` adjunction as a single `Iso`. Both sides now have
-  definitional β/η *separately*; making them definitionally inverse to
-  **each other** additionally requires the promodel's unfocused and
-  focused splittings to be definitionally inverse. That holds for
-  strings but is not automatic, and is the right place to state it as a
-  promodel law.
+- ~~`μ` of the shape functor … `⊤ ≅ μ(shape)`~~ — **done**
+  (`Automaton.scanμ` / `Free`); the "stuck index" blocker was avoidable,
+  since `löb` is level-polymorphic and never meets it.
+- ~~The `⊗ ⊣ ⊸` adjunction as a single `Iso`~~ — **done**, and no
+  promodel law was needed. `⊸ˢ` is `Πᴿ` at the payload-decorated
+  splitting relation (`Par.⊸ˢ≅Πᴿ`), so the adjunction is
+  `BaseChange.Σ⊣Π`. See the note at the end of this file.
 - Port `Grammar/Inductive/` (μ, the SPFunctor) over `Fibered`; the
   `NO_POSITIVITY_CHECK` there is an opacity artefact, not slime, and the
   container presentation removes it.
