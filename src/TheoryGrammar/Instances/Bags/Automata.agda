@@ -99,7 +99,7 @@ scanCoalg tt m _ = go (bagCase m tt)
 -- The three pieces, bundled.
 bagScan : Scan
 bagScan .desc       = ScanF
-bagScan .contractive = scanGuarded
+bagScan .contractive = guarded→LC scanGuarded
 bagScan .decompose  = scanCoalg
 
 -- ==================================================================

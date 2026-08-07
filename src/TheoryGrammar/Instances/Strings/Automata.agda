@@ -87,7 +87,7 @@ scanCoalg tt m _ = go (charCase m tt)
 -- of the input rather than an arbitrary description.
 charScan : Scan
 charScan .desc       = ScanF
-charScan .contractive = scanGuarded
+charScan .contractive = guarded→LC scanGuarded
 charScan .decompose  = scanCoalg
 
 -- ==================================================================

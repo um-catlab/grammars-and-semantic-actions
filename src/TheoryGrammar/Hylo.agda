@@ -165,6 +165,49 @@ module HyloM {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   hyloᴳ gF c α x m a = hyloC gF c α (x , m) a
 
   -- ================================================================
+  -- LOCAL CONTRACTIVITY, asked for directly.
+  --
+  -- `Guarded` is a SYNTACTIC condition: it inspects the description's
+  -- positions and checks each next-index has smaller degree.  What the
+  -- recursion actually consumes is the SEMANTIC consequence -- the
+  -- strength `▷(A ⇒ B) → (⟦F⟧ A ⇒ ⟦F⟧ B)`, ccl's `▷HomActionFam`.  That
+  -- is what "F is locally contractive" means, so ask for it.
+  --
+  -- Asking directly pays twice.  The hylomorphism becomes three lines
+  -- (`hyloLC`) with no `mapC`, no `GuardedAt` and no degree arithmetic
+  -- at the use site; and a description that is contractive for a reason
+  -- OTHER than positionwise guardedness is now admissible, where before
+  -- the interface could not express one.
+  --
+  -- `Guarded` survives as the convenient sufficient criterion:
+  -- `guarded→LC` is the one-line bridge, and all the `mapC` machinery
+  -- above is exactly its proof.
+  -- ================================================================
+
+  LocallyContractive : ((x : X) → Functor (xs x)) → Type _
+  LocallyContractive F =
+    {A B : Ix → Type ℓSh} (x : X) (m : GS .fib .carrier (xs x))
+    → ▷ (λ j → A j → B j) (x , m)
+    → ⟦ F x ⟧c A m → ⟦ F x ⟧c B m
+
+  guarded→LC : {F : (x : X) → Functor (xs x)}
+             → ((x : X) → Guarded (F x)) → LocallyContractive F
+  guarded→LC {F = F} gF x m rec t =
+    mapC (F x) m (GS .deg (xs x) m) t (λ p → gF x m _ p) (λ j q → rec j q)
+
+  -- THE HYLOMORPHISM FROM LOCAL CONTRACTIVITY ALONE.  löb supplies the
+  -- recursive call as a `▷`, the strength pushes it under the functor,
+  -- and the algebra closes it up.  Nothing else happens.
+  module _ {F : (x : X) → Functor (xs x)} (lc : LocallyContractive F)
+           {A B : Fam} (c : Coalgᴳ F A) (α : Algᴳ F B) where
+
+    hyloLC : (x : X) → A x ⊢ B x
+    hyloLC x m =
+      löb {A = λ i → ⌞ A ⌟ i → ⌞ B ⌟ i}
+          (λ { (x' , m') rec a → α x' m' (lc x' m' rec (c x' m' a)) })
+          (x , m)
+
+  -- ================================================================
   -- THE GENERIC ▷-APP.  A `later` may be consumed at any position of a
   -- GUARDED description, because guardedness is precisely the
   -- strictness the `later` demands.  This is the analogue of

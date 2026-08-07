@@ -67,13 +67,12 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   --               an element apart -- it is the theory's decomposition
   --               axiom (`charCase`, `bagCase`), not a guess.
   --
-  --   contractive : F is GUARDED -- every recursive position sits at a
-  --               STRICTLY smaller degree.  This IS local contractivity,
-  --               not an analogue of it: `mapGuarded` DERIVES ccl's
-  --               `▷HomActionFam` strength `▷(A ⇒ B) → (H A ⇒ H B)` from
-  --               it, which is the datum a locally contractive functor
-  --               is defined by.  Guardedness is the syntactic form,
-  --               local contractivity the semantic one.
+  --   contractive : F is LOCALLY CONTRACTIVE -- it carries the strength
+  --               `▷(A ⇒ B) → (⟦F⟧ A ⇒ ⟦F⟧ B)`.  Asked for directly,
+  --               rather than via the syntactic `Guarded`, because the
+  --               strength is what the recursion actually consumes and
+  --               a description could be contractive for some other
+  --               reason.  `guarded→LC` is the usual way to supply it.
   --
   -- Neither implies the other: `decompose` alone permits a step that
   -- consumes nothing and loops; `contractive` alone describes a shrinking
@@ -86,11 +85,12 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   Scanner : ((x : X) → Functor (xs x)) → Type _
   Scanner F = Coalgᴳ F (λ _ → ⊤ᴳ)
 
-  record Scan : Type (ℓ-max ℓS (ℓ-max ℓ (ℓ-max ℓ' (ℓ-max ℓV
-                     (ℓ-max ℓX (ℓ-max (ℓ-suc ℓA) (ℓ-max ℓSh ℓPos))))))) where
+  record Scan : Type (ℓ-max ℓS (ℓ-max ℓ (ℓ-max ℓV (ℓ-max ℓX
+                     (ℓ-max (ℓ-suc ℓ') (ℓ-max (ℓ-suc ℓP)
+                     (ℓ-max (ℓ-suc ℓA) ℓPos))))))) where
     field
       desc       : (x : X) → Functor (xs x)
-      contractive : (x : X) → Guarded (desc x)
+      contractive : LocallyContractive desc
       decompose  : Scanner desc
 
   open Scan public
@@ -102,7 +102,7 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   -- ... and running it needs NOTHING FURTHER: the scan already carries
   -- the decomposition and the termination certificate.
   runAut : {S : Scan} {A : Fam} → Automaton S A → (x : X) → ⊤ᴳ ⊢ A x
-  runAut {S = S} α = hyloᴳ (S .contractive) (S .decompose) α
+  runAut {S = S} α = hyloLC (S .contractive) (S .decompose) α
 
   -- the same at the ℓ-zero terminal, which is what instances write
   runAut⊤ : {S : Scan} {A : Fam} → Automaton S A → (x : X) → ⊤G ⊢ A x
