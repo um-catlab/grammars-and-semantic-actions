@@ -201,6 +201,84 @@ module Deriv {S : Type ℓS} (X : S → Type ℓX) {s t : S} (act : X s → X t)
   Σact-& y (x , e , (a , b)) = (x , e , a) , (x , e , b)
 
   -- ================================================================
+  -- THE MODALITIES, DERIVED.
+  --
+  -- Not posited: an adjunction generates a monad on one side and a
+  -- comonad on the other, and the triple `Σact ⊣ δ ⊣ Πact` therefore
+  -- generates four composites.  The two that live on WORLDS are the
+  -- modalities, and their content is forced:
+  --
+  --   ◇ = Σact ∘ δ   the COMONAD of `Σact ⊣ δ`   -- ◇ B y ≅ Fibre y × B y
+  --   □ = Πact ∘ δ   the MONAD  of `δ ⊣ Πact`    -- □ B y ≅ Fibre y → B y
+  --
+  -- So they are exactly conjunction-with and implication-from the
+  -- FIBRE -- the open/closed pair at the subobject "y is reachable by
+  -- this action".  Nothing modal had to be invented; `◇-ε`/`□-η` below
+  -- are the counit and unit, and the characterisations are Isos.
+  --
+  -- The two composites on the SOURCE side are more interesting, and one
+  -- of them corrects a claim I made earlier.  `Ker = δ ∘ Σact` is the
+  -- monad of the first adjunction, and
+  --
+  --   Ker A x = Σ[ x' ] (act x' ≡ act x) × A x'
+  --
+  -- is "A holds at something the action cannot distinguish from x".
+  -- That is the ambiguity of peeling, and `Ker-triv` says it collapses
+  -- to the identity EXACTLY when the action is injective.  For every
+  -- action in this tree -- all of them cons-like -- it is injective, so
+  -- this monad is trivial and the ◇/□ distinction is empty.  The place
+  -- ambiguity actually lives in e.g. bags is `Split`, not the action.
+  -- ================================================================
+
+  ◇ : TheoryTy ℓA t → TheoryTy (ℓ-max ℓX ℓA) t
+  ◇ B = Σact (δ B)
+
+  □ : TheoryTy ℓA t → TheoryTy (ℓ-max ℓX ℓA) t
+  □ B = Πact (δ B)
+
+  -- counit and comultiplication of ◇
+  ◇-ε : {B : TheoryTy ℓA t} → ◇ B ⊢ B
+  ◇-ε _ (x , Eq.refl , b) = b
+
+  ◇-δ : {B : TheoryTy ℓA t} → ◇ B ⊢ ◇ (◇ B)
+  ◇-δ _ (x , Eq.refl , b) = x , Eq.refl , (x , Eq.refl , b)
+
+  -- unit and multiplication of □
+  □-η : {B : TheoryTy ℓA t} → B ⊢ □ B
+  □-η _ b x Eq.refl = b
+
+  □-μ : {B : TheoryTy ℓA t} → □ (□ B) ⊢ □ B
+  □-μ _ h x Eq.refl = h x Eq.refl x Eq.refl
+
+  -- ... and both are the fibre, conjoined and implied
+  ◇-fibre : {B : TheoryTy ℓA t} (y : X t) → Iso (◇ B y) (Fibre y × B y)
+  ◇-fibre y .Iso.fun (x , Eq.refl , b) = (x , Eq.refl) , b
+  ◇-fibre y .Iso.inv ((x , Eq.refl) , b) = x , Eq.refl , b
+  ◇-fibre y .Iso.sec ((x , Eq.refl) , b) = refl
+  ◇-fibre y .Iso.ret (x , Eq.refl , b)   = refl
+
+  □-fibre : {B : TheoryTy ℓA t} (y : X t) → Iso (□ B y) (Fibre y → B y)
+  □-fibre y .Iso.fun h (x , Eq.refl) = h x Eq.refl
+  □-fibre y .Iso.inv g x Eq.refl     = g (x , Eq.refl)
+  □-fibre y .Iso.sec g = funExt λ { (x , Eq.refl) → refl }
+  □-fibre y .Iso.ret h = funExt λ x → funExt λ { Eq.refl → refl }
+
+  -- THE AMBIGUITY MONAD, on the source side.
+  Ker : TheoryTy ℓA s → TheoryTy (ℓ-max ℓX ℓA) s
+  Ker A = δ (Σact A)
+
+  Ker-η : {A : TheoryTy ℓA s} → A ⊢ Ker A
+  Ker-η x a = x , Eq.refl , a
+
+  -- trivial exactly when the action is mono
+  Ker-triv : {A : TheoryTy ℓA s}
+           → ((x x' : X s) → act x Eq.≡ act x' → x Eq.≡ x')
+           → Ker A ⊢ A
+  Ker-triv {A = A} inj x (x' , e , a) = go (inj x' x e) a
+    where go : x' Eq.≡ x → A x' → A x
+          go Eq.refl a' = a'
+
+  -- ================================================================
   -- THEOREM.  `δ` commutes with EVERY additive connective, on the nose.
   --
   -- Each of these is the corresponding line of `Grammar/Derivative/`,
