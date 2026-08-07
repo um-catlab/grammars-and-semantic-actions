@@ -66,6 +66,41 @@ record Fibered {S : Type ℓS} (σ : SortedSig S ℓ ℓ') ℓX ℓP
 open Fibered public
 
 -- ==================================================================
+-- IS THE SPLITTING A RELATION, OR A STRUCTURE?
+--
+-- `Split o m` is Type-valued, deliberately: a parse is DATA, not a
+-- truth value.  But that leaves a question this development kept
+-- answering implicitly, and two properties kept getting conflated.
+--
+--   isProp (Split o m)   "at most one decomposition".  This is
+--                        `DecReadable`'s `splitProp`, and it is FALSE
+--                        for strings -- `w` has `length w + 1` cuts.
+--
+--   PartsFaithful        "a decomposition is determined by its parts".
+--                        Weaker, and orthogonal: it allows many cuts,
+--                        but says the cut is recoverable from what it
+--                        cuts into.
+--
+-- The second is the one that separates the instances.  For STRINGS it
+-- holds -- `Split3 u v w` is "w = u ++ v" witnessed structurally, so
+-- the parts pin the witness (this is what an `isSet` alphabet buys, and
+-- the K-failures in `SeqUnambig` are all it failing to be provable
+-- without one).  For BAGS it does NOT: `Ilv [x] [x] [x,x]` has two
+-- distinct proofs, `left (right nil)` and `right (left nil)`, with the
+-- same parts.  The interleaving pattern is genuine data.
+--
+-- So "bags are ambiguous" is really TWO facts, and only naming both
+-- makes it precise: bags have many cuts (like strings) AND many
+-- witnesses per cut (unlike strings).
+-- ==================================================================
+
+PartsFaithful : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP)
+              → σ .ops → Type (ℓ-max ℓ' (ℓ-max ℓX ℓP))
+PartsFaithful {σ = σ} Fib o =
+  (m : Fib .carrier (σ .resultSort o)) (sp sp' : Fib .Split o m)
+  → Fib .parts o m sp ≡ Fib .parts o m sp' → sp ≡ sp'
+
+-- ==================================================================
 -- A CHOSEN TOTAL POINT, separately.
 --
 -- `op`, `split` and `parts-split` used to sit in the record above.  They
