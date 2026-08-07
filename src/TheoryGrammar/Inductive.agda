@@ -286,3 +286,111 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   -- `Instances/Nat/Species.agda`, where the Dyck constructors are then
   -- combinator composites rather than pointful matches.
   -- ================================================================
+
+  -- ================================================================
+  -- THE GREATEST FIXED POINT.
+  --
+  -- Same container, dualised.  `μ` is a `data` whose constructor packs
+  -- a shape with a function on positions; `ν` is a `record` whose
+  -- fields PROJECT those two.  It lives here rather than in a
+  -- `Coinductive` module for a concrete reason: everything it needs
+  -- (`Functor`, `Sh`, `Pos`, `nx`, `fromC`) is defined inside `Ind`, so
+  -- a separate module would mean a SECOND application of `Ind`, and two
+  -- applications of a parameterised module make every shared name
+  -- ambiguous at any file that sees both.
+  --
+  -- No pragmas here either, and no positivity worry: `ν` is a record,
+  -- so its recursive occurrence is behind a projection by construction.
+  --
+  -- `out-into` is `refl`; `into-out` is NOT, and the asymmetry is worth
+  -- recording.  Agda deliberately withholds η from COINDUCTIVE records
+  -- -- it would let the productivity checker be fooled -- so
+  -- `into (out t) ≡ t` cannot hold definitionally.  It is still one
+  -- line, but as a path built by COPATTERN on the interval rather than
+  -- by `refl`, which is the cubical way of saying "bisimilar at depth
+  -- one".  `μ`'s dual `roll-unroll` needed a pattern match; this needs
+  -- a copattern.
+  -- ================================================================
+
+  record ν (F : (x : X) → Functor (xs x)) (i : Ix) : Type ℓμ where
+    coinductive
+    field
+      shOf : Sh (F (i .fst)) (i .snd)
+      nxOf : (p : Pos (F (i .fst)) (i .snd) shOf)
+           → ν F (nx (F (i .fst)) (i .snd) shOf p)
+
+  open ν public
+
+  module _ {F : (x : X) → Functor (xs x)} where
+
+    -- ν is a coalgebra, definitionally
+    out : (i : Ix) → ν F i → ⟦ F (i .fst) ⟧ (ν F) (i .snd)
+    out i t = t .shOf , t .nxOf
+
+    into : (i : Ix) → ⟦ F (i .fst) ⟧ (ν F) (i .snd) → ν F i
+    into i (sh , f) .shOf = sh
+    into i (sh , f) .nxOf = f
+
+    out-into : (i : Ix) (t : ⟦ F (i .fst) ⟧ (ν F) (i .snd))
+             → out i (into i t) ≡ t
+    out-into i t = refl
+
+    into-out : (i : Ix) (t : ν F i) → into i (out i t) ≡ t
+    into-out i t j .shOf   = t .shOf
+    into-out i t j .nxOf p = t .nxOf p
+
+    -- THE CORECURSOR, against a coalgebra over an arbitrary motive.
+    -- Dual to `fold`, and productive by copatterns rather than
+    -- terminating by structural descent.
+    unfold : {ℓM : Level} (M : Ix → Type ℓM)
+           → ((x : X) (m : Fib .carrier (xs x))
+              → M (x , m)
+              → Σ[ sh ∈ Sh (F x) m ]
+                  ((p : Pos (F x) m sh) → M (nx (F x) m sh p)))
+           → (i : Ix) → M i → ν F i
+    unfold M γ i a .shOf   = γ (i .fst) (i .snd) a .fst
+    unfold M γ i a .nxOf p = unfold M γ _ (γ (i .fst) (i .snd) a .snd p)
+
+    -- ... and its computation rule, on the nose
+    unfold-β : {ℓM : Level} (M : Ix → Type ℓM) (γ : _) (i : Ix) (a : M i)
+             → out i (unfold M γ i a)
+             ≡ Fmap (F (i .fst)) (λ j → unfold M γ j) (i .snd)
+                    (γ (i .fst) (i .snd) a)
+    unfold-β M γ i a = refl
+
+    -- ================================================================
+    -- WHAT IS NOT HERE: uniqueness of the corecursor (`coind`).
+    --
+    -- Splitting the record into `shOf`/`nxOf` is what makes `unfold`
+    -- above pass the productivity checker unaided.  Upstream's `ν` has
+    -- a single field `unroll : ⟦ F x ⟧ (ν F) w`, so its recursive
+    -- occurrence is buried under a Σ and a function type, and
+    -- `Grammar/Coinductive/Indexed.agda` carries `{-# TERMINATING #-}`
+    -- on `corecHomo` for exactly that reason.  Here there is no pragma.
+    --
+    -- The split does NOT rescue uniqueness, and it is worth saying why
+    -- rather than leaving it implicit.  A homomorphism `ϕ` agrees with
+    -- `unfold` on `shOf` by `cong fst` of the homomorphism square, and
+    -- on `nxOf` by `cong snd` of it composed with the corecursive call
+    -- --  but that call sits under `funExt`, which is not a guard, so
+    -- the definition fails termination checking.  Measured, not
+    -- assumed: the attempt is what produced this note.  Upstream's
+    -- `ν-η'` carries a second `{-# TERMINATING #-}`.
+    --
+    -- So the options are (a) the pragma, as upstream, or (b) a genuine
+    -- cubical bisimulation argument.  Neither is taken here: this tree
+    -- has no unsafe pragmas and should not acquire one as a side effect
+    -- of a port.  Everything above is pragma-free and is what the
+    -- COMPUTATIONAL uses of ν need; `coind` is required only to package
+    -- ν as a c-c-l `TerminalCoalgebra`
+    -- (`Grammar/Coinductive/TerminalCoalgebra.agda`), which is the one
+    -- piece of that group still outstanding.
+    -- ================================================================
+
+  -- The corecursor against a CONNECTIVE-form coalgebra -- dual to
+  -- `foldC`, and `fromC` where that used `toC`.  Same rationale: a
+  -- coalgebra should never be written against `Sh`/`Pos`.
+  unfoldC : {F : (x : X) → Functor (xs x)} (A : Ix → Type ℓSh)
+          → CoalgC F A → (i : Ix) → A i → ν F i
+  unfoldC {F = F} A γ =
+    unfold A (λ x m a → fromC (F x) m (γ x m a))

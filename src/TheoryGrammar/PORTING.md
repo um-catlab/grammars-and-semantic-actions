@@ -144,7 +144,7 @@ Not a plan — a measurement against the 21 modules currently in
 | SequentialUnambiguity | 5 | `Instances/Strings/SeqUnambig` | **core done** |
 | **Greedy** | 2 | — | **not started**; needs Levi |
 | RegularExpression | 2 | `Instances/Strings/RegExp` | **done** |
-| **Coinductive** | 4 | — | **not started**; no `ν` in the generic layer |
+| Coinductive | 4 | `Inductive` (`ν`, `unfold`) | **core done**; `coind` open |
 | String, External | 12 | — | *replaced*, not ported |
 
 So the additive half is done, the multiplicative core is done, and what
@@ -232,8 +232,35 @@ hypothesis rather than on volume.
    unambiguous regex that is no loss; for an ambiguous one it is
    precisely the ambiguity, and a parser (as opposed to a matcher)
    would have to keep it.
-4. **`Coinductive` (4 files).** Needs a greatest-fixed-point counterpart
-   to `Inductive`'s `μ`. Not blocked on anything but volume.
+4. **`Coinductive`** — core done, and it was **not** just volume.
+   `ν` sits next to `μ` inside `Ind` (a separate module would mean a
+   second application of `Ind`, and two applications of a parameterised
+   module make every shared name ambiguous — a trap that cost time
+   twice in this session).
+
+   The measured result: **splitting the record into `shOf`/`nxOf`
+   removes upstream's first `{-# TERMINATING #-}`.** Upstream's `ν` has
+   one field `unroll : ⟦ F x ⟧ (ν F) w`, burying the recursive
+   occurrence under a Σ and a function type, so `corecHomo` needs the
+   pragma; here `unfold` is productive unaided. That mirrors `μ`, which
+   needs no `NO_POSITIVITY_CHECK` here for the same structural reason.
+
+   Two things it does *not* fix, both verified rather than assumed:
+
+   * `into-out` is **not** `refl`. Agda withholds η from coinductive
+     records (it would let the productivity checker be fooled), so the
+     round trip is a one-line copattern on the interval instead.
+   * **`coind` (uniqueness) still needs the pragma.** `ϕ` agrees with
+     `unfold` on `shOf` by `cong fst` of the homomorphism square and on
+     `nxOf` by `cong snd` composed with the corecursive call — but that
+     call sits under `funExt`, which is not a guard, so termination
+     checking fails. Upstream carries a second `{-# TERMINATING #-}`
+     for it. Not taken here: this tree has no unsafe pragmas and should
+     not acquire one as a side effect of a port. The choice is (a) the
+     pragma or (b) a real cubical bisimulation argument.
+
+   `coind` is needed only to package ν as a c-c-l `TerminalCoalgebra`;
+   every computational use of ν is covered.
 5. ~~**`Subgrammar`**~~ — **done**, and it confirms the classification:
    it needs *no signature at all*. `Compr` lives at `CarrierNotation`,
    the same level as `&` and `⊕`, because comprehension is pointwise in
