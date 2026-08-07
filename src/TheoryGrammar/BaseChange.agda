@@ -126,6 +126,60 @@ module Rel {I : Type ℓI} {J : Type ℓJ} (R : I → J → Type ℓR) where
   Σᴿ-& j (i , r , (a , b)) = (i , r , a) , (i , r , b)
 
   -- ================================================================
+  -- WHEN DOES Σ DISTRIBUTE BACK IN?  The general principle.
+  --
+  -- `Σᴿ-&` above goes one way unconditionally.  The converse is what
+  -- "unambiguity" means, and stating it generally shows it is not a
+  -- property of the theory but of the theory RELATIVE TO A PAIR OF
+  -- GRAMMARS -- which is why `⊛` could never yield `DecReadable`.
+  --
+  --   `isProp (FibreR j)` -- "at most one way to reach j" -- is far too
+  --   strong.  It fails for strings, where `w` has `length w + 1` cuts,
+  --   and no hypothesis will rescue it.
+  --
+  --   `DetPair A B j` asks only that two witnesses agree WHEN ONE
+  --   SUPPORTS AN A AND THE OTHER A B.  Most of the fibre is allowed to
+  --   be as ambiguous as it likes, provided the parts these two
+  --   grammars can see pin it down.
+  --
+  -- That is the general form of sequential unambiguity, and it is what
+  -- `Instances.Strings.SeqUnambig.⊗-align` establishes at the splitting
+  -- relation: `⊛` supplies exactly `DetPair`.
+  --
+  -- PRECISION.  `DetPair` is ANTITONE in its grammars -- refining
+  -- either one preserves it (`DetPair-mono`).  So unambiguity is
+  -- inherited by more precise grammars, never lost, which is the right
+  -- behaviour: sharpening what you are parsing cannot introduce
+  -- ambiguity.  Taking `A = B = ⊤` recovers `isProp (FibreR j)`, the
+  -- global condition, as the least precise case.
+  --
+  -- ARBITRARY OPERATIONS.  Nothing here mentions arity.  At an n-ary
+  -- operation the alignment reads
+  --     (⊗ o A) & (⊗ o A) ⊢ ⊗ o (λ a → A a & A a)
+  -- and the hypothesis is the same `DetPair` at the same relation.
+  -- Binary-ness was never used.
+  -- ================================================================
+
+  FibreR : J → Type (ℓ-max ℓI ℓR)
+  FibreR j = Σ[ i ∈ I ] R i j
+
+  DetPair : (I → Type ℓA) → (I → Type ℓB) → J → Type _
+  DetPair A B j = (p q : FibreR j) → A (p .fst) → B (q .fst) → p ≡ q
+
+  -- the converse of `Σᴿ-&`, exactly under that hypothesis
+  Σᴿ-&-conv : {A : I → Type ℓA} {B : I → Type ℓB} (j : J)
+            → DetPair A B j
+            → (Σᴿ A j × Σᴿ B j) → Σᴿ (λ i → A i × B i) j
+  Σᴿ-&-conv {B = B} j det ((i , r , a) , (i' , r' , b)) =
+    i , r , a , subst B (cong fst (sym (det (i , r) (i' , r') a b))) b
+
+  -- unambiguity is inherited by refinement
+  DetPair-mono : {A A' : I → Type ℓA} {B B' : I → Type ℓB} (j : J)
+               → ((i : I) → A' i → A i) → ((i : I) → B' i → B i)
+               → DetPair A B j → DetPair A' B' j
+  DetPair-mono j fa fb det p q a' b' = det p q (fa (p .fst) a') (fb (q .fst) b')
+
+  -- ================================================================
   -- THE COMPARISON, and what it measures.
   --
   -- `Σᴿ A j → Πᴿ`-style universality needs the accessibility structure
