@@ -18,6 +18,9 @@ open import Cubical.Data.Sum using (_⊎_; inl; inr)
 open import Cubical.Data.Unit
 open import Cubical.Data.Empty using (⊥*)
 
+import Cubical.Data.Equality as Eq
+open import Cubical.Foundations.Isomorphism
+open import TheoryGrammar.BaseChange
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.Rules
@@ -65,6 +68,32 @@ module ParS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
   -- is a PROPOSITION, and hence that `⊗` already IS its own `All`.
   -- Compare `Derivative.Σ→Π`, which is the same map for an action.
   -- ================================================================
+
+  -- ================================================================
+  -- ⊗ˢ IS Σᴿ, on the nose up to one singleton contraction.
+  --
+  -- A relation is the graph of the projection out of its total space,
+  -- and the total space here is `Splits o` -- the splittings together
+  -- with what they split.  Base change along that projection IS the
+  -- convolution.  Both round trips are `refl`; the only content is
+  -- contracting `Σ[ m' ] m' ≡ m`.
+  -- ================================================================
+
+  Splits : σ .ops → Type (ℓ-max ℓX ℓP)
+  Splits o = Σ[ m ∈ Fib .carrier (σ .resultSort o) ] Fib .Split o m
+
+  ⊗ˢ≅Σᴿ : (o : σ .ops)
+          {A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a)}
+          (m : Fib .carrier (σ .resultSort o))
+        → Iso (⊗ˢ o A m)
+              (Rel.Σᴿ (λ (s : Splits o) (m' : Fib .carrier (σ .resultSort o))
+                         → s .fst Eq.≡ m')
+                      (λ s → (a : σ .arities o) → A a (Fib .parts o (s .fst) (s .snd) a))
+                      m)
+  ⊗ˢ≅Σᴿ o m .Iso.fun (sp , h)                    = (m , sp) , Eq.refl , h
+  ⊗ˢ≅Σᴿ o m .Iso.inv ((_ , sp) , Eq.refl , h)    = sp , h
+  ⊗ˢ≅Σᴿ o m .Iso.sec ((_ , sp) , Eq.refl , h)    = refl
+  ⊗ˢ≅Σᴿ o m .Iso.ret (sp , h)                    = refl
 
   ⊗ˢ→Allˢ : (o : σ .ops)
             {A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a)}

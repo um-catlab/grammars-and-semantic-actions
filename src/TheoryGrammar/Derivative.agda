@@ -39,6 +39,7 @@ open import Cubical.Data.Sigma
 open import Cubical.Data.Sum using (_⊎_; inl; inr)
 import Cubical.Data.Equality as Eq
 
+open import TheoryGrammar.BaseChange
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.CanonicalFocus
@@ -219,6 +220,15 @@ module Deriv {S : Type ℓS} (X : S → Type ℓX) {s t : S} (act : X s → X t)
   -- fibres on one side.  That is the whole reason actions have a `δ`
   -- and relations -- splittings, orders -- do not.
   -- ================================================================
+
+  -- The identifications, as proofs rather than remarks.  Both are
+  -- `refl`: `Σact`/`Πact` were base change all along, at the action's
+  -- graph and at its transpose.
+  Σact≡ : {A : TheoryTy ℓA s} → Σact A ≡ Rel.Σᴿ (λ (x : X s) (y : X t) → act x Eq.≡ y) A
+  Σact≡ = refl
+
+  Πact≡ : {A : TheoryTy ℓA s} → Πact A ≡ Rel.Πᴿ (λ (y : X t) (x : X s) → act x Eq.≡ y) A
+  Πact≡ = refl
 
   δ≅Π : {B : TheoryTy ℓB t} (x : X s)
       → Iso (δ B x) ((y : X t) → act x Eq.≡ y → B y)

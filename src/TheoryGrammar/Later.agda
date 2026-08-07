@@ -11,6 +11,8 @@ module TheoryGrammar.Later where
 open import Cubical.Foundations.Prelude
 open import Cubical.Induction.WellFounded
 
+open import TheoryGrammar.BaseChange
+
 -- ==================================================================
 -- THE LATER MODALITY, GENERIC IN THE ORDER.
 --
@@ -33,6 +35,12 @@ module WFLater {ℓI ℓR : Level} {I : Type ℓI} (_≺_ : I → I → Type ℓ
   löb : {ℓM : Level} {A : I → Type ℓM}
       → ((i : I) → ▷ A i → A i) → (i : I) → A i
   löb {A = A} step = WFI.induction ≺-wf λ i rec → step i (λ j q → rec j q)
+
+  -- `▷` IS base change: `Πᴿ` at the relation "j is smaller than i".
+  -- Not an analogy -- `refl`.
+  ▷≡Πᴿ : {ℓM : Level} {A : I → Type ℓM}
+       → ▷ A ≡ Rel.Πᴿ (λ i j → j ≺ i) A
+  ▷≡Πᴿ = refl
 
   -- ================================================================
   -- löb IS THE UNIQUE FIXED POINT.
