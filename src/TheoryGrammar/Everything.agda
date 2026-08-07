@@ -34,6 +34,7 @@ import TheoryGrammar.Fibered
 import TheoryGrammar.Gluing
 import TheoryGrammar.Graded
 import TheoryGrammar.Grading
+import TheoryGrammar.HLevels
 import TheoryGrammar.Hoare
 import TheoryGrammar.Hylo
 import TheoryGrammar.Induction
