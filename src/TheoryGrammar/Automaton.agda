@@ -55,24 +55,55 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   -- decomposition axiom gets automata for free.
   -- ================================================================
 
-  -- An automaton is an ALGEBRA -- as a term, `⟦F⟧ A ⊢ A`.
-  Automaton : ((x : X) → Functor (xs x)) → Fam → Type _
-  Automaton F A = Algᴳ F A
+  -- ================================================================
+  -- WHAT `F` IS.
+  --
+  -- Not any description.  An algebra for an arbitrary `F` is just an
+  -- algebra -- it has no claim to be an automaton, and nothing lets you
+  -- run it.  Running needs TWO further facts, and together they are
+  -- exactly "F is a decreasing decomposition of the input":
+  --
+  --   decompose : ⊤ carries a coalgebra for F.  So F really does take
+  --               an element apart -- it is the theory's decomposition
+  --               axiom (`charCase`, `bagCase`), not a guess.
+  --
+  --   contractive : F is GUARDED -- every recursive position sits at a
+  --               STRICTLY smaller degree.  This IS local contractivity,
+  --               not an analogue of it: `mapGuarded` DERIVES ccl's
+  --               `▷HomActionFam` strength `▷(A ⇒ B) → (H A ⇒ H B)` from
+  --               it, which is the datum a locally contractive functor
+  --               is defined by.  Guardedness is the syntactic form,
+  --               local contractivity the semantic one.
+  --
+  -- Neither implies the other: `decompose` alone permits a step that
+  -- consumes nothing and loops; `contractive` alone describes a shrinking
+  -- process that need not be a decomposition of THIS input.  Bundling
+  -- them is what deserves a name, so the bundle gets one and the
+  -- automaton is an algebra FOR IT.
+  -- ================================================================
 
-  -- ⊤ carries a COALGEBRA.  Carried by the terminal GRAMMAR `⊤ᴳ`, so
-  -- this is a term `⊤ᴳ ⊢ ⟦F⟧ ⊤ᴳ` -- not a function out of a bare
-  -- `Unit*`.  Supplying one is the theory's decomposition axiom.
+  -- ⊤'s coalgebra for a description -- the theory's decomposition axiom.
   Scanner : ((x : X) → Functor (xs x)) → Type _
   Scanner F = Coalgᴳ F (λ _ → ⊤ᴳ)
 
-  -- Running an automaton is the hylomorphism, and it is a TERM out of ⊤.
-  runAut : {F : (x : X) → Functor (xs x)} {A : Fam}
-         → ((x : X) → Guarded (F x)) → Scanner F → Automaton F A
-         → (x : X) → ⊤ᴳ ⊢ A x
-  runAut g sc α = hyloᴳ g sc α
+  record Scan : Type (ℓ-max ℓS (ℓ-max ℓ (ℓ-max ℓ' (ℓ-max ℓV
+                     (ℓ-max ℓX (ℓ-max (ℓ-suc ℓA) (ℓ-max ℓSh ℓPos))))))) where
+    field
+      desc       : (x : X) → Functor (xs x)
+      contractive : (x : X) → Guarded (desc x)
+      decompose  : Scanner desc
+
+  open Scan public
+
+  -- An automaton over a scan is an ALGEBRA for its description.
+  Automaton : Scan → Fam → Type _
+  Automaton S A = Algᴳ (S .desc) A
+
+  -- ... and running it needs NOTHING FURTHER: the scan already carries
+  -- the decomposition and the termination certificate.
+  runAut : {S : Scan} {A : Fam} → Automaton S A → (x : X) → ⊤ᴳ ⊢ A x
+  runAut {S = S} α = hyloᴳ (S .contractive) (S .decompose) α
 
   -- the same at the ℓ-zero terminal, which is what instances write
-  runAut⊤ : {F : (x : X) → Functor (xs x)} {A : Fam}
-          → ((x : X) → Guarded (F x)) → Scanner F → Automaton F A
-          → (x : X) → ⊤G ⊢ A x
-  runAut⊤ g sc α x = runAut g sc α x ∘⊢ ⊤ᴳ-I
+  runAut⊤ : {S : Scan} {A : Fam} → Automaton S A → (x : X) → ⊤G ⊢ A x
+  runAut⊤ {S = S} α x = runAut {S = S} α x ∘⊢ ⊤ᴳ-I

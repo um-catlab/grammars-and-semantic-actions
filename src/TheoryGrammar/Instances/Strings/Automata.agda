@@ -83,6 +83,13 @@ scanCoalg tt m _ = go (charCase m tt)
     go (inr (c , sp , h)) =
       false , sp , λ { true  → lift (c , h true) ; false → tt* }
 
+-- The three pieces, bundled: this is what makes `ScanF` a decomposition
+-- of the input rather than an arbitrary description.
+charScan : Scan
+charScan .desc       = ScanF
+charScan .contractive = scanGuarded
+charScan .decompose  = scanCoalg
+
 -- ==================================================================
 -- A DFA is ONE WAY TO BUILD such an algebra -- not a separate notion.
 -- The carrier is "given a state, does the machine accept from here?",
@@ -95,7 +102,7 @@ module DFA (Q : Type₀) (step : Q → Char → Q) (acc : Q → Bool) where
   Acceptance : Fam
   Acceptance _ _ = Q → Bool
 
-  dfaAlg : Automaton ScanF Acceptance
+  dfaAlg : Automaton charScan Acceptance
   dfaAlg tt =
     ⊕ᴰ-E λ { true  → λ _ _ q → acc q
            ; false →
@@ -105,4 +112,4 @@ module DFA (Q : Type₀) (step : Q → Char → Q) (acc : Q → Bool) where
 
   -- ... and the observable: run from a start state
   accepts : Q → ⊤G ⊢ (λ _ → Bool)
-  accepts q₀ m x = runAut⊤ scanGuarded scanCoalg dfaAlg tt m x q₀
+  accepts q₀ m x = runAut⊤ {S = charScan} dfaAlg tt m x q₀

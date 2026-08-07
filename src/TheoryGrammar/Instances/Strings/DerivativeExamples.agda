@@ -20,6 +20,7 @@ open import Cubical.Data.Nat using (ℕ; zero; suc)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Enumerable using (No)
+open import TheoryGrammar.SemanticAction using (passes; _↦_; _at_)
 
 decBool : (a b : Bool) → (a Eq.≡ b) ⊎ No (a Eq.≡ b)
 decBool true  true  = inl Eq.refl
@@ -52,13 +53,11 @@ dlit : SlotDec Alit
 dlit true  w = decLit w
 dlit false w = inl tt
 
-_ : isYes (decδ⊗ Alit dlit (true ∷ false ∷ [])) ≡ true
-_ = refl
-
-_ : isYes (decδ⊗ Alit dlit (false ∷ [])) ≡ false
-_ = refl
-
-_ : isYes (decδ⊗ Alit dlit []) ≡ false
+_ : passes ((λ w → isYes (decδ⊗ Alit dlit w)) at
+             ( (true ∷ false ∷ []) ↦ true
+             ∷ (false ∷ [])        ↦ false
+             ∷ []                  ↦ false
+             ∷ [] ))
 _ = refl
 
 -- ==================================================================
@@ -74,29 +73,23 @@ b = ⟨ false ⟩
 a⋆b : RegExp false
 a⋆b = a ⋆ · b
 
-_ : isYes (decRE a⋆b (false ∷ [])) ≡ true
-_ = refl
-
-_ : isYes (decRE a⋆b (true ∷ true ∷ false ∷ [])) ≡ true
-_ = refl
-
-_ : isYes (decRE a⋆b []) ≡ false
-_ = refl
-
-_ : isYes (decRE a⋆b (true ∷ true ∷ [])) ≡ false
-_ = refl
-
-_ : isYes (decRE a⋆b (false ∷ false ∷ [])) ≡ false
+_ : passes ((λ w → isYes (decRE a⋆b w)) at
+             ( (false ∷ [])                 ↦ true
+             ∷ (true ∷ true ∷ false ∷ [])   ↦ true
+             ∷ []                           ↦ false
+             ∷ (true ∷ true ∷ [])           ↦ false
+             ∷ (false ∷ false ∷ [])         ↦ false
+             ∷ [] ))
 _ = refl
 
 -- alternation, and a nullable regex: (a ∪ b) ⋆ accepts everything
 allBits : RegExp true
 allBits = (a ∪ b) ⋆
 
-_ : isYes (decRE allBits []) ≡ true
-_ = refl
-
-_ : isYes (decRE allBits (true ∷ false ∷ true ∷ [])) ≡ true
+_ : passes ((λ w → isYes (decRE allBits w)) at
+             ( []                          ↦ true
+             ∷ (true ∷ false ∷ true ∷ [])  ↦ true
+             ∷ [] ))
 _ = refl
 
 -- ==================================================================
@@ -125,15 +118,15 @@ _ = refl
 
 -- (b) NOT a DFA -- any algebra will do, which is the point of defining
 --     an automaton as one.  This one has an infinite state space.
-countAlg : Automaton ScanF (λ _ _ → ℕ)
+countAlg : Automaton charScan (λ _ _ → ℕ)
 countAlg tt =
   ⊕ᴰ-E λ { true  → λ _ _ → 0
          ; false → ⊗ˢ-E appop {A = λ a → ⟦ starSlot char a ⟧c (λ _ → ℕ)}
                               {B = λ _ → ℕ}
                               (λ _ _ h → suc (h false)) }
 
-_ : runAut⊤ scanGuarded scanCoalg countAlg tt (true ∷ false ∷ true ∷ []) tt ≡ 3
+_ : runAut⊤ {S = charScan} countAlg tt (true ∷ false ∷ true ∷ []) tt ≡ 3
 _ = refl
 
-_ : runAut⊤ scanGuarded scanCoalg countAlg tt [] tt ≡ 0
+_ : runAut⊤ {S = charScan} countAlg tt [] tt ≡ 0
 _ = refl
