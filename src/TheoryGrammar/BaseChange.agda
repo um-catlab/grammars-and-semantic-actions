@@ -43,15 +43,11 @@ module TheoryGrammar.BaseChange where
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.Isomorphism
 open import Cubical.Data.Sigma
+open import Cubical.Data.Sum using (_⊎_; inl; inr)
 
 private variable ℓI ℓJ ℓR ℓA ℓB : Level
 
 module Rel {I : Type ℓI} {J : Type ℓJ} (R : I → J → Type ℓR) where
-
-  -- families and their maps, written out since this module sits below
-  -- the grammar notation
-  _⟶_ : {K : Type ℓI} → (K → Type ℓA) → (K → Type ℓB) → Type _
-  _⟶_ {K = K} A B = (k : K) → A k → B k
 
   Σᴿ : (I → Type ℓA) → (J → Type (ℓ-max ℓI (ℓ-max ℓR ℓA)))
   Σᴿ A j = Σ[ i ∈ I ] (R i j × A i)
@@ -94,6 +90,40 @@ module Rel {I : Type ℓI} {J : Type ℓJ} (R : I → J → Type ℓR) where
 
   □-mult : {A : I → Type ℓA} (i : I) → □ᴿ (□ᴿ A) i → □ᴿ A i
   □-mult i h j r = h j r .snd .snd j (h j r .snd .fst)
+
+  -- ================================================================
+  -- PRESERVATION.  A left adjoint preserves coproducts; a right adjoint
+  -- preserves products.  Proved ONCE here, they hold for every instance
+  -- -- the guarded modality, the derivative's adjoints, and the
+  -- convolution -- which is the point of having the general form.
+  --
+  -- Neither preserves the other side, and the asymmetry is real:
+  -- `Σᴿ (A & B)` is strictly stronger than `Σᴿ A & Σᴿ B` once `R i j`
+  -- has more than one inhabitant, because the left says ONE witness
+  -- serves both.  `Σᴿ-&` is that one-way comparison.
+  -- ================================================================
+
+  Πᴿ-& : {B : J → Type ℓA} {C : J → Type ℓB} (i : I)
+       → Iso (Πᴿ (λ j → B j × C j) i) (Πᴿ B i × Πᴿ C i)
+  Πᴿ-& i .Iso.fun h       = (λ j r → h j r .fst) , (λ j r → h j r .snd)
+  Πᴿ-& i .Iso.inv (f , g) = λ j r → f j r , g j r
+  Πᴿ-& i .Iso.sec _ = refl
+  Πᴿ-& i .Iso.ret _ = refl
+
+  Σᴿ-⊕ : {A : I → Type ℓA} {B : I → Type ℓB} (j : J)
+       → Iso (Σᴿ (λ i → A i ⊎ B i) j) (Σᴿ A j ⊎ Σᴿ B j)
+  Σᴿ-⊕ j .Iso.fun (i , r , inl a)   = inl (i , r , a)
+  Σᴿ-⊕ j .Iso.fun (i , r , inr b)   = inr (i , r , b)
+  Σᴿ-⊕ j .Iso.inv (inl (i , r , a)) = i , r , inl a
+  Σᴿ-⊕ j .Iso.inv (inr (i , r , b)) = i , r , inr b
+  Σᴿ-⊕ j .Iso.sec (inl _) = refl
+  Σᴿ-⊕ j .Iso.sec (inr _) = refl
+  Σᴿ-⊕ j .Iso.ret (_ , _ , inl _) = refl
+  Σᴿ-⊕ j .Iso.ret (_ , _ , inr _) = refl
+
+  Σᴿ-& : {A : I → Type ℓA} {B : I → Type ℓB} (j : J)
+       → Σᴿ (λ i → A i × B i) j → (Σᴿ A j × Σᴿ B j)
+  Σᴿ-& j (i , r , (a , b)) = (i , r , a) , (i , r , b)
 
   -- ================================================================
   -- THE COMPARISON, and what it measures.

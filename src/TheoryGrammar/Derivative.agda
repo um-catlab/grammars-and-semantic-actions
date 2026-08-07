@@ -153,89 +153,22 @@ module Deriv {S : Type ℓS} (X : S → Type ℓX) {s t : S} (act : X s → X t)
   -- ================================================================
   -- WHAT THE TRIPLE BUYS.
   --
-  -- (1) It EXPLAINS the refl laws below.  `δ` has a left adjoint, so it
-  --     preserves limits (⊤, &, &ᴰ, ⇒); it has a right adjoint, so it
-  --     preserves colimits (⊥, ⊕, ⊕ᴰ).  Those are exactly the seven
-  --     laws proved by `refl` in `δ-laws`.  They were not a coincidence
-  --     of precomposition being pointwise -- they are adjointness.
+  -- (1) It EXPLAINS the refl laws below.  `δ` has a left adjoint so it
+  --     preserves limits (⊤, &, &ᴰ, ⇒); a right adjoint so it preserves
+  --     colimits (⊥, ⊕, ⊕ᴰ).  Those are exactly the seven laws proved
+  --     by `refl` in `δ-laws`.  Not a coincidence of pointwiseness --
+  --     adjointness.
   --
-  -- (2) The adjoints preserve on their own side, and this is the part
-  --     that is new rather than a re-reading.  `Σact` is a left adjoint
-  --     so it preserves COPRODUCTS; `Πact` is a right adjoint so it
-  --     preserves PRODUCTS.  Neither preserves the other side, and that
-  --     asymmetry is real: `Σact (A & B)` is strictly stronger than
-  --     `Σact A & Σact B` when the fibre has more than one point, since
-  --     the left says ONE peeling witnesses both.
+  -- (2) The adjoints preserve on their own side.  Those laws are NOT
+  --     restated here: they are `Rel.Πᴿ-&`, `Rel.Σᴿ-⊕` and `Rel.Σᴿ-&`
+  --     in `TheoryGrammar.BaseChange`, proved once for every
+  --     accessibility structure.  `Σact≡`/`Πact≡` below are `refl`, so
+  --     they apply to `Σact`/`Πact` with no transport.
   --
-  -- (3) Read as parsers: `Σact` is the MAY semantics ("some
-  --     decomposition works") and `Πact` the MUST ("every decomposition
-  --     does").  For a free theory they agree.  For a commutative one
-  --     they are two genuinely different parsers, and until now only
-  --     the `Σ` one had a name.
+  -- (3) Read as parsers, `Σact` is "some decomposition works" and
+  --     `Πact` "every decomposition does".  They agree exactly when
+  --     peeling is unambiguous -- see `Ker` below, which measures it.
   -- ================================================================
-
-  -- Πact preserves products, on the nose in both directions.
-  Πact-& : {A : TheoryTy ℓA s} {B : TheoryTy ℓB s} (y : X t)
-         → Iso (Πact (A & B) y) ((Πact A & Πact B) y)
-  Πact-& y .Iso.fun h       = (λ x e → h x e .fst) , (λ x e → h x e .snd)
-  Πact-& y .Iso.inv (f , g) = λ x e → f x e , g x e
-  Πact-& y .Iso.sec _ = refl
-  Πact-& y .Iso.ret _ = refl
-
-  -- Σact preserves coproducts.
-  Σact-⊕ : {A : TheoryTy ℓA s} {B : TheoryTy ℓB s} (y : X t)
-         → Iso (Σact (A ⊕ B) y) ((Σact A ⊕ Σact B) y)
-  Σact-⊕ y .Iso.fun (x , e , inl a) = inl (x , e , a)
-  Σact-⊕ y .Iso.fun (x , e , inr b) = inr (x , e , b)
-  Σact-⊕ y .Iso.inv (inl (x , e , a)) = x , e , inl a
-  Σact-⊕ y .Iso.inv (inr (x , e , b)) = x , e , inr b
-  Σact-⊕ y .Iso.sec (inl _) = refl
-  Σact-⊕ y .Iso.sec (inr _) = refl
-  Σact-⊕ y .Iso.ret (_ , _ , inl _) = refl
-  Σact-⊕ y .Iso.ret (_ , _ , inr _) = refl
-
-  -- The MAY/MUST comparison in the other direction is free: one
-  -- peeling that works is, in particular, evidence at that peeling.
-  -- (The converse is `Σ→Π`, and needs unambiguity.)
-  Σact-& : {A : TheoryTy ℓA s} {B : TheoryTy ℓB s} (y : X t)
-         → Σact (A & B) y → (Σact A & Σact B) y
-  Σact-& y (x , e , (a , b)) = (x , e , a) , (x , e , b)
-
-  -- ================================================================
-  -- ALL OF THIS IS BASE CHANGE (TheoryGrammar.BaseChange).
-  --
-  -- Write `R x y = act x ≡ y`, the action's graph.  Then
-  --
-  --     Σact = Σᴿ at R          Πact = Πᴿ at the TRANSPOSE of R
-  --
-  -- and -- this is the point -- `δ` is BOTH remaining adjoints:
-  --
-  --     Πᴿ at R          B x = (y) → act x ≡ y → B y   ≅  B (act x)
-  --     Σᴿ at Rᵀ         A x = Σ[ y ] (act x ≡ y) × A y ≅  A (act x)
-  --
-  -- both by contractibility of the singleton, `δ≅Π` below.  So the
-  -- famous triple is not one exotic three-fold adjunction: it is the
-  -- ORDINARY two-fold adjunction `Σᴿ ⊣ Πᴿ` taken at `R` and at `Rᵀ`,
-  -- glued in the middle because a FUNCTION's graph has contractible
-  -- fibres on one side.  That is the whole reason actions have a `δ`
-  -- and relations -- splittings, orders -- do not.
-  -- ================================================================
-
-  -- The identifications, as proofs rather than remarks.  Both are
-  -- `refl`: `Σact`/`Πact` were base change all along, at the action's
-  -- graph and at its transpose.
-  Σact≡ : {A : TheoryTy ℓA s} → Σact A ≡ Rel.Σᴿ (λ (x : X s) (y : X t) → act x Eq.≡ y) A
-  Σact≡ = refl
-
-  Πact≡ : {A : TheoryTy ℓA s} → Πact A ≡ Rel.Πᴿ (λ (y : X t) (x : X s) → act x Eq.≡ y) A
-  Πact≡ = refl
-
-  δ≅Π : {B : TheoryTy ℓB t} (x : X s)
-      → Iso (δ B x) ((y : X t) → act x Eq.≡ y → B y)
-  δ≅Π x .Iso.fun b y Eq.refl = b
-  δ≅Π x .Iso.inv h = h (act x) Eq.refl
-  δ≅Π x .Iso.sec h = funExt λ y → funExt λ { Eq.refl → refl }
-  δ≅Π x .Iso.ret _ = refl
 
   -- ================================================================
   -- THE MODALITIES, DERIVED.
