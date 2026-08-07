@@ -144,7 +144,7 @@ Not a plan — a measurement against the 21 modules currently in
 | SequentialUnambiguity | 5 | `Instances/Strings/SeqUnambig` | **core done** |
 | Greedy | 2 | `Instances/Strings/Greedy`, `Graded` (`Automaton`) | **done** |
 | RegularExpression | 2 | `Instances/Strings/RegExp` | **done** |
-| Coinductive | 4 | `Inductive` (`ν`, `unfold`) | **core done**; `coind` open |
+| Coinductive | 4 | `Inductive` (`ν`), `Hylo` (`ν-η`, `μ≅ν`) | **done** |
 | String, External | 12 | — | *replaced*, not ported |
 
 So the additive half is done, the multiplicative core is done, and what

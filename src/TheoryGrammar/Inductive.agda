@@ -439,32 +439,22 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
     νunfold-β M γ i a = refl
 
     -- ================================================================
-    -- WHAT IS NOT HERE: uniqueness of the corecursor (`coind`).
+    -- UNIQUENESS OF THE CORECURSOR lives in `Hylo` as `ν-η`, because it
+    -- needs guardedness -- and it needs NO pragma.
     --
-    -- Splitting the record νinto `shOf`/`nxOf` is what makes `νunfold`
-    -- above pass the productivity checker unaided.  Upstream's `ν` has
-    -- a single field `unroll : ⟦ F x ⟧ (ν F) w`, so its recursive
-    -- occurrence is buried under a Σ and a function type, and
-    -- `Grammar/Coinductive/Indexed.agda` carries `{-# TERMINATING #-}`
-    -- on `corecHomo` for exactly that reason.  Here there is no pragma.
+    -- Splitting the record into `shOf`/`nxOf` is what makes `νunfold`
+    -- above pass the productivity checker unaided; upstream's `ν` has a
+    -- single field `⟦ F x ⟧ (ν F) w`, burying the recursive occurrence
+    -- under a Σ and a function type, so its `corecHomo` carries
+    -- `{-# TERMINATING #-}`.
     --
-    -- The split does NOT rescue uniqueness, and it is worth saying why
-    -- rather than leaving it implicit.  A homomorphism `ϕ` agrees with
-    -- `νunfold` on `shOf` by `cong fst` of the homomorphism square, and
-    -- on `nxOf` by `cong snd` of it composed with the corecursive call
-    -- --  but that call sits under `funExt`, which is not a guard, so
-    -- the definition fails termination checking.  Measured, not
-    -- assumed: the attempt is what produced this note.  Upstream's
-    -- `ν-η'` carries a second `{-# TERMINATING #-}`.
-    --
-    -- So the options are (a) the pragma, as upstream, or (b) a genuine
-    -- cubical bisimulation argument.  Neither is taken here: this tree
-    -- has no unsafe pragmas and should not acquire one as a side effect
-    -- of a port.  Everything above is pragma-free and is what the
-    -- COMPUTATIONAL uses of ν need; `coind` is required only to package
-    -- ν as a c-c-l `TerminalCoalgebra`
-    -- (`Grammar/Coinductive/TerminalCoalgebra.agda`), which is the one
-    -- piece of that group still outstanding.
+    -- Uniqueness looks like it needs a second pragma, and upstream's
+    -- `ν-η'` has one: the obvious proof is corecursive and its call
+    -- lands under `funExt`, which is not a guard.  But the recursion
+    -- does not have to be on the ν-element.  For a GUARDED F the INDEX
+    -- is well-founded, so the argument runs as a löb instead -- see
+    -- `Hylo.ν-η` and `Hylo.μ→ν-ν→μ`.  What the upstream pragma actually
+    -- buys is generality in `F` that this tree never uses.
     -- ================================================================
 
   -- The corecursor against a CONNECTIVE-form coalgebra -- dual to

@@ -9,6 +9,7 @@
 module TheoryGrammar.Hylo where
 
 open import Cubical.Foundations.Prelude
+open import Cubical.Foundations.Isomorphism
 open import Cubical.Data.Sigma
 open import Cubical.Data.Nat
 open import Cubical.Data.Nat.Order
@@ -270,15 +271,64 @@ module HyloM {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
       funExt⁻ (löb-unfold ν→μStep (x , m)) (μ→ν (x , m) (sup sh f))
       ∙ cong (sup sh) (funExt λ p → ν→μ-μ→ν _ (f p))
 
-    -- THE OTHER ROUND TRIP IS NOT, and it is the same wall as `coind`.
-    -- `μ→ν ∘ ν→μ ≡ id` on `ν F` is a statement about infinite objects:
-    -- it has to be proved by copattern, and the corecursive call lands
-    -- under `funExt`, which is not a guard.  So the coincidence is
-    -- established here as a RETRACTION -- μ F is a retract of ν F,
-    -- generically -- and upgrading it to an isomorphism needs exactly
-    -- the coinductive uniqueness that `Inductive.agda` declines to
-    -- assume with a `{-# TERMINATING #-}`.  Initiality is cheap,
-    -- finality is not; this is the third place that shows up.
+    -- ... AND SO IS THE OTHER, without a pragma.
+    --
+    -- This looked blocked: `μ→ν ∘ ν→μ ≡ id` is a statement about
+    -- INFINITE objects, so the obvious proof is corecursive, and the
+    -- corecursive call lands under `funExt`, which is not a guard.
+    -- That is why upstream carries `{-# TERMINATING #-}`.
+    --
+    -- But the recursion does not have to be on the ν-element.
+    -- GUARDEDNESS already makes the INDEX well-founded, so the proof can
+    -- be a löb on `i` -- and löb is total.  The recursive appeal then
+    -- comes from the löb hypothesis at a strictly smaller index rather
+    -- than from a self-call, so nothing needs to be productive and the
+    -- termination checker has nothing to complain about.
+    --
+    -- No copattern-on-a-path either: `νinto-νout` already packages the
+    -- one-step η, so the proof is three `cong`s in a row.
+    --
+    -- Semantically this is the guarded fixed-point theorem doing its
+    -- job -- contractivity is exactly what lets an argument about
+    -- infinite objects be run by well-founded recursion instead.
+    μ→ν-ν→μ : (i : Ix) (u : ν F i) → μ→ν i (ν→μ i u) ≡ u
+    μ→ν-ν→μ = löb λ { (x , m) rec u →
+        cong (μ→ν (x , m)) (funExt⁻ (löb-unfold ν→μStep (x , m)) u)
+      ∙ cong (λ g → νinto (x , m) (u .shOf , g))
+             (funExt λ p → rec _ (gF x m (u .shOf) p) (u .nxOf p))
+      ∙ νinto-νout (x , m) u }
+
+    -- THE SAME TRICK KILLS `coind`.  Uniqueness of the corecursor was
+    -- the other thing upstream needed `{-# TERMINATING #-}` for, and it
+    -- is blocked for an ARBITRARY functor.  For a GUARDED one it is
+    -- not: the recursive indices decrease, so löb on the index does the
+    -- job again and no corecursion appears.
+    --
+    -- That is the real content of the pragma upstream carries -- it is
+    -- paying for generality in `F` that this tree never uses, since
+    -- every description it builds is guarded anyway.
+    ν-η : {ℓM : Level} (M : Ix → Type ℓM)
+          (γ : (x : X) (m : GS .fib .carrier (xs x)) → M (x , m)
+             → Σ[ sh ∈ Sh (F x) m ] ((p : Pos (F x) m sh) → M (nx (F x) m sh p)))
+          (ϕ : (i : Ix) → M i → ν F i)
+        → ((i : Ix) (a : M i)
+           → νout i (ϕ i a)
+           ≡ (γ (i .fst) (i .snd) a .fst
+             , λ p → ϕ _ (γ (i .fst) (i .snd) a .snd p)))
+        → (i : Ix) (a : M i) → ϕ i a ≡ νunfold M γ i a
+    ν-η M γ ϕ hom = löb λ { (x , m) rec a →
+        sym (νinto-νout (x , m) (ϕ (x , m) a))
+      ∙ cong (νinto (x , m)) (hom (x , m) a)
+      ∙ cong (λ g → νinto (x , m) (γ x m a .fst , g))
+             (funExt λ p → rec _ (gF x m (γ x m a .fst) p) (γ x m a .snd p))
+      ∙ νinto-νout (x , m) (νunfold M γ (x , m) a) }
+
+    -- Hence the coincidence is a genuine ISOMORPHISM, for every theory.
+    μ≅ν : (i : Ix) → Iso (μ F i) (ν F i)
+    μ≅ν i .Iso.fun = μ→ν i
+    μ≅ν i .Iso.inv = ν→μ i
+    μ≅ν i .Iso.sec = μ→ν-ν→μ i
+    μ≅ν i .Iso.ret = ν→μ-μ→ν i
 
   -- ================================================================
   -- THE GENERIC ▷-APP.  A `later` may be consumed at any position of a
