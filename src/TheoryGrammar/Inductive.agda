@@ -288,6 +288,39 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
         → AlgC F B → (i : Ix) → μ F i → B i
   foldC {F = F} B α = fold B λ x m sh f → α x m (toC (F x) m (sh , f))
 
+  -- ================================================================
+  -- μ IS THE INITIAL ALGEBRA, for every theory.
+  --
+  -- `foldᴳ α` is an algebra map out of μ as a TERM, and `fold-unique`
+  -- says it is the only one.  Together: μ is initial.
+  --
+  -- Note this needs NO pragma, where ν's dual `coind` does.  The
+  -- asymmetry is not incidental: uniqueness for μ recurses structurally
+  -- on the element being folded, so the termination checker sees it;
+  -- uniqueness for ν has to produce an infinite proof and the
+  -- corecursive call ends up under `funExt`, which is not a guard.
+  -- ================================================================
+
+  μᴳ : ((x : X) → Functor (xs x)) → (x : X) → TheoryTy ℓμ (xs x)
+  μᴳ F x m = μ F (x , m)
+
+  foldᴳ : {F : (x : X) → Functor (xs x)} {A : Fam}
+        → Algᴳ F A → (x : X) → μᴳ F x ⊢ A x
+  foldᴳ {A = A} α x m t = foldC ⌞ A ⌟ α (x , m) t
+
+  fold-unique : {F : (x : X) → Functor (xs x)} {A : Fam}
+                (α : Algᴳ F A) (h : (x : X) → μᴳ F x ⊢ A x)
+              → ((x : X) (m : Fib .carrier (xs x)) (sh : Sh (F x) m)
+                 (f : (p : Pos (F x) m sh) → μ F (nx (F x) m sh p))
+                 → h x m (sup sh f)
+                 ≡ α x m (toC (F x) m (sh , λ p → h _ _ (f p))))
+              → (x : X) (m : Fib .carrier (xs x)) (t : μᴳ F x m)
+              → h x m t ≡ foldᴳ α x m t
+  fold-unique {F = F} α h hh x m (sup sh f) =
+    hh x m sh f
+    ∙ cong (λ g → α x m (toC (F x) m (sh , g)))
+           (funExt λ p → fold-unique α h hh _ _ (f p))
+
   -- The shape underlying a connective-form element (the payload erased).
   -- This is what lets guardedness -- which is stated with Pos/nx -- be
   -- applied to a term written against the connectives, WITHOUT the
