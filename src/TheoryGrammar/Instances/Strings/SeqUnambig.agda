@@ -271,15 +271,22 @@ strPartsFaithful ss m (u , v , s) (u' , v' , s') e =
 
 module _ (ss : isSet String) {A B : Gr} (su : A ⊛ B) where
 
-  private
-    spEq : (w : String) (sp sp' : MonSplit appop w)
+  -- THIS IS `DetPair` (TheoryGrammar.BaseChange) at the splitting
+  -- relation, spelled concretely.  It is the reusable content of `⊛`:
+  -- two splittings that both carry an A on the left and a B on the
+  -- right are equal.  Nothing downstream of it mentions `levi` or
+  -- `First`/`FollowLast` -- those are used only to produce it.
+  --
+  -- Exposed rather than kept private because it, not `⊗-align`, is
+  -- what a client with a different conclusion in mind would want.
+  ⊛→detSplit : (w : String) (sp sp' : MonSplit appop w)
          → A (MonParts appop w sp true)  → B (MonParts appop w sp false)
          → A (MonParts appop w sp' true) → B (MonParts appop w sp' false)
          → sp ≡ sp'
-    spEq w (u , v , s) (u' , v' , s') a b a' b' =
-      strPartsFaithful ss w (u , v , s) (u' , v' , s')
-        (funExt λ { true  → Eq.eqToPath (sameParts su s s' a b a' b' .fst)
-                  ; false → Eq.eqToPath (sameParts su s s' a b a' b' .snd) })
+  ⊛→detSplit w (u , v , s) (u' , v' , s') a b a' b' =
+    strPartsFaithful ss w (u , v , s) (u' , v' , s')
+      (funExt λ { true  → Eq.eqToPath (sameParts su s s' a b a' b' .fst)
+                ; false → Eq.eqToPath (sameParts su s s' a b a' b' .snd) })
 
   ⊗-align : ((A ⊗' B) & (A ⊗' B)) ⊢ ((A & A) ⊗' (B & B))
   ⊗-align w ((sp , h) , (sp' , h')) =
@@ -288,7 +295,7 @@ module _ (ss : isSet String) {A B : Gr} (su : A ⊛ B) where
            ; false → h false , subst (λ s → B (MonParts appop w s false))
                                      (sym eq) (h' false) }
     where eq : sp ≡ sp'
-          eq = spEq w sp sp' (h true) (h false) (h' true) (h' false)
+          eq = ⊛→detSplit w sp sp' (h true) (h false) (h' true) (h' false)
 
   -- The external statement, for comparison.  Note where the work is:
   -- `eq` -- the alignment -- is the whole content, and the two
@@ -300,4 +307,4 @@ module _ (ss : isSet String) {A B : Gr} (su : A ⊛ B) where
     ΣPathP (eq , isProp→PathP
                    (λ _ → isPropΠ λ { true → pa _ ; false → pb _ }) h h')
     where eq : sp ≡ sp'
-          eq = spEq w sp sp' (h true) (h false) (h' true) (h' false)
+          eq = ⊛→detSplit w sp sp' (h true) (h false) (h' true) (h' false)
