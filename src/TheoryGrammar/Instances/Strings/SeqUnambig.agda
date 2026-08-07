@@ -32,6 +32,7 @@ open import Cubical.Data.Sum using (_⊎_; inl; inr)
 open import Cubical.Data.Unit
 open import Cubical.Data.List
 open import Cubical.Data.Nat
+open import Cubical.Foundations.HLevels
 open import Cubical.Data.Empty as E using (⊥; ⊥*)
 import Cubical.Data.Equality as Eq
 
@@ -191,3 +192,57 @@ sameParts su sp sp' a₁ b₁ a₂ b₂ = go (sameSplit su sp sp' a₁ b₁ a₂
 -- unique-readability constructor, which is a change to
 -- `Decidable/Tensor.agda` and should be made deliberately.
 -- ==================================================================
+
+-- ==================================================================
+-- `Split3` IS A PROPOSITION -- the parts pin the witness.
+--
+-- This is `PartsFaithful` (TheoryGrammar.Fibered) for strings, and it
+-- was the thing three separate results were waiting on: unambiguity of
+-- `A ⊗ B`, `Free` for the string scan, and the K-failures earlier in
+-- this file.
+--
+-- TWO THINGS ABOUT THE SHAPE OF IT.
+--
+-- First, the hypothesis is an ARGUMENT, not a module parameter.  I had
+-- been proposing to thread `isSet Char` through the whole Strings
+-- chain; that is unnecessary -- only these lemmas want it, so only
+-- these lemmas take it.
+--
+-- Second, and this is why it works at all: the retraction needs NO set
+-- hypothesis.  `Split3 u v w` retracts onto `w ≡ u ++ v` outright.  The
+-- set-ness is used only to know the TARGET is a proposition, which is
+-- `HLevels.⌈⌉-isProp`'s observation one level down -- a path in a set.
+-- ==================================================================
+
+split3Of : ∀ {u v w} → w Eq.≡ (u ++ v) → Split3 u v w
+split3Of {u = u} {v = v} Eq.refl = splitAll u v
+
+private
+  -- `split3Of` commutes with consing, which is the only step the
+  -- induction needs
+  split3Of-∷ : ∀ {c u v w} (e : w Eq.≡ (u ++ v))
+             → split3Of {c ∷ u} {v} (Eq.ap (λ z → c ∷ z) e) ≡ cons (split3Of e)
+  split3Of-∷ Eq.refl = refl
+
+  split3-retract : ∀ {u v w} (s : Split3 u v w) → split3Of (split3App s) ≡ s
+  split3-retract nil      = refl
+  split3-retract (cons t) = split3Of-∷ (split3App t) ∙ cong cons (split3-retract t)
+
+  propEqStr : isSet String → {x y : String} → isProp (x Eq.≡ y)
+  propEqStr ss {x} {y} = subst isProp Eq.PathPathEq (ss x y)
+
+split3IsProp : isSet String → ∀ {u v w} → isProp (Split3 u v w)
+split3IsProp ss =
+  isOfHLevelRetract 1 split3App split3Of split3-retract (propEqStr ss)
+
+-- ... and hence the general property, discharged.  `PartsFaithful` says
+-- a decomposition is determined by its parts; for strings the parts
+-- give the two components and `split3IsProp` gives the third.
+strPartsFaithful : isSet String → PartsFaithful strFib appop
+strPartsFaithful ss m (u , v , s) (u' , v' , s') e =
+  ΣPathP (eu , ΣPathP (ev , isProp→PathP (λ _ → split3IsProp ss) s s'))
+  where
+    eu : u ≡ u'
+    eu = funExt⁻ e true
+    ev : v ≡ v'
+    ev = funExt⁻ e false
