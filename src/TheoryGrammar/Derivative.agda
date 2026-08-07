@@ -201,6 +201,33 @@ module Deriv {S : Type ℓS} (X : S → Type ℓX) {s t : S} (act : X s → X t)
   Σact-& y (x , e , (a , b)) = (x , e , a) , (x , e , b)
 
   -- ================================================================
+  -- ALL OF THIS IS BASE CHANGE (TheoryGrammar.BaseChange).
+  --
+  -- Write `R x y = act x ≡ y`, the action's graph.  Then
+  --
+  --     Σact = Σᴿ at R          Πact = Πᴿ at the TRANSPOSE of R
+  --
+  -- and -- this is the point -- `δ` is BOTH remaining adjoints:
+  --
+  --     Πᴿ at R          B x = (y) → act x ≡ y → B y   ≅  B (act x)
+  --     Σᴿ at Rᵀ         A x = Σ[ y ] (act x ≡ y) × A y ≅  A (act x)
+  --
+  -- both by contractibility of the singleton, `δ≅Π` below.  So the
+  -- famous triple is not one exotic three-fold adjunction: it is the
+  -- ORDINARY two-fold adjunction `Σᴿ ⊣ Πᴿ` taken at `R` and at `Rᵀ`,
+  -- glued in the middle because a FUNCTION's graph has contractible
+  -- fibres on one side.  That is the whole reason actions have a `δ`
+  -- and relations -- splittings, orders -- do not.
+  -- ================================================================
+
+  δ≅Π : {B : TheoryTy ℓB t} (x : X s)
+      → Iso (δ B x) ((y : X t) → act x Eq.≡ y → B y)
+  δ≅Π x .Iso.fun b y Eq.refl = b
+  δ≅Π x .Iso.inv h = h (act x) Eq.refl
+  δ≅Π x .Iso.sec h = funExt λ y → funExt λ { Eq.refl → refl }
+  δ≅Π x .Iso.ret _ = refl
+
+  -- ================================================================
   -- THE MODALITIES, DERIVED.
   --
   -- Not posited: an adjunction generates a monad on one side and a

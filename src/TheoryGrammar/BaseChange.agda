@@ -1,0 +1,112 @@
+{-
+  BASE CHANGE ALONG A RELATION -- and the modalities it generates.
+
+  Every modality in this development has been built by hand and then
+  recognised, afterwards, as Σ or Π over some fibre:
+
+      Σact / Πact   (Derivative)  -- over the fibre of an action
+      ⊗ˢ   / Allˢ   (Par)         -- over `Split o m`
+      ▷            (Later)        -- over `j ≺ i`
+
+  They are all one construction.  A relation `R : I → J → Type` -- an
+  ACCESSIBILITY STRUCTURE on worlds -- induces
+
+      Σᴿ A j = Σ[ i ] R i j × A i      "some R-predecessor of j is an A"
+      Πᴿ B i = (j) → R i j → B j       "every R-successor of i is a B"
+
+  and `Σᴿ ⊣ Πᴿ`.  The adjunction is CURRYING: both round trips are
+  `refl`, and no hypothesis on `R` is used.  So the modalities are not
+  chosen, they are the (co)monads this adjunction generates, exactly as
+  they should be.
+
+  THE THREE INSTANCES.
+
+  * `R` = the graph of a function `act`.  Then `Πᴿ` is precomposition,
+    i.e. `δ` -- which is why the derivative has a THREE-fold adjunction
+    where the others have two.  A function is a relation with a middle
+    functor.
+
+  * `R m⃗ m` = "m splits as m⃗".  Then `Σᴿ` is `⊗ˢ` and `Πᴿ` is `Allˢ`,
+    modulo the external product turning a slot-family into a
+    tuple-family.
+
+  * `R j i` = `j ≺ i`.  Then `Πᴿ` is `▷`, and `löb` is its fixed point.
+
+  What this buys beyond tidiness: the (co)monads below are defined once,
+  so `◇`/`□` at an action, "the ambiguity of a splitting", and the
+  guarded modality are the same object at three relations -- and a fact
+  proved here holds for all of them.
+-}
+{-# OPTIONS --lossy-unification #-}
+module TheoryGrammar.BaseChange where
+
+open import Cubical.Foundations.Prelude
+open import Cubical.Foundations.Isomorphism
+open import Cubical.Data.Sigma
+
+private variable ℓI ℓJ ℓR ℓA ℓB : Level
+
+module Rel {I : Type ℓI} {J : Type ℓJ} (R : I → J → Type ℓR) where
+
+  -- families and their maps, written out since this module sits below
+  -- the grammar notation
+  _⟶_ : {K : Type ℓI} → (K → Type ℓA) → (K → Type ℓB) → Type _
+  _⟶_ {K = K} A B = (k : K) → A k → B k
+
+  Σᴿ : (I → Type ℓA) → (J → Type (ℓ-max ℓI (ℓ-max ℓR ℓA)))
+  Σᴿ A j = Σ[ i ∈ I ] (R i j × A i)
+
+  Πᴿ : (J → Type ℓB) → (I → Type (ℓ-max ℓJ (ℓ-max ℓR ℓB)))
+  Πᴿ B i = (j : J) → R i j → B j
+
+  -- ================================================================
+  -- THE ADJUNCTION.  `Σᴿ ⊣ Πᴿ`, and it is currying -- both round trips
+  -- are `refl`, with no hypothesis on `R` whatsoever.
+  -- ================================================================
+
+  Σ⊣Π : {A : I → Type ℓA} {B : J → Type ℓB}
+       → Iso ((j : J) → Σᴿ A j → B j) ((i : I) → A i → Πᴿ B i)
+  Σ⊣Π .Iso.fun f i a j r     = f j (i , r , a)
+  Σ⊣Π .Iso.inv g j (i , r , a) = g i a j r
+  Σ⊣Π .Iso.sec _ = refl
+  Σ⊣Π .Iso.ret _ = refl
+
+  -- ================================================================
+  -- ... and hence the modalities, generated rather than posited.
+  -- ================================================================
+
+  -- the COMONAD on J-families
+  ◇ᴿ : (J → Type ℓB) → (J → Type _)
+  ◇ᴿ B = Σᴿ (Πᴿ B)
+
+  ◇-counit : {B : J → Type ℓB} (j : J) → ◇ᴿ B j → B j
+  ◇-counit j (i , r , h) = h j r
+
+  ◇-comult : {B : J → Type ℓB} (j : J) → ◇ᴿ B j → ◇ᴿ (◇ᴿ B) j
+  ◇-comult j (i , r , h) = i , r , λ j' r' → i , r' , h
+
+  -- the MONAD on I-families
+  □ᴿ : (I → Type ℓA) → (I → Type _)
+  □ᴿ A = Πᴿ (Σᴿ A)
+
+  □-unit : {A : I → Type ℓA} (i : I) → A i → □ᴿ A i
+  □-unit i a j r = i , r , a
+
+  □-mult : {A : I → Type ℓA} (i : I) → □ᴿ (□ᴿ A) i → □ᴿ A i
+  □-mult i h j r = h j r .snd .snd j (h j r .snd .fst)
+
+  -- ================================================================
+  -- THE COMPARISON, and what it measures.
+  --
+  -- `Σᴿ A j → Πᴿ`-style universality needs the accessibility structure
+  -- to be a PROPOSITION -- "at most one way to reach j".  That single
+  -- statement is `splitProp` for a splitting, injectivity for an
+  -- action, and antisymmetry-of-reachability for an order: the three
+  -- unique-readability hypotheses in this development are one
+  -- condition on `R`.
+  -- ================================================================
+
+  Σ→all : {A : I → Type ℓA} (j : J)
+        → ((i i' : I) → R i j → R i' j → i ≡ i')
+        → Σᴿ A j → ((i : I) → R i j → A i)
+  Σ→all {A = A} j uniq (i , r , a) i' r' = subst A (uniq i i' r r') a
