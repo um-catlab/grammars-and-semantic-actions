@@ -56,54 +56,33 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   -- ================================================================
 
   -- ================================================================
-  -- WHAT `F` IS.
+  -- PROGRAMS OUT OF ⊤.
   --
-  -- Not any description.  An algebra for an arbitrary `F` is just an
-  -- algebra -- it has no claim to be an automaton, and nothing lets you
-  -- run it.  Running needs TWO further facts, and together they are
-  -- exactly "F is a decreasing decomposition of the input":
+  -- There is no "automaton" structure to define.  An automaton is an
+  -- ALGEBRA -- `Algᴳ F A`, which already exists -- and running one on
+  -- the input needs exactly two things:
   --
-  --   decompose : ⊤ carries a coalgebra for F.  So F really does take
-  --               an element apart -- it is the theory's decomposition
-  --               axiom (`charCase`, `bagCase`), not a guess.
+  --   * F is LOCALLY CONTRACTIVE (`LocallyContractive`, in `Hylo`), so
+  --     the recursion is total;
+  --   * ⊤ carries a COALGEBRA for F, so F really decomposes the input.
+  --     That is the theory's decomposition axiom -- `charCase`,
+  --     `bagCase` -- and `Scanner` is just its name.
   --
-  --   contractive : F is LOCALLY CONTRACTIVE -- it carries the strength
-  --               `▷(A ⇒ B) → (⟦F⟧ A ⇒ ⟦F⟧ B)`.  Asked for directly,
-  --               rather than via the syntactic `Guarded`, because the
-  --               strength is what the recursion actually consumes and
-  --               a description could be contractive for some other
-  --               reason.  `guarded→LC` is the usual way to supply it.
+  -- Neither implies the other: a ⊤-coalgebra alone permits a step that
+  -- consumes nothing and loops; contractivity alone describes a
+  -- shrinking process that need not decompose THIS input.  But they do
+  -- not need bundling into a record either -- there are no laws
+  -- relating them, so a record would be indirection with nothing in it.
+  -- They are two arguments.
   --
-  -- Neither implies the other: `decompose` alone permits a step that
-  -- consumes nothing and loops; `contractive` alone describes a shrinking
-  -- process that need not be a decomposition of THIS input.  Bundling
-  -- them is what deserves a name, so the bundle gets one and the
-  -- automaton is an algebra FOR IT.
+  -- What remains is a one-line specialisation of `hyloLC`.
   -- ================================================================
 
   -- ⊤'s coalgebra for a description -- the theory's decomposition axiom.
   Scanner : ((x : X) → Functor (xs x)) → Type _
   Scanner F = Coalgᴳ F (λ _ → ⊤ᴳ)
 
-  record Scan : Type (ℓ-max ℓS (ℓ-max ℓ (ℓ-max ℓV (ℓ-max ℓX
-                     (ℓ-max (ℓ-suc ℓ') (ℓ-max (ℓ-suc ℓP)
-                     (ℓ-max (ℓ-suc ℓA) ℓPos))))))) where
-    field
-      desc       : (x : X) → Functor (xs x)
-      contractive : LocallyContractive desc
-      decompose  : Scanner desc
-
-  open Scan public
-
-  -- An automaton over a scan is an ALGEBRA for its description.
-  Automaton : Scan → Fam → Type _
-  Automaton S A = Algᴳ (S .desc) A
-
-  -- ... and running it needs NOTHING FURTHER: the scan already carries
-  -- the decomposition and the termination certificate.
-  runAut : {S : Scan} {A : Fam} → Automaton S A → (x : X) → ⊤ᴳ ⊢ A x
-  runAut {S = S} α = hyloLC (S .contractive) (S .decompose) α
-
-  -- the same at the ℓ-zero terminal, which is what instances write
-  runAut⊤ : {S : Scan} {A : Fam} → Automaton S A → (x : X) → ⊤G ⊢ A x
-  runAut⊤ {S = S} α x = runAut {S = S} α x ∘⊢ ⊤ᴳ-I
+  runAut : {F : (x : X) → Functor (xs x)} {A : Fam}
+         → LocallyContractive F → Scanner F → Algᴳ F A
+         → (x : X) → ⊤G ⊢ A x
+  runAut lc sc α x = hyloLC lc sc α x ∘⊢ ⊤ᴳ-I

@@ -118,15 +118,15 @@ _ = refl
 
 -- (b) NOT a DFA -- any algebra will do, which is the point of defining
 --     an automaton as one.  This one has an infinite state space.
-countAlg : Automaton charScan (λ _ _ → ℕ)
+countAlg : Algᴳ ScanF (λ _ _ → ℕ)
 countAlg tt =
   ⊕ᴰ-E λ { true  → λ _ _ → 0
          ; false → ⊗ˢ-E appop {A = λ a → ⟦ starSlot char a ⟧c (λ _ → ℕ)}
                               {B = λ _ → ℕ}
                               (λ _ _ h → suc (h false)) }
 
-_ : runAut⊤ {S = charScan} countAlg tt (true ∷ false ∷ true ∷ []) tt ≡ 3
+_ : runAut scanLC scanCoalg countAlg tt (true ∷ false ∷ true ∷ []) tt ≡ 3
 _ = refl
 
-_ : runAut⊤ {S = charScan} countAlg tt [] tt ≡ 0
+_ : runAut scanLC scanCoalg countAlg tt [] tt ≡ 0
 _ = refl

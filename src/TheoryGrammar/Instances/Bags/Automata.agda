@@ -96,11 +96,8 @@ scanCoalg tt m _ = go (bagCase m tt)
     go (inr (x , sp , h)) =
       false , sp , λ { true → lift (x , h true) ; false → tt* }
 
--- The three pieces, bundled.
-bagScan : Scan
-bagScan .desc       = ScanF
-bagScan .contractive = guarded→LC scanGuarded
-bagScan .decompose  = scanCoalg
+scanLC : LocallyContractive ScanF
+scanLC = guarded→LC scanGuarded
 
 -- ==================================================================
 -- THE FUNCTOR, spelled out.  A description is not self-evident, so
@@ -132,7 +129,7 @@ module Fold (B : Type₀) (nil· : B) (cons· : A → B → B) where
   Carrier : Fam
   Carrier _ _ = B
 
-  foldAut : Automaton bagScan Carrier
+  foldAut : Algᴳ ScanF Carrier
   foldAut tt =
     ⊕ᴰ-E λ { true  → λ _ _ → nil·
            ; false → ⊗ˢ-E appop {A = λ a → ⟦ ScanSlot a ⟧c ⌞ Carrier ⌟}
@@ -141,4 +138,4 @@ module Fold (B : Type₀) (nil· : B) (cons· : A → B → B) where
 
   -- an INTERNAL term out of ⊤
   runFold : ⊤G ⊢ (λ _ → B)
-  runFold = runAut⊤ {S = bagScan} foldAut tt
+  runFold = runAut scanLC scanCoalg foldAut tt
