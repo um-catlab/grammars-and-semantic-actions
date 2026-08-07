@@ -31,7 +31,7 @@ open import Cubical.Data.Empty using (⊥*)
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 
-private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓB ℓV : Level
+private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓB ℓV ℓA' : Level
 
 module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
            (Fib : Fibered σ ℓX ℓP) (ℓA : Level)
@@ -230,6 +230,53 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
 
   CoalgC : (F : (x : X) → Functor (xs x)) → (Ix → Type ℓSh) → Type _
   CoalgC F A = (x : X) (m : Fib .carrier (xs x)) → A (x , m) → ⟦ F x ⟧c A m
+
+  -- ================================================================
+  -- THE INTERNAL INTERFACE.
+  --
+  -- `AlgC`/`CoalgC` above are stated pointfully -- they take an element
+  -- of the carrier and an element of the motive.  That is the wrong
+  -- shape for this library: an algebra should be a TERM, `⟦F⟧ A ⊢ A`.
+  --
+  -- Nothing has to change to get it.  A motive `Ix → Type` IS a family
+  -- of grammars, one per nonterminal, merely uncurried -- `Ix` is
+  -- `Σ[ x ∈ X ] carrier (xs x)`, so `⌞_⌟` below is Σ's η and `Algᴳ` is
+  -- `AlgC` DEFINITIONALLY (`Algᴳ≡` witnesses it by `refl`).  What the
+  -- internal form buys is that instances write `⊢` composites instead
+  -- of functions taking `m` and an element.
+  -- ================================================================
+
+  Fam : Type (ℓ-max ℓV (ℓ-max ℓX (ℓ-suc ℓSh)))
+  Fam = (x : X) → TheoryTy ℓSh (xs x)
+
+  ⌞_⌟ : Fam → (Ix → Type ℓSh)
+  ⌞ A ⌟ i = A (i .fst) (i .snd)
+
+  -- the description's action ON GRAMMARS.  This is the functor.
+  ⟦_⟧ᴳ : {s : S} → Functor s → Fam → TheoryTy ℓSh s
+  ⟦ F ⟧ᴳ A = ⟦ F ⟧c ⌞ A ⌟
+
+  Algᴳ : ((x : X) → Functor (xs x)) → Fam → Type _
+  Algᴳ F A = (x : X) → ⟦ F x ⟧ᴳ A ⊢ A x
+
+  Coalgᴳ : ((x : X) → Functor (xs x)) → Fam → Type _
+  Coalgᴳ F A = (x : X) → A x ⊢ ⟦ F x ⟧ᴳ A
+
+  -- the two presentations are the same data, on the nose
+  Algᴳ≡ : {F : (x : X) → Functor (xs x)} {A : Fam} → Algᴳ F A ≡ AlgC F ⌞ A ⌟
+  Algᴳ≡ = refl
+
+  Coalgᴳ≡ : {F : (x : X) → Functor (xs x)} {A : Fam} → Coalgᴳ F A ≡ CoalgC F ⌞ A ⌟
+  Coalgᴳ≡ = refl
+
+  -- the terminal grammar at the motive's level: `⊤G` is the ℓ-zero one,
+  -- and this is its lift.  A coalgebra carried by ⊤ is carried by THIS
+  -- -- a grammar -- not by a bare `Unit*`.
+  ⊤ᴳ : {s : S} → TheoryTy ℓSh s
+  ⊤ᴳ _ = Unit*
+
+  ⊤ᴳ-I : {s : S} {A : TheoryTy ℓA' s} → A ⊢ ⊤ᴳ
+  ⊤ᴳ-I _ _ = tt*
 
   -- THE RECURSOR, against a connective-form algebra.  `fold` is stated
   -- with `Sh`/`Pos`, which is not what an algebra should ever be written

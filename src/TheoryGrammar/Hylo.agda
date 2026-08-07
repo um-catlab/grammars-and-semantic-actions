@@ -28,6 +28,7 @@ module HyloM {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
              (X : Type ℓV) (xs : X → S) where
 
   open Grade GS ℓA X xs public
+  open FibNotation (GS .fib)
 
   -- ================================================================
   -- THE STRENGTH.  This is ccl's `▷HomActionFam`, derived rather than
@@ -152,6 +153,16 @@ module HyloM {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
     hyloC = löb λ { (x , m) rec ai →
       alg x m (mapC (F x) m (GS .deg (xs x) m) (c x m ai)
                     (λ p → gF x m _ p) (λ j q → rec j q)) }
+
+  -- ================================================================
+  -- ... and the same thing as an INTERNAL TERM.  `hyloC` is stated with
+  -- `Ix` and an element; `hyloᴳ` is the `⊢` a use site actually wants.
+  -- Definitionally the same map -- only the presentation differs.
+  -- ================================================================
+
+  hyloᴳ : {F : (x : X) → Functor (xs x)} (gF : (x : X) → Guarded (F x))
+          {A B : Fam} → Coalgᴳ F A → Algᴳ F B → (x : X) → A x ⊢ B x
+  hyloᴳ gF c α x m a = hyloC gF c α (x , m) a
 
   -- ================================================================
   -- THE GENERIC ▷-APP.  A `later` may be consumed at any position of a

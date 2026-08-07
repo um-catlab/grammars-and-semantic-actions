@@ -26,6 +26,7 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
              (X : Type ℓV) (xs : X → S) where
 
   open HyloM GS ℓA X xs public
+  open FibNotation (GS .fib)
 
   -- ================================================================
   -- AUTOMATA ARE ALGEBRAS, and running one is a hylomorphism.
@@ -54,13 +55,24 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   -- decomposition axiom gets automata for free.
   -- ================================================================
 
-  Automaton : ((x : X) → Functor (xs x)) → (Ix → Type ℓSh) → Type _
-  Automaton F B = AlgC F B
+  -- An automaton is an ALGEBRA -- as a term, `⟦F⟧ A ⊢ A`.
+  Automaton : ((x : X) → Functor (xs x)) → Fam → Type _
+  Automaton F A = Algᴳ F A
 
+  -- ⊤ carries a COALGEBRA.  Carried by the terminal GRAMMAR `⊤ᴳ`, so
+  -- this is a term `⊤ᴳ ⊢ ⟦F⟧ ⊤ᴳ` -- not a function out of a bare
+  -- `Unit*`.  Supplying one is the theory's decomposition axiom.
   Scanner : ((x : X) → Functor (xs x)) → Type _
-  Scanner F = CoalgC F (λ _ → Unit*)
+  Scanner F = Coalgᴳ F (λ _ → ⊤ᴳ)
 
-  runAut : {F : (x : X) → Functor (xs x)} {B : Ix → Type ℓSh}
-         → ((x : X) → Guarded (F x)) → Scanner F → Automaton F B
-         → (i : Ix) → B i
-  runAut g sc α i = hyloC g sc α i tt*
+  -- Running an automaton is the hylomorphism, and it is a TERM out of ⊤.
+  runAut : {F : (x : X) → Functor (xs x)} {A : Fam}
+         → ((x : X) → Guarded (F x)) → Scanner F → Automaton F A
+         → (x : X) → ⊤ᴳ ⊢ A x
+  runAut g sc α = hyloᴳ g sc α
+
+  -- the same at the ℓ-zero terminal, which is what instances write
+  runAut⊤ : {F : (x : X) → Functor (xs x)} {A : Fam}
+          → ((x : X) → Guarded (F x)) → Scanner F → Automaton F A
+          → (x : X) → ⊤G ⊢ A x
+  runAut⊤ g sc α x = runAut g sc α x ∘⊢ ⊤ᴳ-I

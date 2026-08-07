@@ -76,7 +76,7 @@ scanGuarded = starGuarded char charNN
 scanCoalg : Scanner ScanF
 scanCoalg tt m _ = go (charCase m tt)
   where
-    go : (⌈ [] ⌉ ⊕ NonTrivial) m → ⟦ ScanF tt ⟧c (λ _ → Unit*) m
+    go : (⌈ [] ⌉ ⊕ NonTrivial) m → ⟦ ScanF tt ⟧ᴳ (λ _ → ⊤ᴳ) m
     go (inl e) = true , lift (nilOf e)
       where nilOf : m Eq.≡ [] → ε' m
             nilOf Eq.refl = tt , λ ()
@@ -92,17 +92,17 @@ scanCoalg tt m _ = go (charCase m tt)
 
 module DFA (Q : Type₀) (step : Q → Char → Q) (acc : Q → Bool) where
 
-  Acceptance : Ix → Type₀
-  Acceptance _ = Q → Bool
+  Acceptance : Fam
+  Acceptance _ _ = Q → Bool
 
   dfaAlg : Automaton ScanF Acceptance
   dfaAlg tt =
     ⊕ᴰ-E λ { true  → λ _ _ q → acc q
            ; false →
-               ⊗ˢ-E appop {A = λ a → ⟦ starSlot char a ⟧c Acceptance}
+               ⊗ˢ-E appop {A = λ a → ⟦ starSlot char a ⟧c ⌞ Acceptance ⌟}
                           {B = λ _ → Q → Bool}
                           (λ _ _ h q → h false (step q (lower (h true) .fst))) }
 
   -- ... and the observable: run from a start state
   accepts : Q → ⊤G ⊢ (λ _ → Bool)
-  accepts q₀ m _ = runAut scanGuarded scanCoalg dfaAlg (tt , m) q₀
+  accepts q₀ m x = runAut⊤ scanGuarded scanCoalg dfaAlg tt m x q₀

@@ -89,12 +89,32 @@ scanGuarded tt = <⊕e Bool ScanAlt alt
 scanCoalg : Scanner ScanF
 scanCoalg tt m _ = go (bagCase m tt)
   where
-    go : (⌈ [] ⌉ ⊕ NonTrivial) m → ⟦ ScanF tt ⟧c (λ _ → Unit*) m
+    go : (⌈ [] ⌉ ⊕ NonTrivial) m → ⟦ ScanF tt ⟧ᴳ (λ _ → ⊤ᴳ) m
     go (inl e) = true , lift (nilOf e)
       where nilOf : m Eq.≡ [] → ε' m
             nilOf Eq.refl = tt , λ ()
     go (inr (x , sp , h)) =
       false , sp , λ { true → lift (x , h true) ; false → tt* }
+
+-- ==================================================================
+-- THE FUNCTOR, spelled out.  A description is not self-evident, so
+-- here is what `ScanF` actually does to a grammar:
+--
+--     ⟦ ScanF ⟧ A  ≅  ε  ⊕  (atom ⊗ A)
+--
+-- Both directions are terms.  The only content is `⊕e`/`⊗e` versus
+-- `⊕`/`⊗'` and the `Lift`s on the constant slots.
+-- ==================================================================
+
+scanOut : (A : Gr) → ⟦ ScanF tt ⟧ᴳ (λ _ → A) ⊢ (ε' ⊕ (bagAtom ⊗' A))
+scanOut A m (true  , e)       = inl (lower e)
+scanOut A m (false , sp , h)  =
+  inr (sp , λ { true → lower (h true) ; false → h false })
+
+scanIn : (A : Gr) → (ε' ⊕ (bagAtom ⊗' A)) ⊢ ⟦ ScanF tt ⟧ᴳ (λ _ → A)
+scanIn A m (inl e)        = true , lift e
+scanIn A m (inr (sp , h)) =
+  false , sp , λ { true → lift (h true) ; false → h false }
 
 -- ==================================================================
 -- An automaton over bags: fold with a combining function.  Well-defined
@@ -103,15 +123,16 @@ scanCoalg tt m _ = go (bagCase m tt)
 
 module Fold (B : Type₀) (nil· : B) (cons· : A → B → B) where
 
-  Carrier : Ix → Type₀
-  Carrier _ = B
+  Carrier : Fam
+  Carrier _ _ = B
 
   foldAut : Automaton ScanF Carrier
   foldAut tt =
     ⊕ᴰ-E λ { true  → λ _ _ → nil·
-           ; false → ⊗ˢ-E appop {A = λ a → ⟦ ScanSlot a ⟧c Carrier}
+           ; false → ⊗ˢ-E appop {A = λ a → ⟦ ScanSlot a ⟧c ⌞ Carrier ⌟}
                                 {B = λ _ → B}
                                 (λ _ _ h → cons· (lower (h true) .fst) (h false)) }
 
+  -- an INTERNAL term out of ⊤
   runFold : ⊤G ⊢ (λ _ → B)
-  runFold m _ = runAut scanGuarded scanCoalg foldAut (tt , m)
+  runFold = runAut⊤ scanGuarded scanCoalg foldAut tt
