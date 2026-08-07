@@ -157,3 +157,53 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   shapeContr→Free {F = F} shc gF = löb λ { (x , m) rec →
     isContrRetract unroll roll roll-unroll
       (isContrΣ (shc x m) (λ sh → isContrΠ λ p → rec _ (gF x m sh p))) }
+
+  -- ================================================================
+  -- VIEWS, FREENESS, AND EQUIDIVISIBILITY -- one story.
+  --
+  -- `TheoryGrammar.View` already observes that a coalgebra out of ⊤ IS
+  -- a view in McBride's sense: `Cover P = ⊤G ⊢ P` is the covering
+  -- function, and `Scanner`/`runAut` here are its `ViewsOf`/`byView` in
+  -- internal spelling.  What that file leaves open is the question
+  -- "views from the left" actually turns on, and the pieces are now all
+  -- present to answer it.
+  --
+  -- A view needs TWO properties to be a genuine pattern match.  Cover
+  -- gives the first.  The second is that the analysis be DETERMINED --
+  -- otherwise matching refines nothing, and dependent elaboration has
+  -- no equation to propagate leftward.
+  --
+  --   `Free F` IS that second property.  `∀ i → isContr (μ F i)` says
+  --   the iterated view has exactly one analysis.  Strings have it;
+  --   bags do not.  So freeness is precisely "this view is a pattern
+  --   match, not merely a cover".
+  --
+  -- WHERE DETERMINISM IS UNAVAILABLE, EQUIDIVISIBILITY IS THE FALLBACK.
+  -- The ⊗-view genuinely has many analyses -- `length w + 1` cuts --
+  -- and no hypothesis makes it deterministic.  Levi's lemma says they
+  -- are DIRECTED: any two have a common refinement.  That is weaker
+  -- than determinism and it is enough, because it lets two matches be
+  -- COMPARED.
+  --
+  --   `Instances.Strings.SeqUnambig.sameSplit` is exactly this trade.
+  --   Levi produces the middle piece `t`; `⊛` -- First/FollowLast
+  --   disjointness -- rules out `t ≠ ε`.  So sequential unambiguity is
+  --   "the concatenation view is a pattern match AT THESE TWO
+  --   GRAMMARS".  Which is why it cannot yield `DecReadable`:
+  --   determinism there is relative to the grammars, not a property of
+  --   the promodel, and the interface has no slot for that.
+  --
+  -- AND "FROM THE LEFT" NEEDS A LEFT.
+  -- The derivative is this view iterated: consume on the left, refine
+  -- the remaining obligation.  Its two obstructions are exactly the two
+  -- halves of that sentence --
+  --
+  --   equidivisibility  lets you INVERT the ⊗-view at a consumption;
+  --   an ordered arity  is what makes "the left" mean anything, since
+  --                     `δ(A⊗B) = δA⊗B ⊕ νA·δB` asks WHICH slot
+  --                     absorbed the action.
+  --
+  -- Bags have neither.  That is the same reason `Greedy`'s "leftmost"
+  -- is string-specific, and the same reason `Free` fails there.  A
+  -- commutative theory has views; it has no views FROM THE LEFT.
+  -- ================================================================
