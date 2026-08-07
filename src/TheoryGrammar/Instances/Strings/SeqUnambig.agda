@@ -246,3 +246,58 @@ strPartsFaithful ss m (u , v , s) (u' , v' , s') e =
     eu = funExt⁻ e true
     ev : v ≡ v'
     ev = funExt⁻ e false
+
+-- ==================================================================
+-- UNAMBIGUITY OF THE TENSOR, INTERNALLY.
+--
+-- `isProp ((A ⊗ B) w)` is an EXTERNAL statement -- a claim about the
+-- semantic type.  The internal content is a TERM:
+--
+--     ⊗-align : (A ⊗ B) & (A ⊗ B)  ⊢  (A & A) ⊗ (B & B)
+--
+-- "two parses of a tensor decompose the same way, so they pair up
+-- slot-wise".  That is exactly the converse of `BaseChange.Σᴿ-&`,
+-- which holds unconditionally in the other direction -- Σ always
+-- distributes OUT of a conjunction, and distributing back IN is
+-- precisely the statement that the accessibility structure is
+-- determined.  So the internal form of "the tensor is unambiguous" is
+-- not a proposition at all; it is the missing half of a distributivity.
+--
+-- Both hypotheses are used, and for different halves: `⊛` (via `levi`
+-- and `sameParts`) gives that the PARTS agree, and `split3IsProp` that
+-- the WITNESS does.  That is the two-property split `PartsFaithful`
+-- names, appearing here as two steps of one proof.
+-- ==================================================================
+
+module _ (ss : isSet String) {A B : Gr} (su : A ⊛ B) where
+
+  private
+    spEq : (w : String) (sp sp' : MonSplit appop w)
+         → A (MonParts appop w sp true)  → B (MonParts appop w sp false)
+         → A (MonParts appop w sp' true) → B (MonParts appop w sp' false)
+         → sp ≡ sp'
+    spEq w (u , v , s) (u' , v' , s') a b a' b' =
+      strPartsFaithful ss w (u , v , s) (u' , v' , s')
+        (funExt λ { true  → Eq.eqToPath (sameParts su s s' a b a' b' .fst)
+                  ; false → Eq.eqToPath (sameParts su s s' a b a' b' .snd) })
+
+  ⊗-align : ((A ⊗' B) & (A ⊗' B)) ⊢ ((A & A) ⊗' (B & B))
+  ⊗-align w ((sp , h) , (sp' , h')) =
+    sp , λ { true  → h true  , subst (λ s → A (MonParts appop w s true))
+                                     (sym eq) (h' true)
+           ; false → h false , subst (λ s → B (MonParts appop w s false))
+                                     (sym eq) (h' false) }
+    where eq : sp ≡ sp'
+          eq = spEq w sp sp' (h true) (h false) (h' true) (h' false)
+
+  -- The external statement, for comparison.  Note where the work is:
+  -- `eq` -- the alignment -- is the whole content, and the two
+  -- propositions only collapse the paired payloads afterwards.
+  ⊗-unambiguous : ((w : String) → isProp (A w))
+                → ((w : String) → isProp (B w))
+                → (w : String) → isProp ((A ⊗' B) w)
+  ⊗-unambiguous pa pb w (sp , h) (sp' , h') =
+    ΣPathP (eq , isProp→PathP
+                   (λ _ → isPropΠ λ { true → pa _ ; false → pb _ }) h h')
+    where eq : sp ≡ sp'
+          eq = spEq w sp sp' (h true) (h false) (h' true) (h' false)
