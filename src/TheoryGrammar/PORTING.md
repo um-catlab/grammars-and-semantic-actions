@@ -357,9 +357,21 @@ the above:
   now a property rather than a warning:
   `scanμ-scanner-irrelevant` says the parse is independent of the
   scanner *precisely when the theory is free*.
-- `⊗ ⊣ ⊸` as a single `Iso`. Both sides have definitional β/η
-  *separately*; making them definitionally inverse to each other needs
-  the promodel's focused and unfocused splittings to be definitionally
-  inverse — true for strings, not automatic.
+- ~~`⊗ ⊣ ⊸` as a single `Iso`~~ — **the diagnosis here was wrong.** It
+  said the two definitional β/η's could only be joined by a new
+  promodel law (focused and unfocused splittings definitionally
+  inverse). No law is needed. Decorate the splitting relation with the
+  other slots' payloads,
+
+      R⊸ A x m = Σ[ sp ] (parts o m sp i ≡ x) × ((a) → A a (parts a))
+
+  and `⊸ˢ o i A B` **is** `Πᴿ` at `R⊸ A` (`Par.⊸ˢ≅Πᴿ` — pure currying,
+  both round trips `refl`), while `Σᴿ` at the same relation is the
+  tensor with slot `i` reopened. So the adjunction is `BaseChange.Σ⊣Π`,
+  which holds for *every* relation with no hypothesis at all.
+
+  `Focus`/`Assembly` supply a chosen presentation of that relation,
+  convenient for computing. They were never what made the adjunction
+  hold — which is why looking for a law to add was the wrong move.
 - `permTrans` / `permInsert` / `mergePerm`, which is what stands between
   `merge : Bag → Bag → Bag` and an internal `Bagged ⊗ Bagged ⊢ Bagged`.

@@ -26,7 +26,7 @@ open import TheoryGrammar.Fibered
 open import TheoryGrammar.Rules
 open import TheoryGrammar.RulesFib
 
-private variable ℓS ℓ ℓ' ℓX ℓP ℓA : Level
+private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓB : Level
 
 module ParS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP) where
 
@@ -94,6 +94,47 @@ module ParS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
   ⊗ˢ≅Σᴿ o m .Iso.inv ((_ , sp) , Eq.refl , h)    = sp , h
   ⊗ˢ≅Σᴿ o m .Iso.sec ((_ , sp) , Eq.refl , h)    = refl
   ⊗ˢ≅Σᴿ o m .Iso.ret (sp , h)                    = refl
+
+  -- ================================================================
+  -- THE RESIDUAL IS Πᴿ, AND THE ADJUNCTION IS FREE.
+  --
+  -- `PORTING.md` records `⊗ ⊣ ⊸` as outstanding, needing "the focused
+  -- and unfocused splittings to be definitionally inverse" as a new
+  -- promodel law.  That diagnosis was wrong, and for the same reason
+  -- `Σᴿ-&-conv` was: the apparatus was mis-factored, not incomplete.
+  --
+  -- Decorate the splitting relation with the OTHER slots' payloads:
+  --
+  --   R⊸ A x m = Σ[ sp ] (parts o m sp i ≡ x) × ((a) → A a (parts a))
+  --
+  -- Then `⊸ˢ o i A B` IS `Πᴿ` at `R⊸ A` (`⊸ˢ≅Πᴿ`, pure currying, both
+  -- round trips `refl`), and `Σᴿ` at the same relation is the tensor
+  -- with slot `i` reopened.  So the adjunction is `BaseChange.Σ⊣Π` --
+  -- which holds for EVERY relation with no hypothesis at all.
+  --
+  -- No promodel law is needed.  What `Focus`/`Assembly` supply is a
+  -- CHOSEN presentation of that relation, convenient for computing; it
+  -- was never what made the adjunction hold.
+  -- ================================================================
+
+  R⊸ : (o : σ .ops) (i : σ .arities o)
+       (A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
+     → Fib .carrier (σ .sortOf o i)
+     → Fib .carrier (σ .resultSort o) → Type (ℓ-max ℓP (ℓ-max ℓ' (ℓ-max ℓX ℓA)))
+  R⊸ o i A x m =
+    Σ[ sp ∈ Fib .Split o m ]
+      ((Fib .parts o m sp i ≡ x)
+       × ((a : σ .arities o) → A a (Fib .parts o m sp a)))
+
+  ⊸ˢ≅Πᴿ : (o : σ .ops) (i : σ .arities o)
+          {A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a)}
+          {B : TheoryTy ℓB (σ .resultSort o)}
+          (x : Fib .carrier (σ .sortOf o i))
+        → Iso (⊸ˢ o i A B x) (Rel.Πᴿ (R⊸ o i A) B x)
+  ⊸ˢ≅Πᴿ o i x .Iso.fun f m (sp , e , h) = f m sp e h
+  ⊸ˢ≅Πᴿ o i x .Iso.inv g m sp e h       = g m (sp , e , h)
+  ⊸ˢ≅Πᴿ o i x .Iso.sec _ = refl
+  ⊸ˢ≅Πᴿ o i x .Iso.ret _ = refl
 
   ⊗ˢ→Allˢ : (o : σ .ops)
             {A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a)}
