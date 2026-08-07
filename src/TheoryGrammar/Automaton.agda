@@ -4,6 +4,7 @@
 module TheoryGrammar.Automaton where
 
 open import Cubical.Foundations.Prelude
+open import Cubical.Foundations.HLevels
 open import Cubical.Data.Sigma
 open import Cubical.Data.Nat
 open import Cubical.Data.Nat.Order
@@ -133,3 +134,26 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
     → (x : X) (m : GS .fib .carrier (xs x)) (u : ⊤G m)
     → scanμ gF sc x m u ≡ scanμ gF sc' x m u
   scanμ-scanner-irrelevant fr gF sc sc' x m u = free→isProp fr (x , m) _ _
+
+  -- ================================================================
+  -- A USABLE CRITERION FOR FREENESS.
+  --
+  -- `Free` as stated is a property of `μ F`, which nothing can discharge
+  -- directly.  This reduces it to a property of the description's SHAPES:
+  -- if each `Sh (F x) m` is contractible -- "there is exactly one way to
+  -- take this element apart, one step" -- then the whole parse is unique.
+  --
+  -- The proof is the recursion, once: `roll`/`unroll` are already
+  -- definitional inverses, so `μ F (x , m)` retracts onto
+  -- `Σ[ sh ] ((p : Pos ...) → μ F (nx ...))`, and contractibility of a Σ
+  -- is contractibility of its base and fibres.  löb supplies the fibres,
+  -- with guardedness as the descent.
+  -- ================================================================
+
+  shapeContr→Free : {F : (x : X) → Functor (xs x)}
+                  → ((x : X) (m : GS .fib .carrier (xs x)) → isContr (Sh (F x) m))
+                  → ((x : X) → Guarded (F x))
+                  → Free F
+  shapeContr→Free {F = F} shc gF = löb λ { (x , m) rec →
+    isContrRetract unroll roll roll-unroll
+      (isContrΣ (shc x m) (λ sh → isContrΠ λ p → rec _ (gF x m sh p))) }
