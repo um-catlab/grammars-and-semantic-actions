@@ -18,49 +18,34 @@ open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
+open import TheoryGrammar.Theories.MonoidStar
 
 open import TheoryGrammar.Instances.Strings.Decomposition Char public
 
-starSlot : Gr → Bool → Functor tt
-starSlot A true  = ⌜ A ⌝
-starSlot A false = Var tt
+-- The description and its guardedness are NOT string-specific: they
+-- are the generic monoid star (TheoryGrammar.Theories.MonoidStar) at
+-- this promodel.  Opened SELECTIVELY, so `MonStar`'s own `Guard` and
+-- `ε'` re-exports do not collide with the ones this chain already has.
+open MonStar strGraded using (starSlot; starAlt; starF; ProperBody) public
 
-starAlt : Gr → Bool → Functor tt
-starAlt A true  = ⌜ ε' ⌝
-starAlt A false = ⊗e appop (starSlot A)
+-- non-nullability, internally: a non-nullable grammar entails the
+-- resource predicate.  This is the string spelling of the generic
+-- `ProperBody`, and `nn→proper` is the whole difference between them --
+-- `StrProper` at the right slot IS `NonTrivial` of the left part.
+NonNullable : Gr → Type₀
+NonNullable A = A ⊢ NonTrivial
 
-starF : Gr → Unit → Functor tt
-starF A _ = ⊕e Bool (starAlt A)
+nn→proper : {A : Gr} → NonNullable A → ProperBody A
+nn→proper nn m sp a = nn _ a
 
 -- THE UNIT versus GUARDEDNESS.  `A *` is guarded exactly when `A` is
 -- NON-NULLABLE.  If `A` accepts ε then the splitting `(ε , w)` puts
 -- the recursive occurrence back at `w`, and the star has infinitely
 -- many parses at every index -- the classic `(ε)*` problem.  The type
 -- `μ (starF A)` still exists and every tree in it is finite; it is
--- enumeration and `hyloC` that fail.  So the unit is harmless as an
--- operation and dangerous only through the fixpoint, and this is the
--- hypothesis that fences it off.
-
--- non-nullability, internally: a non-nullable grammar entails the
--- resource predicate
-NonNullable : Gr → Type₀
-NonNullable A = A ⊢ NonTrivial
-
+-- enumeration and `hyloC` that fail.
 starGuarded : (A : Gr) → NonNullable A → (x : Unit) → Guarded (starF A x)
-starGuarded A nn tt = <⊕e Bool (starAlt A) alt
-  where
-    go : (m : String) (sp : MonSplit appop m)
-         (sh : (a : Bool) → Sh (starSlot A a) (MonParts appop m sp a))
-         (a : Bool) (p : Pos (starSlot A a) _ (sh a))
-       → degIx (nx (starSlot A a) _ (sh a) p) < length m
-    go m sp sh true ()
-    go m (u , v , s) sh false p =
-      slotProper appop m (u , v , s) false (≤Var tt)
-                 (nn u (lower (sh true))) (sh false) p
-
-    alt : (b : Bool) → Guarded (starAlt A b)
-    alt true  = <⌜⌝ ε'
-    alt false = ⊗-guard appop (starSlot A) go
+starGuarded A nn = MonStar.starGuarded strGraded A (nn→proper nn)
 
 -- literals are non-nullable, so `literal c *` is guarded
 literalNN : (c : Char) → NonNullable (literal c)
