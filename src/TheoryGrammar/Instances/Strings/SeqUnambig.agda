@@ -37,6 +37,7 @@ open import Cubical.Data.Empty as E using (⊥; ⊥*)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
+open import TheoryGrammar.BaseChange
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.Enumerable using (No)
 
@@ -288,14 +289,28 @@ module _ (ss : isSet String) {A B : Gr} (su : A ⊛ B) where
       (funExt λ { true  → Eq.eqToPath (sameParts su s s' a b a' b' .fst)
                 ; false → Eq.eqToPath (sameParts su s s' a b a' b' .snd) })
 
+  private
+    -- the payload of a splitting, which is what the two sides carry
+    Pay : (w : String) → MonSplit appop w → Type₀
+    Pay w sp = (a : MonAr appop) → (if a then A else B) (MonParts appop w sp a)
+
+    -- ... and `⊛→detSplit` is exactly `Σ-det` for it
+    detAt : (w : String) → Σ-det (Pay w) (Pay w)
+    detAt w sp sp' h h' =
+      ⊛→detSplit w sp sp' (h true) (h false) (h' true) (h' false)
+
+  -- DERIVED from `BaseChange.Σ-&-conv`.  The only string-specific input
+  -- is `detAt`; the distribution itself is generic, and `go` is the
+  -- Π/× shuffle that `if` forces (`if a then (A & A) else (B & B)` and
+  -- `(if a then A else B) × (if a then A else B)` agree at each literal
+  -- slot but not at a neutral one).
   ⊗-align : ((A ⊗' B) & (A ⊗' B)) ⊢ ((A & A) ⊗' (B & B))
-  ⊗-align w ((sp , h) , (sp' , h')) =
-    sp , λ { true  → h true  , subst (λ s → A (MonParts appop w s true))
-                                     (sym eq) (h' true)
-           ; false → h false , subst (λ s → B (MonParts appop w s false))
-                                     (sym eq) (h' false) }
-    where eq : sp ≡ sp'
-          eq = ⊛→detSplit w sp sp' (h true) (h false) (h' true) (h' false)
+  ⊗-align w x = go (Σ-&-conv (detAt w) x)
+    where
+      go : Σ (MonSplit appop w) (λ sp → Pay w sp × Pay w sp)
+         → ((A & A) ⊗' (B & B)) w
+      go (sp , h , h') =
+        sp , λ { true → h true , h' true ; false → h false , h' false }
 
   -- The external statement, for comparison.  Note where the work is:
   -- `eq` -- the alignment -- is the whole content, and the two

@@ -47,6 +47,32 @@ open import Cubical.Data.Sum using (_⊎_; inl; inr)
 
 private variable ℓI ℓJ ℓR ℓA ℓB : Level
 
+-- ==================================================================
+-- THE PRINCIPLE, at its actual level of generality.
+--
+-- Deriving `⊗-align` from `Rel.Σᴿ-&-conv` showed that the latter is
+-- not the general form -- it is already an instance.  What is going on
+-- has nothing to do with base change, or relations, or fibres: it is
+-- that a Σ over a COMMON INDEX distributes into a product exactly when
+-- the index is pinned by the two payloads.
+--
+--   Σ F P × Σ F Q  →  Σ F (λ f → P f × Q f)     given `Σ-det P Q`
+--
+-- Two lines, and both `Σᴿ-&-conv` (at `F = FibreR j`) and the tensor
+-- alignment (at `F = Split o m`) are it at different `F`.  Stating it
+-- here rather than at either instance is what stops them being two
+-- parallel developments that merely look alike.
+-- ==================================================================
+
+Σ-det : {F : Type ℓI} (P : F → Type ℓA) (Q : F → Type ℓB) → Type _
+Σ-det {F = F} P Q = (f f' : F) → P f → Q f' → f ≡ f'
+
+Σ-&-conv : {F : Type ℓI} {P : F → Type ℓA} {Q : F → Type ℓB}
+         → Σ-det P Q → (Σ F P × Σ F Q) → Σ F (λ f → P f × Q f)
+Σ-&-conv {Q = Q} det ((f , p) , (f' , q)) =
+  f , p , subst Q (sym (det f f' p q)) q
+
+
 module Rel {I : Type ℓI} {J : Type ℓJ} (R : I → J → Type ℓR) where
 
   Σᴿ : (I → Type ℓA) → (J → Type (ℓ-max ℓI (ℓ-max ℓR ℓA)))
@@ -170,6 +196,8 @@ module Rel {I : Type ℓI} {J : Type ℓJ} (R : I → J → Type ℓR) where
   Σᴿ-&-conv : {A : I → Type ℓA} {B : I → Type ℓB} (j : J)
             → DetPair A B j
             → (Σᴿ A j × Σᴿ B j) → Σᴿ (λ i → A i × B i) j
+  -- ... which is `Σ-&-conv` at `F = FibreR j`, modulo reassociating
+  -- `Σ[ i ] R i j × A i` as `Σ[ p ∈ FibreR j ] A (p .fst)`.
   Σᴿ-&-conv {B = B} j det ((i , r , a) , (i' , r' , b)) =
     i , r , a , subst B (cong fst (sym (det (i , r) (i' , r') a b))) b
 
