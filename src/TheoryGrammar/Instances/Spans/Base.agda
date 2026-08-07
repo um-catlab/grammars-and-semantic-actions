@@ -28,10 +28,16 @@
 
   WHAT THIS BUYS, and what it does not.
 
-  Buys: the CHART.  `deg (i , n) = n`, so `▷ Dec⟨Deriv P⟩` at a span is
-  "decided at every SHORTER span" -- which is exactly the filled part of
-  a CYK chart.  Memoisation by span length, which is what distinguishes
-  CYK from derivative parsing, is `löb` here and needs nothing new.
+  Buys: the CHART'S SHAPE.  `deg (i , n) = n`, so `▷ Dec⟨Deriv P⟩` at a
+  span is "decided at every SHORTER span" -- which is exactly the filled
+  part of a CYK chart.  Recursion on span length, which is what
+  distinguishes CYK from derivative parsing, is `löb` here and needs
+  nothing new; `Spans.Examples` runs it.
+
+  Does not buy: the SHARING.  `löb` is `WFI.induction`, which
+  re-descends at every consultation rather than tabulating, so the
+  connective gives the well-founded structure of the chart and not its
+  cubic complexity.  Measurements are in `Spans.Examples`.
 
   Does not buy: the inner cut-scan.  `Split cat (i , n)` is a Type, not a
   sort, in this theory as in every other -- `TheoryTy` is a family over

@@ -4,9 +4,15 @@
 
   `deg (i , n) = n`: a span is measured by its LENGTH, not by where it
   sits.  So `▷ A` at a span is "A at every SHORTER span", which is
-  exactly the filled part of a CYK chart.  Memoisation by span length --
-  the thing that distinguishes CYK from derivative parsing -- is `löb`
-  here, and needs nothing that isn't already in `TheoryGrammar.Graded`.
+  exactly the SHAPE of a CYK chart: every recursive call lands at a
+  strictly shorter span, and `löb` supplies that with nothing that isn't
+  already in `TheoryGrammar.Graded`.
+
+  Not claimed: the SHARING.  `löb` is `WFI.induction` and re-descends at
+  every consultation, so the connective gives the chart's well-founded
+  structure but does not tabulate it -- see the measurements in
+  `Spans.Examples`.  Cubic CYK would need a tabulated fixpoint, which is
+  a different construction.
 
   Everything mirrors `Instances.Strings.Graded` clause for clause, with
   `Cut` in place of `Split3`; that the two proofs have the same shape is

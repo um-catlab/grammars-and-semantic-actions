@@ -11,7 +11,7 @@ import Cubical.Data.Equality as Eq
 open import Cubical.Data.Maybe using (Maybe; just; nothing)
 open import TheoryGrammar.SemanticAction using (passes; _↦_; _at_)
 
-open import TheoryGrammar.Instances.Bags.Sorted ℕ
+open import TheoryGrammar.Instances.Bags.Automata ℕ
 
 leℕ : ℕ → ℕ → Bool
 leℕ zero    _       = true
@@ -108,4 +108,25 @@ _ = refl
 
 _ : passes (run msortS at
       ([] ↦ [] ∷ (5 ∷ 3 ∷ 4 ∷ 1 ∷ 2 ∷ []) ↦ (1 ∷ 2 ∷ 3 ∷ 4 ∷ 5 ∷ []) ∷ []))
+_ = refl
+
+-- ==================================================================
+-- AUTOMATA over a commutative theory.  Same generic `Automaton` /
+-- `Scanner` / `runAut` as the string instance -- only the description
+-- and the decomposition axiom differ.
+--
+-- Both algebras below are commutative, which is what makes the answer
+-- independent of the order `bagCase` happens to pull elements out in.
+-- ==================================================================
+
+module Sum  = Fold ℕ 0 _+_
+module Size = Fold ℕ 0 (λ _ n → suc n)
+
+_ : Sum.runFold (3 ∷ 1 ∷ 2 ∷ []) tt ≡ 6
+_ = refl
+
+_ : Sum.runFold [] tt ≡ 0
+_ = refl
+
+_ : Size.runFold (3 ∷ 1 ∷ 2 ∷ []) tt ≡ 3
 _ = refl

@@ -1,177 +1,194 @@
-{-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 {-
-  A GENUINELY PARTIAL PROMODEL: heaps, and separation logic.
+  HEAPS: THE PARTIAL COMMUTATIVE MONOID.
 
-  Every other instance in this tree has a total operation.  Each supplies
-  a `Fibered` together with a `LaxPoint`, and each would have worked just
-  as well before the two were separated -- so the split that
-  `TheoryGrammar.Fibered` argues for is, so far, unexercised.  This file
-  is the test.  Its claim is not that heaps are interesting (they are, but
-  that is separation logic's business) but that
+  A heap is a list of cells; `h₁ ∗ h₂` is defined only when the domains
+  are DISJOINT.  As at `Field`, partiality is not a side condition: it is
 
-      RulesF heapFib  works, and  LaxPoint heapFib  is REFUTABLE.
+      Split appop h = Σ u, Σ v, Ilv u v h × (u # v),
 
-  If both hold, the split delivered what it promised: the multiplicative
-  and additive layers really do need only `Split` and `parts`, and the
-  three totality fields really were excluding something.
+  and the `u # v` conjunct is the whole of it.  Dropping exactly that
+  conjunct gives `cellFib` -- same carrier, same `parts` -- which DOES
+  have a total point (it is `Bags` at `Cell`).  So the obstruction is
+  located at one conjunct of one operation.
 
-  ------------------------------------------------------------------
-  THE CARRIER, AND WHY THIS SHAPE
-  ------------------------------------------------------------------
+  Representation: an association LIST, not `Loc → Maybe V`.  A function
+  carrier would make heap equality `funExt` and every `refl` test inert;
+  a list of cells keeps `⌈ h ⌉` structural and `Diff`/`Fresh`/`_#_`
+  Unit/⊥-valued, hence definitionally propositional.
 
-  A heap is an allocation bitmap, `List Bool`: position n says whether
-  location n is owned.  This is deliberately the crudest heap there is --
-  no values, no addresses -- because the point is the PARTIALITY of
-  joining, and values would only add noise.
-
-  The real design decision is `Disj`.  Every instance in this tree gives
-  its splittings as an inductive family indexed by the output -- `Split3`
-  for strings, `Add3` for ℕ, `Times` for Dirichlet, `Ilv` for bags -- and
-  the same works here:
-
-      Disj u v w   =   u and v are disjoint, and their union is w.
-
-  Read the constructors and notice what is ABSENT: there is no clause
-  taking `true` on the left and `true` on the right.  THAT missing
-  constructor is the partiality, and it is structural.  No equation, no
-  proof component, no `Maybe`, nothing to unfold.  `CLAUDE.md` warns
-  against carrying a proof in a `Split`; partiality turns out to be one
-  more thing you get for free by not carrying one.
-
-  ------------------------------------------------------------------
-  WHAT THIS IS, IN THE SEPARATION-LOGIC READING
-  ------------------------------------------------------------------
-
-      ⊗ˢ joinOp   is  the separating conjunction  ∗
-      ⊸ˢ joinOp   is  the magic wand             ─∗
-      ⊗ˢ empOp    is  emp
-      ⊗ˢ-map      is  the FRAME RULE
-
-  none of which is new here -- they are the generic connectives of
-  `RulesF`, instantiated.  That is the whole content: separation logic is
-  what the calculus becomes at a partial promodel, and it costs no new
-  infrastructure.
+  PRIMITIVE (matching the representation): `Diff`, `Fresh`, `_#_`,
+  `IsNil`, `Ilv`, `HeapSplit`, `HeapParts`, `boolΠ`.
 -}
-open import Cubical.Foundations.Prelude
-
+{-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Heap.Base where
 
+open import Cubical.Foundations.Prelude
 open import Cubical.Data.Sigma
-open import Cubical.Data.Bool hiding (_⊕_; _≤_)
-open import Cubical.Data.Sum using (_⊎_; inl; inr)
+open import Cubical.Data.Bool using (Bool; true; false)
+open import Cubical.Data.Nat using (ℕ; zero; suc)
 open import Cubical.Data.Unit
-open import Cubical.Data.Nat
-open import Cubical.Data.List
-open import Cubical.Data.Empty as E using (⊥)
+open import Cubical.Data.List using (List; []; _∷_)
+open import Cubical.Data.Empty using (⊥)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
+open import TheoryGrammar.Theories.Monoid public
 open import TheoryGrammar.Fibered
-open import TheoryGrammar.RulesFib
 
 -- ==================================================================
--- The carrier and the signature.
+-- Locations, values, cells, heaps.
+--
+-- Three values, as `Field` takes 𝔽₃: every table reduces, so the tests
+-- are `refl`.  Locations are ℕ, which reduces on numerals.
 -- ==================================================================
+
+Loc : Type₀
+Loc = ℕ
+
+data Val : Type₀ where
+  v0 v1 v2 : Val
+
+Cell : Type₀
+Cell = Loc × Val
 
 Heap : Type₀
-Heap = List Bool
+Heap = List Cell
 
--- The signature of a commutative monoid.  Note it is the SAME signature
--- a total monoid has: partiality is not visible here at all, because a
--- signature only names operations.  It shows up one level down, in what
--- `Split` is willing to produce.
-data PcmOp : Type₀ where
-  empOp joinOp : PcmOp
-
-PcmAr : PcmOp → Type₀
-PcmAr empOp  = ⊥
-PcmAr joinOp = Bool
-
-pcmSig : SortedSig Unit ℓ-zero ℓ-zero
-pcmSig .ops          = PcmOp
-pcmSig .arities      = PcmAr
-pcmSig .sortOf _ _   = tt
-pcmSig .resultSort _ = tt
+single : Loc → Val → Heap
+single l x = (l , x) ∷ []
 
 -- ==================================================================
--- DISJOINT UNION, as data indexed by the output.
---
--- The four constructors are: both empty; owned on the left; owned on
--- the right; owned by neither.  There is NO fifth taking (true, true).
+-- Apartness.  Every one of these is Unit/⊥-valued, so a proof is a
+-- nest of `tt` and any two are definitionally equal -- which is what
+-- keeps a splitting's disjointness component from blocking `refl`.
 -- ==================================================================
 
-data Disj : Heap → Heap → Heap → Type₀ where
-  dnil : Disj [] [] []
-  dl   : ∀ {u v w} → Disj u v w → Disj (true  ∷ u) (false ∷ v) (true  ∷ w)
-  dr   : ∀ {u v w} → Disj u v w → Disj (false ∷ u) (true  ∷ v) (true  ∷ w)
-  dnone : ∀ {u v w} → Disj u v w → Disj (false ∷ u) (false ∷ v) (false ∷ w)
+Diff : Loc → Loc → Type₀                          -- PRIMITIVE
+Diff zero    zero    = ⊥
+Diff zero    (suc _) = Unit
+Diff (suc _) zero    = Unit
+Diff (suc m) (suc n) = Diff m n
 
--- `emp`, as a RECURSIVE predicate rather than an indexed family -- the
--- same choice `IsNil` makes for strings, and for the same reason: every
--- case split then happens on the heap itself.
-Emp : Heap → Type₀
-Emp []            = Unit
-Emp (true  ∷ _)   = ⊥
-Emp (false ∷ w)   = Emp w
+diff-irrefl : (l : Loc) → Diff l l → ⊥            -- PRIMITIVE
+diff-irrefl zero    d = d
+diff-irrefl (suc l) d = diff-irrefl l d
 
-PcmSplit : (o : PcmOp) → Heap → Type₀
-PcmSplit empOp  w = Emp w
-PcmSplit joinOp w = Σ[ u ∈ Heap ] Σ[ v ∈ Heap ] Disj u v w
+-- `l` is not a key of `h`
+Fresh : Loc → Heap → Type₀                        -- PRIMITIVE
+Fresh l []            = Unit
+Fresh l ((k , _) ∷ h) = Diff l k × Fresh l h
 
-PcmParts : (o : PcmOp) (w : Heap) → PcmSplit o w → PcmAr o → Heap
-PcmParts empOp  w sp ()
-PcmParts joinOp w (u , v , _) b = if b then u else v
+-- disjoint domains.  THE partiality condition.
+infix 4 _#_
+
+_#_ : Heap → Heap → Type₀                         -- PRIMITIVE
+[]            # v = Unit
+((l , _) ∷ u) # v = Fresh l v × (u # v)
+
+-- transport of disjointness along `Eq`, so nothing downstream needs a
+-- Path where an index has to reduce
+#-Eq : {u u' v v' : Heap} → u Eq.≡ u' → v Eq.≡ v' → u # v → u' # v'
+#-Eq Eq.refl Eq.refl d = d
+
+-- everything is apart from the empty heap
+#-nil : (u : Heap) → u # []
+#-nil []            = tt
+#-nil ((l , _) ∷ u) = tt , #-nil u
+
+-- a cell is never apart from itself: the ONE fact the no-point theorem
+-- turns on
+#-self : (l : Loc) (x : Val) → single l x # single l x → ⊥
+#-self l x ((d , _) , _) = diff-irrefl l d
 
 -- ==================================================================
--- THE PROMODEL.  Note what is NOT here: no `op`, no `split`, no
--- `parts-split`.  Before the split of `Fibered` from `LaxPoint` this
--- record could not have been written at all.
+-- Splittings.  `Ilv` is the interleaving relation, indexed by the
+-- WHOLE; `_#_` restricts it to disjoint decompositions.
 -- ==================================================================
 
-heapFib : Fibered pcmSig ℓ-zero ℓ-zero
+IsNil : Heap → Type₀                              -- PRIMITIVE
+IsNil []      = Unit
+IsNil (_ ∷ _) = ⊥
+
+data Ilv : Heap → Heap → Heap → Type₀ where       -- PRIMITIVE
+  nil   : Ilv [] [] []
+  left  : ∀ {c u v w} → Ilv u v w → Ilv (c ∷ u) v (c ∷ w)
+  right : ∀ {c u v w} → Ilv u v w → Ilv u (c ∷ v) (c ∷ w)
+
+ilv-nilL : (v : Heap) → Ilv [] v v
+ilv-nilL []      = nil
+ilv-nilL (c ∷ v) = right (ilv-nilL v)
+
+ilv-nilR : (u : Heap) → Ilv u [] u
+ilv-nilR []      = nil
+ilv-nilR (c ∷ u) = left (ilv-nilR u)
+
+-- the left part of an interleaving with an empty right part
+ilv-nilL-inv : {v w : Heap} → Ilv [] v w → v Eq.≡ w
+ilv-nilL-inv nil       = Eq.refl
+ilv-nilL-inv (right p) = Eq.ap (_ ∷_) (ilv-nilL-inv p)
+
+ilv-nilR-inv : {u w : Heap} → Ilv u [] w → u Eq.≡ w
+ilv-nilR-inv nil      = Eq.refl
+ilv-nilR-inv (left p) = Eq.ap (_ ∷_) (ilv-nilR-inv p)
+
+-- the dependent eliminator for the arity.  `MonAr appop` is `Bool`, so
+-- a slot family is a Bool-family; this is its induction principle and
+-- the only place `true`/`false` are matched.
+boolΠ : ∀ {ℓ} {M : Bool → Type ℓ} → M true → M false → (b : Bool) → M b
+boolΠ t f true  = t                               -- PRIMITIVE
+boolΠ t f false = f
+
+-- ==================================================================
+-- The promodel.
+-- ==================================================================
+
+HeapSplit : (o : MonOp) → Heap → Type₀            -- PRIMITIVE
+HeapSplit nilop h = IsNil h
+HeapSplit appop h = Σ[ u ∈ Heap ] Σ[ v ∈ Heap ] (Ilv u v h × (u # v))
+
+HeapParts : (o : MonOp) (h : Heap) → HeapSplit o h → MonAr o → Heap
+HeapParts nilop h sp ()                           -- PRIMITIVE
+HeapParts appop h (u , v , _) = boolΠ u v
+
+heapFib : Fibered monoidSig ℓ-zero ℓ-zero
 heapFib .carrier _ = Heap
-heapFib .Split     = PcmSplit
-heapFib .parts     = PcmParts
-
--- ... and the whole calculus is available over it.
-open RulesF heapFib public
-
-Hp : Type₁
-Hp = TheoryTy ℓ-zero tt
+heapFib .Split     = HeapSplit
+heapFib .parts     = HeapParts
 
 -- ==================================================================
--- THE THEOREM.  There is no total point.
---
--- A `LaxPoint` would have to supply a total `op`, and `split` would then
--- have to exhibit a splitting of `op joinOp m⃗` whose parts are `m⃗`.  Take
--- `m⃗` to be two heaps that both own location 0: no constructor of `Disj`
--- applies, so no such splitting exists at any output whatsoever.
---
--- This is the exact analogue of upstream's `heapNoLaxPoint`, and it is
--- what makes the instance a real test rather than a re-labelling: the
--- calculus above is not merely usable without the totality fields, it is
--- usable where they are FALSE.
+-- THE FRAGMENT THAT IS TOTAL: the same carrier, the same `parts`, the
+-- same `Ilv` -- with the `u # v` conjunct deleted.  This is `Bags` at
+-- `Cell`, and it has a lax point (bag union).  Compare `Field`, where
+-- the fragment is the same promodel with one OPERATION deleted; here it
+-- is one CONJUNCT of one splitting, which is as sharp as the
+-- localisation gets.
 -- ==================================================================
 
--- PRIMITIVE (phase 1): two owners of location 0 cannot be joined.
-noJoin : (w : Heap) → Disj (true ∷ []) (true ∷ []) w → ⊥
-noJoin w ()
+CellSplit : (o : MonOp) → Heap → Type₀
+CellSplit nilop h = IsNil h
+CellSplit appop h = Σ[ u ∈ Heap ] Σ[ v ∈ Heap ] Ilv u v h
 
-¬LaxPointHeap : LaxPoint heapFib → ⊥
-¬LaxPointHeap P =
-  noJoin (P .op joinOp m⃗)
-         (transport (λ i → Disj (uEq i) (vEq i) (P .op joinOp m⃗)) d)
-  where
-    m⃗ : Bool → Heap
-    m⃗ _ = true ∷ []
+CellParts : (o : MonOp) (h : Heap) → CellSplit o h → MonAr o → Heap
+CellParts nilop h sp ()
+CellParts appop h (u , v , _) = boolΠ u v
 
-    u = P .split joinOp m⃗ .fst
-    v = P .split joinOp m⃗ .snd .fst
-    d = P .split joinOp m⃗ .snd .snd
+cellFib : Fibered monoidSig ℓ-zero ℓ-zero
+cellFib .carrier _ = Heap
+cellFib .Split     = CellSplit
+cellFib .parts     = CellParts
 
-    -- `parts-split` says the splitting's parts really are `m⃗`
-    uEq : u ≡ true ∷ []
-    uEq i = P .parts-split joinOp m⃗ i true
+_++h_ : Heap → Heap → Heap
+[]      ++h v = v
+(c ∷ u) ++h v = c ∷ (u ++h v)
 
-    vEq : v ≡ true ∷ []
-    vEq i = P .parts-split joinOp m⃗ i false
+ilv-app : (u v : Heap) → Ilv u v (u ++h v)
+ilv-app []      v = ilv-nilL v
+ilv-app (c ∷ u) v = left (ilv-app u v)
+
+cellPoint : LaxPoint cellFib
+cellPoint .op nilop _ = []
+cellPoint .op appop f = f true ++h f false
+cellPoint .split nilop f = tt
+cellPoint .split appop f = f true , f false , ilv-app (f true) (f false)
+cellPoint .parts-split nilop f = funExt λ ()
+cellPoint .parts-split appop f = funExt (boolΠ refl refl)

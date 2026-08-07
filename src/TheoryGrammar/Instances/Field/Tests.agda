@@ -17,12 +17,13 @@ import Cubical.Data.Equality as Eq
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.SemanticAction using (passes; _↦_; _at_; module ActFib)
-open ActFib fldFib using (Δ; run; caseA; pureA; okA; refute; witness)
 open import Cubical.Data.List using ([]; _∷_)
 open import TheoryGrammar.Instances.Field.Base
 open import TheoryGrammar.Instances.Field.Domain
 open import TheoryGrammar.Instances.Field.Partial
 open import TheoryGrammar.Instances.Field.NoPoint
+
+open ActFib fldFib using (Δ; run; caseA; pureA; okA; refute; witness)
 
 -- ==================================================================
 -- 1.  The tables.
@@ -42,36 +43,14 @@ private
   _ = refl
 
 -- ==================================================================
--- 2.  THE DECISION.  `probe-img` reads `dec-inv` with `⊕-E-at`,
--- `probe-dec` reads the NORMALISED decision `dec-invOp = toDec
--- invDecision` with `dec-elim`.  They must agree, and they do by
--- `refl`, which is the test that `toDec`/`largest` compute.
+-- 2.  THE DECISION.  `dec-inv` and the NORMALISED `dec-invOp = toDec
+-- invDecision` must agree, and they do by `refl` -- which is the test
+-- that `toDec`/`largest` compute.  Both are observed in §6 by the
+-- generic `caseA`/`run`, so neither needs a reader here.
 -- ==================================================================
 
-probe-img : (m : 𝔽) → 𝔽
-probe-img m = ⊕-E-at (Imgˢ invOp) ⌈ f0 ⌉ m (λ _ → f1) (λ _ → f0) (dec-inv m tt)
-
-probe-dec : (m : 𝔽) → 𝔽
-probe-dec m = dec-elim (Imgˢ invOp) m (λ _ → f1) (λ _ → f0) (dec-invOp m tt)
-
-private
-  _ : probe-img f0 ≡ f0
-  _ = refl
-
-  _ : probe-img f1 ≡ f1
-  _ = refl
-
-  _ : probe-img f2 ≡ f1
-  _ = refl
-
-  _ : probe-dec f0 ≡ f0
-  _ = refl
-
-  _ : probe-dec f1 ≡ f1
-  _ = refl
-
-  _ : probe-dec f2 ≡ f1
-  _ = refl
+-- (the observations themselves are terms, in §6 below -- a reader of
+-- type `𝔽 → 𝔽` would have externalised at the definition)
 
 -- ==================================================================
 -- 3.  THE INVERSE, READ OFF A SPLITTING.  `parts invOp m sp tt` is the

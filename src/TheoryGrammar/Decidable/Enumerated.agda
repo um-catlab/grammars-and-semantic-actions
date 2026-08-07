@@ -32,7 +32,7 @@ open import TheoryGrammar.Par
 open import TheoryGrammar.Decidable.Additive
 open import TheoryGrammar.Decidable.Tensor
 
-private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓM : Level
+private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓB ℓM : Level
 
 module DecEnum {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                (Fib : Fibered σ ℓX ℓP) where
@@ -66,6 +66,23 @@ module DecEnum {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   -- the search over splittings and the search over the tags of a `⊕ᴰ`
   -- (`Decidable.Listable.dec-⊕ᴰ`) are literally the same combinator.
   -- ================================================================
+
+  -- The short circuit itself, ONCE.  "A slot refuted refutes the whole
+  -- splitting": the hypothesis is a TERM `A a ⊢ B`, and the conclusion
+  -- is a refutation at the splitting.
+  --
+  -- This cannot be a `⊢` and the reason is the standing one: `Refutes
+  -- o A m sp` is indexed by a SPLITTING, and `TheoryTy` is a family over
+  -- the CARRIER, so "the tensor fails AT THIS CUT" is not the statement
+  -- of any grammar.  What can be done is to prove it once here rather
+  -- than let every instance write `λ h → k (f _ (h a))` inline -- which
+  -- is what `Strings.CYK` and `Spans.CYK` both did.
+  slotMiss : (o : σ .ops) (A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
+             (m : Fib .carrier (σ .resultSort o)) (sp : Fib .Split o m)
+             (a : σ .arities o) (B : TheoryTy ℓB (σ .sortOf o a))
+           → A a ⊢ B
+           → (¬G B) (Fib .parts o m sp a) → Refutes o A m sp
+  slotMiss o A m sp a B f k h = k (f _ (h a))
 
   dec-⊗-cuts : (o : σ .ops) (A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
                (m : Fib .carrier (σ .resultSort o))

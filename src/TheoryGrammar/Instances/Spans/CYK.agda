@@ -93,7 +93,7 @@ open import TheoryGrammar.Decidable.Enumerated
 open import TheoryGrammar.Instances.Spans.Graded public
 
 -- the cut search, and the two abbreviations its hypothesis is stated in
-open DecEnum spanFib using (⊗at; Refutes; dec-⊗-cuts)
+open DecEnum spanFib using (⊗at; Refutes; dec-⊗-cuts; slotMiss)
 
 module CYK (V : Type₀)
            (unitR : V → ℕ → Type₀)          -- P derives the terminal at j
@@ -278,12 +278,15 @@ module CYK (V : Type₀)
                  ⊎ Refutes cat (binSlots Q T) s c
 
           -- an empty side refutes the cut, because `neOf` says the slot
-          -- sitting there certifies its own span to be non-empty
+          -- sitting there certifies its own span to be non-empty.
+          -- `slotMiss` is the generic "a slot refuted refutes the cut";
+          -- its only argument is the term `neOf`, so nothing pointful is
+          -- written here.
           missL : (¬G NonEmpty) sL → Refutes cat (binSlots Q T) s c
-          missL k h = k (neOf Q sL (h true))
+          missL = slotMiss cat (binSlots Q T) s c true  NonEmpty (neOf Q)
 
           missR : (¬G NonEmpty) sR → Refutes cat (binSlots Q T) s c
-          missR k h = k (neOf T sR (h false))
+          missR = slotMiss cat (binSlots Q T) s c false NonEmpty (neOf T)
 
           -- neither side empty: each side is then a PROPER part, and
           -- `deg<` -- the grading's own field -- says a proper part is

@@ -1,31 +1,38 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 {-
-  SEPARATION LOGIC, AS THE GENERIC CONNECTIVES AT A PARTIAL PROMODEL.
+  SEPARATION LOGIC AS THE GENERIC CONNECTIVES, AND PARTIALITY AS A
+  THEOREM OF THE CALCULUS.
 
-  Nothing in this file is new machinery.  `∗`, `emp` and `─∗` are `⊗ˢ`,
-  `⊗ˢ empOp` and `⊸ˢ` from `RulesFib`, renamed; the frame rule is
-  `⊗ˢ-map`; the adjunction between `∗` and `─∗` is `⊸ˢ-app`.  That is the
-  claim being demonstrated: separation logic is what the dependent Lambek
-  calculus BECOMES at a promodel whose operation is partial, and it costs
-  no new infrastructure whatsoever.
+  `∗` is `⊗ˢ appop`, `emp` is `⊗ˢ nilop`, `─∗` is `⊸ᶠ`, and the FRAME
+  RULE is `⊗ˢ-map`.  None of that is new machinery: it is what the
+  dependent Lambek calculus already is, read at a promodel whose
+  operation is partial.
 
-  Worth stating precisely which of these are phase 1 and why.  `∗`, `emp`,
-  `─∗` and `frame` are phase 2 -- composites of `RulesF` combinators, with
-  no heap ever matched on.  `∗-comm` and `∗-assoc`-style facts ARE phase 1,
-  because commutativity and associativity of disjoint union are properties
-  of `Disj` and have to be proved by recursion on it.  That is the right
-  split: the LOGIC is generic, the ALGEBRA of heaps is not.
+  THE WAND USES `⊸ᶠ`, NOT `⊸ˢ`, and the difference is exactly why
+  `Focus` exists.  `⊸ˢ o i A B` demands a payload at EVERY slot including
+  the focused one, so a wand built on it has to supply a vacuous `tt`
+  there and needs a pointful weakening step.  `Focus` names the
+  COMPLEMENT of the focused slot (`Rest`), so `⊸ᶠ` demands payloads only
+  at the other slots -- which for a binary operation is precisely "given
+  a heap disjoint from me".  With it the adjunction is `⊸ᶠ-UP`, whose β
+  and η are `refl`.
+
+  PHASE.  Building `heapFocus` is phase 1 -- it is language construction,
+  like the promodel itself.  `split-#` is the ONE new primitive, and it
+  is the honest interface to the representation: a splitting entails
+  disjointness of its parts.  Everything after that is phase 2:
+  `apart-self`, `no-tuple-point` and `noHeapPoint` are composites of
+  `⊗ˢ-E`, `⌈⌉`-elimination and the primitives Base already marks.
 -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Heap.Connectives where
 
 open import Cubical.Data.Sigma
-open import Cubical.Data.Bool hiding (_⊕_; _≤_)
-open import Cubical.Data.Sum using (_⊎_; inl; inr)
+open import Cubical.Data.Bool using (Bool; true; false)
 open import Cubical.Data.Unit
-open import Cubical.Data.List
-open import Cubical.Data.Empty as E using (⊥)
+open import Cubical.Data.List using (List; []; _∷_)
+open import Cubical.Data.Empty as E using (⊥; ⊥*)
 import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
@@ -35,92 +42,155 @@ open import TheoryGrammar.RulesFib
 open import TheoryGrammar.Instances.Heap.Base public
 
 -- ==================================================================
--- The separation-logic connectives.
+-- GENERIC: a partiality located at a TUPLE refutes every total point.
+--
+-- BELONGS UPSTREAM, beside `Domain.no-point`.  That one handles
+-- partiality located at a SLOT -- a single bad element, as for a field's
+-- inverse.  This one handles partiality located at a TUPLE, which is the
+-- shape every partial commutative monoid has: no element is bad, only
+-- certain PAIRS are.  Both take an internal refutation and hand back a
+-- metatheorem, so the mathematical content stays in the calculus.
+--
+-- Placed here, before `RulesF` is opened, so that `FibNotation Fib` for
+-- an abstract `Fib` does not collide with the heap's own connectives.
 -- ==================================================================
 
--- `emp` -- the nullary case.  Its arity is `⊥`, so there is no payload:
--- `emp w` is exactly `Emp w`, modulo the vacuous function.
-emp : Hp
-emp = ⊗ˢ empOp (λ ())
+module Generic {S : Type₀} {σ : SortedSig S ℓ-zero ℓ-zero}
+               (Fib : Fibered σ ℓ-zero ℓ-zero) where
 
--- SEPARATING CONJUNCTION.  This is `⊗ˢ` at `joinOp`, and it is where
--- partiality does its work: `(A ∗ B) w` is inhabited only when `w`
--- actually splits, and `Disj` has no clause for overlapping heaps.
-_∗_ : Hp → Hp → Hp
-A ∗ B = ⊗ˢ joinOp (λ b → if b then A else B)
+  open FibNotation Fib
+
+  no-tuple-point : (o : σ .ops)
+                   (m⃗ : (a : σ .arities o) → Fib .carrier (σ .sortOf o a))
+                 → (⊗ˢ o (λ a → ⌈ m⃗ a ⌉) ⊢ ⊥G)
+                 → LaxPoint Fib → ⊥
+  no-tuple-point o m⃗ k P =
+    E.rec* (k (P .op o m⃗)
+              ( P .split o m⃗
+              , λ a → Eq.pathToEq (funExt⁻ (P .parts-split o m⃗) a) ))
+
+open RulesF heapFib public
+
+Gr : Type₁
+Gr = TheoryTy ℓ-zero tt
+
+-- ==================================================================
+-- The separating conjunction and the empty heap.
+-- ==================================================================
+
+emp : Gr
+emp = ⊗ˢ nilop (λ ())
+
+-- `⊗ˢ` at the partial operation.  `(A ∗ B) h` is inhabited only when `h`
+-- actually splits DISJOINTLY -- the `u # v` conjunct of `HeapSplit` --
+-- so the whole content of separation is in the promodel, not here.
+_∗_ : Gr → Gr → Gr
+A ∗ B = ⊗ˢ appop (boolΠ A B)
 
 infixr 20 _∗_
 
--- MAGIC WAND.  `⊸ˢ` at slot `false`: the index sits in the second slot,
--- an `A` sits in the first, and the result is a `B` at the join.  The
--- `⊤G` in the second component is because that slot IS the index -- the
--- residual must not demand a payload there.
-_─∗_ : Hp → Hp → Hp
-A ─∗ B = ⊸ˢ joinOp false (λ b → if b then A else ⊤G) B
+-- ==================================================================
+-- THE FRAME RULE is the functorial action of `∗`.  Phase 2: `⊗ˢ-map`
+-- and `boolΠ`, nothing else.  Note `boolΠ` is what keeps this honest --
+-- an extended lambda here would be a NEW term each time it is written,
+-- and nominally distinct from the one `_∗_` used.
+-- ==================================================================
+
+frame : {A B : Gr} (C : Gr) → A ⊢ B → (A ∗ C) ⊢ (B ∗ C)
+frame {A} {B} C f =
+  ⊗ˢ-map appop {A = boolΠ A C} {B = boolΠ B C} (boolΠ f idg)
+
+frameL : {A B : Gr} (C : Gr) → A ⊢ B → (C ∗ A) ⊢ (C ∗ B)
+frameL {A} {B} C f =
+  ⊗ˢ-map appop {A = boolΠ C A} {B = boolΠ C B} (boolΠ idg f)
+
+-- ==================================================================
+-- THE MAGIC WAND, via `Focus`.
+--
+-- Focused at slot `false`: the index is the heap we hold, `Rest` is the
+-- single other slot, and `whole` is the join.  Reading `⊸ᶠ` at this
+-- focus gives, at a heap `v`,
+--
+--     (u , h with Ilv u v h and u # v)  →  A u  →  B h
+--
+-- which is the magic wand with nothing left over.
+-- ==================================================================
+
+heapFocus : Focus heapFib appop false
+heapFocus .SplitAt v = Σ[ u ∈ Heap ] Σ[ h ∈ Heap ] (Ilv u v h × (u # v))
+heapFocus .whole (u , h , _) = h
+heapFocus .Rest = Unit
+heapFocus .restOf _ = true
+heapFocus .restSlot (u , _ , _) _ = u
+
+open FocusNotation heapFocus public
+
+_─∗_ : Gr → Gr → Gr
+A ─∗ B = ⊸ᶠ (boolΠ A ⊤G) B
 
 infixr 19 _─∗_
 
--- ==================================================================
--- THE FRAME RULE is the functorial action of `∗`, i.e. `⊗ˢ-map`.  The
--- families are pinned explicitly: `⊗ˢ joinOp (λ b → if b then A else C)`
--- unfolds to a Σ in which `A` occurs only under `parts`, so no
--- first-order unifier recovers it (the trap in CLAUDE.md).
--- ==================================================================
-
-frame : {A B : Hp} (C : Hp) → A ⊢ B → (A ∗ C) ⊢ (B ∗ C)
-frame {A} {B} C f =
-  ⊗ˢ-map joinOp {A = λ b → if b then A else C}
-                {B = λ b → if b then B else C}
-                (λ { true → f ; false → idg })
-
--- ... and symmetrically on the right.
-frameL : {A B : Hp} (C : Hp) → A ⊢ B → (C ∗ A) ⊢ (C ∗ B)
-frameL {A} {B} C f =
-  ⊗ˢ-map joinOp {A = λ b → if b then C else A}
-                {B = λ b → if b then C else B}
-                (λ { true → idg ; false → f })
+-- The adjunction, with β and η both `refl` -- `⊸ᶠ-UP` from `Fibered`.
+-- This is the payoff of using `Focus`: no weakening, no `tt`, no
+-- pointful step.
+wand-UP : {A B : Gr} → _
+wand-UP {A} {B} = ⊸ᶠ-UP {A = boolΠ A ⊤G} {B = B}
 
 -- ==================================================================
--- THE ADJUNCTION.  `⊸ˢ-app` is exactly modus ponens for the wand:
--- from `A ⊢ (B ─∗ C)` conclude `A ∗ B ⊢ C`.  Generic, no heap matched.
+-- PARTIALITY, AS A THEOREM OF THE CALCULUS.
+--
+-- The separation-logic statement of "a location cannot be owned twice"
+-- is not a side condition but an internal refutation:
+--
+--     ⌈ single l x ⌉ ∗ ⌈ single l x ⌉  ⊢  ⊥G
+--
+-- Compare `Field/Partial`, where "inv is undefined at 0" is
+-- `Domˢ invOp ⊣⊢ ¬G ⌈ f0 ⌉`.  The shapes differ because the field's
+-- partiality is UNARY (one bad element) while a PCM's is BINARY (one bad
+-- pair), and that difference is what makes `Domain.no-point` inapplicable
+-- here -- every heap fills either slot, paired with the empty heap.
 -- ==================================================================
 
--- PRIMITIVE (phase 1), and pure plumbing -- compare `intoQ` in
--- Bags/Quicksort.  `⊸ˢ` demands a payload at EVERY slot including the
--- focused one, so the wand (which asks for `⊤G` there) has to be weakened
--- to the family `⊸ˢ-app` expects.  Nothing is discarded but a `tt`.
-private
-  wandWeaken : {A B : Hp}
-             → (A ─∗ B) ⊢ ⊸ˢ joinOp false (λ b → if b then A else (A ─∗ B)) B
-  wandWeaken x w m sp e k = w m sp e (λ { true → k true ; false → tt })
+-- PRIMITIVE (phase 1): the only new one.  A splitting entails
+-- disjointness of its parts; this is the interface to `HeapSplit`'s
+-- fourth component, and the one place it is projected.
+split-# : (h : Heap) (sp : heapFib .Split appop h)
+        → heapFib .parts appop h sp true # heapFib .parts appop h sp false
+split-# h (u , v , _ , d) = d
 
--- MODUS PONENS for the wand, and it really is `⊸ˢ-app`.
-wand-mp : {A B : Hp} → (A ∗ (A ─∗ B)) ⊢ B
-wand-mp {A} {B} =
-  ⊸ˢ-app joinOp false {A = λ b → if b then A else (A ─∗ B)} {B = B} wandWeaken
+-- THEOREM (phase 2): `⊗ˢ-E` supplies the splitting and the two
+-- representable payloads; `#-Eq` moves disjointness onto them; `#-self`
+-- refutes it.  All three are already primitives of `Base`.
+apart-self : (l : Loc) (x : Val)
+           → (⌈ single l x ⌉ ∗ ⌈ single l x ⌉) ⊢ ⊥G
+apart-self l x =
+  ⊗ˢ-E appop {A = boolΠ ⌈ single l x ⌉ ⌈ single l x ⌉}
+       (λ h sp k → E.rec (#-self l x (#-Eq (k true) (k false) (split-# h sp))))
 
 -- ==================================================================
--- COMMUTATIVITY.  PHASE 1 -- this is a fact about `Disj`, not about the
--- logic, and it is a three-line structural recursion because the
--- splittings are DATA.  Note the constructors swap in pairs, which is
--- precisely "disjointness is symmetric".
+-- ... and the refutation of every total point, from that theorem alone.
+--
+-- BELONGS UPSTREAM, beside `Domain.no-point`.  That one handles a
+-- partiality located at a SLOT; this one handles a partiality located at
+-- a TUPLE, which is the shape every partial commutative monoid has.
+-- Both take an internal refutation and return a metatheorem.
 -- ==================================================================
 
--- PRIMITIVE (phase 1)
-disjSwap : ∀ {u v w} → Disj u v w → Disj v u w
-disjSwap dnil       = dnil
-disjSwap (dl d)     = dr (disjSwap d)
-disjSwap (dr d)     = dl (disjSwap d)
-disjSwap (dnone d)  = dnone (disjSwap d)
+-- Pure coercion between two spellings of one family -- compare `intoQ`
+-- in Bags/Quicksort.  `⌈ boolΠ u v a ⌉` and `boolΠ ⌈ u ⌉ ⌈ v ⌉ a` are the
+-- same grammar at each of `true` and `false`, but `boolΠ` is stuck at a
+-- variable `a`, so they are distinct terms.  `boolΠ idg idg` splits on
+-- the constructor, where both sides reduce -- the same escape `funExt`
+-- provides for paths.
+respell : {u v : Heap} (a : Bool) → ⌈ boolΠ u v a ⌉ ⊢ boolΠ ⌈ u ⌉ ⌈ v ⌉ a
+respell {u} {v} = boolΠ {M = λ a → ⌈ boolΠ u v a ⌉ ⊢ boolΠ ⌈ u ⌉ ⌈ v ⌉ a} idg idg
 
--- PRIMITIVE (phase 1): the only place a splitting is matched.
-∗-comm : {A B : Hp} → (A ∗ B) ⊢ (B ∗ A)
-∗-comm w ((u , v , d) , h) =
-  (v , u , disjSwap d) , λ { true → h false ; false → h true }
-
--- an involution, and `disjSwap` is one too
-disjSwap² : ∀ {u v w} (d : Disj u v w) → disjSwap (disjSwap d) ≡ d
-disjSwap² dnil      = refl
-disjSwap² (dl d)    = cong dl (disjSwap² d)
-disjSwap² (dr d)    = cong dr (disjSwap² d)
-disjSwap² (dnone d) = cong dnone (disjSwap² d)
+-- THE MONEY RESULT, and every step of it is a term of the calculus:
+-- `⊗ˢ-map` to respell, then the internal refutation `apart-self`.
+noHeapPoint : LaxPoint heapFib → ⊥
+noHeapPoint =
+  Generic.no-tuple-point heapFib appop (boolΠ s s)
+    ( apart-self 0 v0
+    ∘g ⊗ˢ-map appop {A = λ a → ⌈ boolΠ s s a ⌉}
+                    {B = boolΠ ⌈ s ⌉ ⌈ s ⌉} respell )
+  where s = single 0 v0

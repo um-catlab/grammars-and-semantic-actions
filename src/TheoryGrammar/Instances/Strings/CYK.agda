@@ -28,7 +28,7 @@ open DE using (module DecEnum)
 open import TheoryGrammar.Instances.Strings.Enumeration Char public
 
 -- the cut search, and the two abbreviations its hypothesis is stated in
-open DecEnum strFib using (⊗at; Refutes; dec-⊗-cuts)
+open DecEnum strFib using (⊗at; Refutes; dec-⊗-cuts; slotMiss)
 
 -- `¬G_` and `Dec⟨_⟩` are the generic ones (`Decidable.Additive`, via
 -- `DecFib` in `Strings.Base`); this instance defines neither.
@@ -376,12 +376,14 @@ module Parser (V : Type₀)
                  ⊎ Refutes appop (binSlots Q T) w sp
 
           -- a trivial side refutes the cut, because `neOf` says the slot
-          -- sitting there certifies its own part to be non-trivial
+          -- sitting there certifies its own part to be non-trivial.
+          -- `slotMiss` is the generic "a slot refuted refutes the cut";
+          -- its only argument is the term `neOf`.
           missL : (¬G NonTrivial) u → Refutes appop (binSlots Q T) w sp
-          missL k h = k (neOf Q u (h true))
+          missL = slotMiss appop (binSlots Q T) w sp true  NonTrivial (neOf Q)
 
           missR : (¬G NonTrivial) v → Refutes appop (binSlots Q T) w sp
-          missR k h = k (neOf T v (h false))
+          missR = slotMiss appop (binSlots Q T) w sp false NonTrivial (neOf T)
 
           -- neither side trivial: each side is then a PROPER part, and
           -- `deg<` -- the grading's own field -- says a proper part is

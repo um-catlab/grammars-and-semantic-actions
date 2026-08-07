@@ -142,7 +142,7 @@ Not a plan — a measurement against the 21 modules currently in
 | Subgrammar | 2 | `Subgrammar` (`Compr`) | **done** |
 | Derivative | 3 | `Derivative` (`δ`, `DerivTensor`) | **done** |
 | SequentialUnambiguity | 5 | `Instances/Strings/SeqUnambig` | **core done** |
-| Greedy | 2 | `Instances/Strings/Greedy` | **Base done**; `Automata` open |
+| Greedy | 2 | `Instances/Strings/Greedy`, `Graded` (`Automaton`) | **done** |
 | RegularExpression | 2 | `Instances/Strings/RegExp` | **done** |
 | Coinductive | 4 | `Inductive` (`ν`, `unfold`) | **core done**; `coind` open |
 | String, External | 12 | — | *replaced*, not ported |
@@ -218,7 +218,35 @@ hypothesis rather than on volume.
    `actʷ-β` is `refl`; nothing new is defined. That is the `Assembly`
    parameter earning its keep for the third time.
 
-   `Greedy/Automata` (188 lines) is what remains of the group.
+   **`Greedy/Automata` did not need porting — it needed deleting.**
+   Upstream builds automata as a bespoke record with its own run
+   function and its own recursion. All of that is three notions the
+   tree already had, and none of them are about strings:
+
+   * an **automaton is an algebra** for a description (`AlgC`). A DFA's
+     transition table is one way to *build* one, not a separate notion
+     — and an algebra may have an infinite carrier, which a DFA may not.
+   * **⊤ carries a coalgebra** for the description exactly when the
+     theory can take an element apart one step along it. That is the
+     decomposition axiom (`charCase`, `bagCase`) — naming it `Scanner`
+     says what it always was.
+   * the description being **guarded** is local contractivity.
+
+   Given those, **running an automaton is `hyloC`** — no recursion at
+   the use site, and the termination certificate *is* the guardedness.
+   `Automaton`/`Scanner`/`runAut` therefore live in `Graded` beside
+   `hyloC`, mention neither strings nor even the signature's
+   operations, and any theory with a decomposition axiom gets automata
+   for free.
+
+   `Instances/Bags/Automata.agda` is the check that this is real: the
+   same three per-theory pieces over a **commutative** theory, same
+   runner. It also surfaces something the string case hides — over a
+   commutative theory the scanner *chooses* a decomposition, so the
+   answer is canonical only when the algebra is invariant under the
+   theory's equations. `sum`/`size` qualify; "build a list" does not.
+   The type does not stop you writing the latter, it just stops meaning
+   what you wanted.
 3. ~~**`RegularExpression`**~~ — **done**, and bucket 3's classification
    of it as *string-specific* was right: the derivative-based matcher
    recurses on the carrier, which is not something `Fibered` provides.
