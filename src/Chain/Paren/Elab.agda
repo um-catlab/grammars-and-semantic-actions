@@ -48,8 +48,8 @@
   project them back out of the shape the parser already produced.
 
   PHASE.  The branches are pointful in the PAYLOAD and not in the index:
-  the motive is `Δ`, a constant family, which `CLAUDE.md` names as the
-  sanctioned case.  §3's `lookupN` is phase 1 and marked.
+  the motive is `Δ`, a constant family, which is the sanctioned case for
+  a semantic action.  §3's `lookupN` is phase 1 and marked.
 -}
 open import Cubical.Foundations.Prelude
 

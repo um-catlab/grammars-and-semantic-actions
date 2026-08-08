@@ -144,8 +144,7 @@ no-drop = F.noType dropRaw refl
 -- resolution is a `SynAlg` over the constant family `Env → ScopeRes`, so
 -- its failure is the CONSTRUCTOR `unbound n` -- it names the variable,
 -- which is the better diagnostic, and it is not a refutation.  That is
--- the cost `CLAUDE.md` predicts for a constant carrier, recorded rather
--- than papered over.
+-- the cost a constant carrier exacts, recorded rather than papered over.
 
 _ : obs CP.asm srcFree ≡ nothing
 _ = refl

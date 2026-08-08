@@ -359,7 +359,7 @@ injPres ρ inj nilop .homParts u e ()
 injPres ρ inj appop .homSplit u (u₁ , u₂ , s) =
   allocOf ρ u₁ , allocOf ρ u₂ , ilvR ρ s 0 , apartR ρ inj s 0
 injPres ρ inj appop .homParts u (u₁ , u₂ , s) =
-  boolΠ {M = λ a → H.boolΠ {M = λ _ → H.Heap} (allocOf ρ u₁) (allocOf ρ u₂) a
+  boolΠ {M = λ a → boolΠ {M = λ _ → H.Heap} (allocOf ρ u₁) (allocOf ρ u₂) a
                      Eq.≡ allocOf ρ (boolΠ {M = λ _ → Usage} u₁ u₂ a)}
         Eq.refl Eq.refl
 

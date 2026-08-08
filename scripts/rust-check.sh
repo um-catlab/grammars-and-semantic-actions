@@ -4,8 +4,6 @@
 # emits, compile it with rustc, run it, and check the answers against the
 # `_⇓_` derivations in Chain/RustEmit.agda.
 #
-# READ scripts/TRUST.md BEFORE BELIEVING ANYTHING THIS PRINTS.
-#
 # WHAT IS PROVED  step 1 only.  The Agda files carry the theorems and
 #                 pin every emitted string by `refl`.
 # WHAT IS TRUSTED step 4.  That `_⇓_` is Rust's real semantics is the

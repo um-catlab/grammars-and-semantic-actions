@@ -10,8 +10,9 @@
 # variables `x` and `y` and the binders `λx.` and `λy.`. Anything else
 # is a LEXICAL error -- `λz. z` is rejected by the lexer, not the parser.
 #
-# READ scripts/TRUST.md. One link in this chain is proved; the rest is
-# tested or trusted, and the script labels each step as it goes.
+# ONE LINK IN THIS CHAIN IS PROVED -- the instruction list against the
+# Agda machine model. The rest is tested or trusted, and the script
+# labels each step as it goes.
 #
 set -euo pipefail
 
@@ -82,7 +83,7 @@ say "3/6  emit AArch64                      [UNVERIFIED PRINTER]"
 # ---------------------------------------------------------------------
 agda_eval "asmFor \\\"$INPUT\\\"" > "$OUT/out.s"
 ok "wrote $(wc -l < "$OUT/out.s" | tr -d ' ') lines to $OUT/out.s"
-warn "emitARM has no theorem -- see TRUST.md gap (A)"
+warn "emitARM has no theorem -- its output is pinned by refl only at the terms tested"
 
 # ---------------------------------------------------------------------
 say "4/6  assemble and link                 [TRUSTED: clang]"
@@ -114,5 +115,5 @@ cat <<'EOF'
    CLOSED, and `Simulation.noBlindBackend` proves the heap backend
    cannot see the term at all, so a term-derived observable is not
    available from this backend. Swapping it in is `Chain.Run`'s §2 and
-   needs the term-directed backend. See scripts/TRUST.md.
+   needs the term-directed backend, `Compile/LinToRust/Codegen`.
 EOF

@@ -41,7 +41,7 @@
   `Eq.refl`s, and `Generate`'s `StrictPoint` exists precisely so that no
   `subst` appears under `Sh` to make the normal form stick.  A generator
   built on `LaxPoint`'s path would leave the hole unsolvable, which is
-  the practical statement of CLAUDE.md's third trap.
+  the practical statement of the `subst` trap.
 
   ==================================================================
   REPRESENTATIONS.
@@ -56,8 +56,8 @@
 
   `viaA` is the one the calculus supplies: `Action (μAt x) V` is
   `μAt x ⊢ Δ V`, an internal term, and applying it is `run` -- the single
-  exit, in the `refl` line of a test, exactly where CLAUDE.md's
-  "externalise LATE" puts it.
+  exit, in the `refl` line of a test, exactly where EXTERNALISE LATE
+  puts it.
 
   §2 then gives ONE generic action, `sizeOf`, the number of constructor
   nodes.  It is derived from `GenDesc` ALONE: listing a layer's recursive

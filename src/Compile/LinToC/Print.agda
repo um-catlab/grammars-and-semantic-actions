@@ -2,8 +2,8 @@
 {-
   REAL C SOURCE TEXT, VIA A TOKEN LIST.
 
-  The rule this file obeys is `CLAUDE.md`'s EXTERNALISE LATE: a producer
-  must not mention `String` in its type.  So nothing here produces a
+  The rule this file obeys is EXTERNALISE LATE: a producer must not
+  mention `String` in its type.  So nothing here produces a
   compiled artefact.  The producer is `Compile.LinToC.Codegen.compileTm`,
   a term `L.TmG L.⊢ Obj` whose payload is a Hoare triple; this file only
   RENDERS an object that already exists.

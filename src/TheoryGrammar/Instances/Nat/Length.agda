@@ -248,7 +248,7 @@ module SBridge = Bridge strPoint strHonest
 
 -- The BACKWARD direction stays by hand, and deliberately: `Bridge`'s
 -- generic `⊗→⊗ˢ` transports along `parts-split`, which is built by
--- `funExt` and so does not reduce (CLAUDE.md's third trap).  This one is
+-- `funExt` and so does not reduce.  This one is
 -- transport-free, and its `λ { true → … ; false → … }` is the arity-η
 -- tax rather than content.
 ⊗→⊗ˢ : {A : Bool → Gr} → ⊗[ appop ] A ⊢ ⊗ˢ appop A

@@ -3,8 +3,10 @@
 # verified-arm64.sh -- typecheck the Agda pipeline, emit AArch64, assemble,
 # run on Apple Silicon, and check the result against the proved prediction.
 #
-# READ scripts/TRUST.md BEFORE BELIEVING ANYTHING THIS PRINTS.
-# The proof covers step 1. Steps 2-5 are unverified or trusted, and the
+# WHAT IS PROVED is step 1 alone: the instruction list `compileU u`
+# produces, run under the AGDA MACHINE MODEL, is exactly `layout u`.
+# AArch64 has no semantics in Agda, so nothing connects the emitted
+# assembly to that model. Steps 2-5 are unverified or trusted, and the
 # script says so as it goes.
 #
 set -euo pipefail
@@ -37,7 +39,9 @@ fi
 say "2/5  UNVERIFIED STEP -- extract the pinned assembly literal"
 # The literal is extracted mechanically from the source, NOT retyped, so
 # it cannot drift from what step 1 proved equal to `emitARM (compileU ugap)`.
-# But `emitARM` itself has no theorem: see TRUST.md gap (A).
+# But `emitARM` itself has no theorem: a bug in `tokS`, `slot`, `storeToks`
+# or `loadToks` yields wrong assembly from a right program, and the `refl`
+# tests pin the output only at the terms tested.
 # ---------------------------------------------------------------------
 LIT=$(grep -m1 '≡ "        .section __TEXT' "$SRC/$AGDA_FILE" \
       | sed -e 's/^[[:space:]]*≡ "//' -e 's/"$//')
@@ -81,5 +85,6 @@ cat <<'EOF'
 
    So: the exit status agreeing with `live u` is EVIDENCE the printer and
    the hardware agree with the model. It is not a proof that they do.
-   See scripts/TRUST.md.
+   This is a prototype with one proved link and a marked boundary, not a
+   verified compiler in the CompCert sense.
 EOF

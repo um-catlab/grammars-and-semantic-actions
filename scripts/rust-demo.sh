@@ -6,9 +6,8 @@
 # RUST the compiler emits, and what that Rust actually DOES when run on
 # a toy input -- checked against the `_⇓_` derivation in Agda.
 #
-# READ scripts/TRUST.md.  Everything marked [proved] is pinned by `refl`
-# in the Agda file named; everything marked [ran] is rustc's answer and
-# is EVIDENCE, not proof.
+# Everything marked [proved] is pinned by `refl` in the Agda file named;
+# everything marked [ran] is rustc's answer and is EVIDENCE, not proof.
 #
 # The [defect] rows are HAND-WRITTEN repairs, not compiler output; the
 # [known defect] row is compiler output that rustc rejects.  A closure

@@ -33,8 +33,9 @@
 
           brokenRefutation : (¬G (BR.Agree selfApp)) []
 
-      a function that eats any purported agreement.  That is CLAUDE.md's
-      rule taken seriously: `≡ false` says the algorithm returned no, and
+      a function that eats any purported agreement.  That is the rule on
+      negative tests taken seriously: `≡ false` says the algorithm
+      returned no, and
       a refutation says there is nothing to return.  `SemanticAction.refute`
       is uniform in the error grammar, so it is the SAME `refl` that
       produces the theorem -- which is exactly why the two kinds of

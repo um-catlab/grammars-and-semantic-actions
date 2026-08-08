@@ -229,12 +229,12 @@ eqLoc (suc m) (suc n) = eqLoc m n
 
 getH : Loc → Heap → Val                              -- PRIMITIVE
 getH l []            = v0
-getH l ((k , y) ∷ h) = M.boolΠ {M = λ _ → Val} y (getH l h) (eqLoc l k)
+getH l ((k , y) ∷ h) = boolΠ {M = λ _ → Val} y (getH l h) (eqLoc l k)
 
 setH : Loc → Val → Heap → Heap                       -- PRIMITIVE
 setH l x []            = []
 setH l x ((k , y) ∷ h) =
-  M.boolΠ {M = λ _ → Heap} ((k , x) ∷ h) ((k , y) ∷ setH l x h) (eqLoc l k)
+  boolΠ {M = λ _ → Heap} ((k , x) ∷ h) ((k , y) ∷ setH l x h) (eqLoc l k)
 
 -- ==================================================================
 -- THE INSTRUCTION SET.
@@ -388,13 +388,13 @@ eqLoc-Diff (suc l) (suc k) d = eqLoc-Diff l k d
 -- the ONE place `eqLoc`'s result is destructed: given its value, both
 -- `getH` and `setH` reduce.  PRIMITIVE (phase 1).
 get-cons : (l k : Loc) (y : Val) (h : Heap) (b : Bool) → eqLoc l k Eq.≡ b
-         → getH l ((k , y) ∷ h) Eq.≡ M.boolΠ {M = λ _ → Val} y (getH l h) b
+         → getH l ((k , y) ∷ h) Eq.≡ boolΠ {M = λ _ → Val} y (getH l h) b
 get-cons l k y h b Eq.refl = Eq.refl
 
 set-cons : (l : Loc) (x : Val) (k : Loc) (y : Val) (h : Heap) (b : Bool)
          → eqLoc l k Eq.≡ b
          → setH l x ((k , y) ∷ h)
-           Eq.≡ M.boolΠ {M = λ _ → Heap} ((k , x) ∷ h) ((k , y) ∷ setH l x h) b
+           Eq.≡ boolΠ {M = λ _ → Heap} ((k , x) ∷ h) ((k , y) ∷ setH l x h) b
 set-cons l x k y h b Eq.refl = Eq.refl
 
 -- the two-cell footprint of a register-to-register instruction

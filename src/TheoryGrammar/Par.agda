@@ -62,9 +62,8 @@ module ParS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
   ⊗ˢ≅Σᴿ o m .Iso.sec ((_ , sp) , Eq.refl , h)    = refl
   ⊗ˢ≅Σᴿ o m .Iso.ret (sp , h)                    = refl
 
-  -- THE RESIDUAL IS Πᴿ, AND THE ADJUNCTION IS FREE. `PORTING.md` records
-  -- `⊗ ⊣ ⊸` as outstanding, needing "the focused and unfocused splittings
-  -- to be definitionally inverse" as a new `Fibered` law.
+  -- THE RESIDUAL IS Πᴿ, AND THE ADJUNCTION IS FREE: `⊗ ⊣ ⊸` needs no new
+  -- `Fibered` law, only the relational residual below.
 
   R⊸ : (o : σ .ops) (i : σ .arities o)
        (A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))

@@ -16,9 +16,9 @@
 # so different terms give different code, and the emitted closures can be
 # applied to actual values.
 #
-# READ scripts/TRUST.md. The agreement demonstrated here is TESTED, not
-# proved: `LinToRust.Codegen.Simulates` states the square and it is not
-# yet discharged.
+# THE AGREEMENT DEMONSTRATED HERE IS TESTED, not proved:
+# `LinToRust.Codegen.Simulates` states the square and it is not yet
+# discharged.
 #
 set -euo pipefail
 

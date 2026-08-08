@@ -79,8 +79,8 @@
   ------------------------------------------------------------------
 
   §3 is the part that matters.  `agreeOn t` is a `Bool`, and a `Bool` is
-  not a test -- CLAUDE.md's rule is that `run f w ≡ false` is strictly
-  weaker than what a decision proves.  So agreement is stated as a
+  not a test -- `run f w ≡ false` is strictly weaker than what a decision
+  proves.  So agreement is stated as a
   GRAMMAR and decided internally:
 
       Agree t   : Ctx                      -- "the selected backends

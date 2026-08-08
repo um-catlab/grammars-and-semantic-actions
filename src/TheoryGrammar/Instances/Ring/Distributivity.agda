@@ -125,8 +125,8 @@ private
   isPropEqℕ {x} {y} = subst isProp (Eq.PathPathEq {x = x} {y = y}) (isSetℕ x y)
 
   -- ON THE PAYLOAD PATHS. `Bool` has no η, so a payload rebuilt slotwise
-  -- is only PROPOSITIONALLY the one it came from -- the tax CLAUDE.md
-  -- records, and the only reason these round trips are not `refl`.
+  -- is only PROPOSITIONALLY the one it came from -- the arity-η tax, and
+  -- the only reason these round trips are not `refl`.
 
 distrib-Iso : (A B C : Gr) (pr : Precise A) (n : ℕ)
             → Iso ((A ⊗× (B ⊗₊ C)) n) (((A ⊗× B) ⊗₊ (A ⊗× C)) n)

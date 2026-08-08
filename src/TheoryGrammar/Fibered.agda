@@ -97,9 +97,9 @@ module FibNotation {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ
       → ⊗ˢ o A ≡ ⊗ˢᵈ o (λ ps → (a : σ .arities o) → A a (ps a))
   ⊗ˢ≡ o A = refl
 
-  -- `P` is EXPLICIT throughout: it is grammar-valued, and CLAUDE.md's
-  -- standing trap is that such arguments cannot be recovered from the
-  -- unfolded type (`⊗ˢᵈ o P m` is a `Σ`, which pins nothing).
+  -- `P` is EXPLICIT throughout: it is grammar-valued, and such arguments
+  -- cannot be recovered from the unfolded type (`⊗ˢᵈ o P m` is a `Σ`,
+  -- which pins nothing).
   module _ (o : σ .ops) (P : Parts o → Type ℓA) where
 
     ⊗ˢᵈ-I : (m : Fib .carrier (σ .resultSort o)) (sp : Fib .Split o m)

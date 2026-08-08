@@ -302,3 +302,24 @@ _build
 .direnv/
 result
 result-*
+
+# Haskell/GHC output from the Agda backend
+*.hi
+*.o
+
+# the compilation probe: scratch sources plus everything GHC emits
+compile-probe/
+
+# working notes, kept local
+AXIOMS.md
+CLAUDE.md
+scripts/TRUST.md
+tools/README.md
+tools/DETAILS.md
+src/TheoryGrammar/*.md
+doc/
+
+# emacs autosaves and locks
+\#*\#
+.\#*
+*~
