@@ -1,28 +1,5 @@
-{-
-  The embedded DSL: intro and elim for every connective, with the β/η
-  equations stated as isomorphisms of hom-sets.
-
-  Two presentations of each connective, deliberately:
-
-    * COMBINATORS (`&-I`, `⊕-E`, `⊸-app`, ...) -- what you actually write
-      programs with, same names and shapes as LambekD.
-
-    * UNIVERSAL PROPERTIES (`&-UP`, `⊕-UP`, ...) -- an `Iso` of hom-sets.
-      This is the β/η package: `sec`/`ret` of the Iso ARE the two
-      equations, so there are no separate β and η lemmas to state and no
-      bespoke universal-property records.
-
-  Almost every UP below holds with `sec` and `ret` equal to `refl` or to
-  a pattern-matching funExt with `refl` inside -- i.e. the connectives
-  compute.  The exceptions are flagged in place.
-
-  The representable case
-
-      ⌈ a ⌉ ⊢ B   ≅   B a
-
-  is the Yoneda lemma for this promodel, and is what `ε` and `literal`
-  were special cases of in the string setting.
--}
+{- The embedded DSL: intro and elim for every connective, with the β/η
+   equations stated as isomorphisms of hom-sets. -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Rules where
 
@@ -41,7 +18,7 @@ private variable ℓS ℓ ℓ' ℓX ℓA ℓB ℓC ℓY : Level
 
 -- The additive rules and the representables need only a CARRIER -- see
 -- the note in `Base.agda`.  Keeping them here, off `Model`, is what lets
--- `RulesFib` serve a promodel with no total operation.
+-- `RulesFib` serve a `Fibered` with no total operation.
 module RulesCarrier {S : Type ℓS} (X : S → Type ℓX) where
 
   open CarrierNotation X
@@ -52,9 +29,7 @@ module RulesCarrier {S : Type ℓS} (X : S → Type ℓX) where
     B : TheoryTy ℓB s
     C : TheoryTy ℓC s
 
-  -- ================================================================
   -- ⊤  --  intro only
-  -- ================================================================
 
   ⊤-I : A ⊢ ⊤G
   ⊤-I _ _ = tt
@@ -65,9 +40,7 @@ module RulesCarrier {S : Type ℓS} (X : S → Type ℓX) where
   ⊤-UP .Iso.sec _ = refl
   ⊤-UP .Iso.ret _ = refl
 
-  -- ================================================================
   -- ⊥  --  elim only
-  -- ================================================================
 
   ⊥-E : ⊥G ⊢ A
   ⊥-E _ ()
@@ -78,9 +51,7 @@ module RulesCarrier {S : Type ℓS} (X : S → Type ℓX) where
   ⊥-UP .Iso.sec _ = refl
   ⊥-UP .Iso.ret f = funExt λ m → funExt λ ()
 
-  -- ================================================================
   -- &  --  binary additive conjunction
-  -- ================================================================
 
   &-I : A ⊢ B → A ⊢ C → A ⊢ (B & C)
   &-I f g m x = f m x , g m x
@@ -97,9 +68,7 @@ module RulesCarrier {S : Type ℓS} (X : S → Type ℓX) where
   &-UP .Iso.sec _ = refl
   &-UP .Iso.ret _ = refl
 
-  -- ================================================================
   -- ⊕  --  binary additive disjunction
-  -- ================================================================
 
   ⊕-I₁ : A ⊢ (A ⊕ B)
   ⊕-I₁ _ = inl
@@ -117,9 +86,7 @@ module RulesCarrier {S : Type ℓS} (X : S → Type ℓX) where
   ⊕-UP .Iso.sec _ = refl
   ⊕-UP .Iso.ret f = funExt λ m → funExt λ { (inl _) → refl ; (inr _) → refl }
 
-  -- ================================================================
   -- ⇒  --  the ADDITIVE function type, right adjoint to &
-  -- ================================================================
 
   ⇒-I : (A & B) ⊢ C → A ⊢ (B ⇒ C)
   ⇒-I f m x y = f m (x , y)
@@ -136,9 +103,7 @@ module RulesCarrier {S : Type ℓS} (X : S → Type ℓX) where
   ⇒-UP .Iso.sec _ = refl
   ⇒-UP .Iso.ret _ = refl
 
-  -- ================================================================
   -- ⊕ᴰ / &ᴰ  --  the indexed additives
-  -- ================================================================
 
   ⊕ᴰ-I : (Y : Type ℓY) {A : Y → TheoryTy ℓA s} (y : Y) → A y ⊢ ⊕ᴰ Y A
   ⊕ᴰ-I Y y m x = y , x
@@ -168,10 +133,56 @@ module RulesCarrier {S : Type ℓS} (X : S → Type ℓX) where
   &ᴰ-UP .Iso.sec _ = refl
   &ᴰ-UP .Iso.ret _ = refl
 
-  -- ================================================================
-  -- ⌈ a ⌉  --  representables.  THE YONEDA LEMMA for this promodel,
+  -- &ᵈ -- THE DEPENDENT ADDITIVE CONJUNCTION. `&` above is non-dependent:
+  -- `(A & B) m = A m × B m`, and the second conjunct cannot mention the
+  -- first's witness.
+
+  _&ᵈ_ : (A : TheoryTy ℓA s) → ((m : X s) → A m → Type ℓB)
+       → TheoryTy (ℓ-max ℓA ℓB) s
+  (A &ᵈ B) m = Σ[ x ∈ A m ] B m x
+
+  infixr 25 _&ᵈ_
+
+  &≡ : (A : TheoryTy ℓA s) (B : TheoryTy ℓB s)
+     → (A & B) ≡ (A &ᵈ λ m _ → B m)
+  &≡ A B = refl
+
+  module _ {A : TheoryTy ℓA s} {B : (m : X s) → A m → Type ℓB} where
+
+    &ᵈ-I : {C : TheoryTy ℓC s} (f : C ⊢ A)
+         → ((m : X s) (x : C m) → B m (f m x)) → C ⊢ (A &ᵈ B)
+    &ᵈ-I f g m x = f m x , g m x
+
+    -- the first projection is a TERM; the second cannot be, and that is
+    -- the content of the connective rather than a defect: its type
+    -- mentions the first component's witness, so it is not a grammar.
+    &ᵈ-E₁ : (A &ᵈ B) ⊢ A
+    &ᵈ-E₁ _ = fst
+
+    &ᵈ-E₂ : (m : X s) (t : (A &ᵈ B) m) → B m (t .fst)
+    &ᵈ-E₂ _ = snd
+
+    &ᵈ-UP : {C : TheoryTy ℓC s}
+          → Iso (C ⊢ (A &ᵈ B))
+                (Σ[ f ∈ (C ⊢ A) ] ((m : X s) (x : C m) → B m (f m x)))
+    &ᵈ-UP .Iso.fun h = (λ m x → h m x .fst) , (λ m x → h m x .snd)
+    &ᵈ-UP .Iso.inv (f , g) = &ᵈ-I f g
+    &ᵈ-UP .Iso.sec _ = refl
+    &ᵈ-UP .Iso.ret _ = refl
+
+  -- Liftg -- the universe shuffle, as a pair of TERMS.
+
+  Liftg : (ℓ : Level) → TheoryTy ℓA s → TheoryTy (ℓ-max ℓA ℓ) s
+  Liftg ℓ A m = Lift ℓ (A m)
+
+  liftg : {ℓ : Level} {A : TheoryTy ℓA s} → A ⊢ Liftg ℓ A
+  liftg _ = lift
+
+  lowerg : {ℓ : Level} {A : TheoryTy ℓA s} → Liftg ℓ A ⊢ A
+  lowerg _ = lower
+
+  -- ⌈ a ⌉  --  representables.  THE YONEDA LEMMA for this `Fibered`,
   -- and the generic replacement for `ε` and `literal`.
-  -- ================================================================
 
   ⌈⌉-I : (a : X s) → ⌈ a ⌉ ⊢ ⌈ a ⌉
   ⌈⌉-I a = id⊢
@@ -189,16 +200,8 @@ module RulesCarrier {S : Type ℓS} (X : S → Type ℓX) where
   ⌈⌉-UP .Iso.sec _ = refl
   ⌈⌉-UP .Iso.ret f = funExt λ m → funExt λ { Eq.refl → refl }
 
--- ==================================================================
--- ⊗[ o ]  --  the multiplicatives.  Intro is n-ary: supply an element
--- for every slot.  Elim is the currying iso of TheoryGrammar.
--- Multiplicative, repackaged as a rule.
---
--- THESE are what need a `Model`: `⊗-I`'s very statement mentions
--- `M .op o m⃗`.  Everything above is `RulesCarrier`.  Note `RulesFib`
--- already hid exactly these three -- the split was latent in that
--- `hiding` clause long before the record was pulled apart.
--- ==================================================================
+-- ⊗[ o ] -- the multiplicatives. Intro is n-ary: supply an element for
+-- every slot.
 
 module Rules {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
 

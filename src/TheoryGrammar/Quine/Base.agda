@@ -1,68 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  A QUINE ENGINE.
-
-  A quine is a source text whose OUTPUT is its own source.  Here the
-  "interpreter" is a semantic action out of the parse trees, so a quine
-  is a fixpoint of
-
-      ⌈ src ⌉  ⊢  Deriv S  ⊢  Δ String
-
-  and the whole verification is that this composite, evaluated at the
-  point `Eq.refl : ⌈ src ⌉ src` of the representable, returns `src`
-  itself.  `⌈_⌉` is what pins "the text parsed is THIS literal": the
-  index of the derivation cannot drift from the source, because the
-  index IS the source.
-
-  ------------------------------------------------------------------
-  THE LANGUAGE.  Three letters, `0`, `1` and `#`.  A program is
-
-      c₀ c₁ … cₙ  #  e            the CODE, a hash, and the DATA
-
-  with the code a nonempty bit string and the data a nonempty string of
-  BIT PAIRS.  The data is a QUOTED bit string: the pair `x y` decodes to
-  `x`, so
-
-      dec (x₀ y₀ x₁ y₁ …) = x₀ x₁ …          enc (b₀ b₁ …) = b₀b₀ b₁b₁ …
-
-  and `dec ∘ enc = id`.  DECODING IS THE GRAMMAR'S JOB, not a function
-  on strings: the pairing is a production (`E → B O`, `O → B E`) and
-  `dec` is "keep the first slot of each pair", one projection per node.
-
-  THE INTERPRETER.  The first bit of the code is the OPCODE, and it
-  chooses what to print:
-
-      opcode 0 :  out = dec(e) ++ "#" ++ enc(dec(e))
-      opcode 1 :  out = enc(dec(e)) ++ "#" ++ dec(e)
-
-  which is the classical quine construction -- "print the data, then
-  print it quoted" -- with the two orders as two instructions.  A source
-  `a # e` is a quine exactly when `a = dec(e)` and `e = enc(a)`, i.e.
-  when the data is the quoted code; so opcode 0 has the quine family
-
-      0#00        00#0000     01#0011     000#000000    …
-
-  whose shortest member is FOUR characters.  Opcode 1 has none at all --
-  its output starts with `enc` of something, hence with a doubled
-  letter, while its source starts with `1`, forcing `enc(d) = 1…`, and
-  `enc` is even and doubled.  (That last is an ARGUMENT, in prose; what
-  the files check by evaluation is that particular opcode-1 texts print
-  something other than themselves.)
-
-  THE GRAMMAR, in Chomsky normal form -- and RIGHT-LINEAR, every binary
-  rule having a one-letter left slot.  That is deliberate: the decision
-  procedure is a `löb` with no tabulation, so a rule whose left slot can
-  be long makes the cut scan re-descend; with a one-letter left slot
-  every wrong cut dies at the literal matcher.
-
-      S → B R            a program: opcode, then the rest
-      R → B R | H E      more code, or the hash and the data
-      H → '#'
-      B → '0' | '1'
-      E → B O            the data: a bit, then …
-      O → '0' | '1'      … the pair's second bit, ending the data
-        | B E            … or the pair's second bit and more data
--}
+{- A QUINE ENGINE. A quine is a source text whose OUTPUT is its own source. -}
 module TheoryGrammar.Quine.Base where
 
 open import Cubical.Foundations.Prelude
@@ -78,9 +15,7 @@ import Cubical.Data.Equality as Eq
 open import TheoryGrammar.Enumerable
 open import TheoryGrammar.SemanticAction
 
--- ==================================================================
 -- §0  THE ALPHABET
--- ==================================================================
 
 data Chr : Type₀ where
   c0 c1 c# : Chr
@@ -99,9 +34,7 @@ Hash? c# = Unit
 
 open import TheoryGrammar.Instances.Strings.CYK Chr public
 
--- ==================================================================
 -- §1  THE GRAMMAR
--- ==================================================================
 
 data NT : Type₀ where ntS ntR ntH ntB ntE ntO : NT
 
@@ -198,12 +131,7 @@ allComplete ntO (inr (ntB , ntB , ()))
 allComplete ntO (inr (ntB , ntE , tt)) = there (there here)
 allComplete ntO (inr (ntB , ntO , ()))
 
--- ==================================================================
--- §2  THE ONE EXTERNAL INPUT: decidability of the alphabet.
---
--- Exactly as `Strings.Examples.decEqS`.  It enters the calculus once,
--- as the PROBE `litProbe`, and nothing below matches a string.
--- ==================================================================
+-- §2 THE ONE EXTERNAL INPUT: decidability of the alphabet.
 
 decEqC : (a b : Chr) → (a Eq.≡ b) ⊎ No (a Eq.≡ b)
 decEqC c0 c0 = inl Eq.refl
@@ -232,18 +160,7 @@ litProbe c w _ = decEqS w (c ∷ [])
 
 open Decide allRules allComplete litProbe public
 
--- ==================================================================
--- §3  THE INTERPRETER, as a semantic action.
---
--- One meaning per nonterminal, one metalanguage combination per
--- production -- which is what a `Δ`-valued algebra IS.  Nothing here
--- looks at a string: `dec` never appears, because the pairing that
--- realises it is the grammar's own structure.
---
---     B  ↦ the letter                E ↦ dec of the data below it
---     H  ↦ nothing                   O ↦ dec of the data below it
---     R  ↦ dec of the data           S ↦ THE OUTPUT
--- ==================================================================
+-- §3 THE INTERPRETER, as a semantic action.
 
 -- QUOTING: the only string function in the interpreter, and it is the
 -- classical quine's `quote`.
@@ -260,13 +177,7 @@ emit c# d = []                      -- unreachable: `B` derives no `#`
 
 module AI = ActInd strFib ℓ-zero NT (λ _ → tt)
 
--- THE INTERPRETER, parameterised by what the ROOT does.  Everything
--- below the root is fixed -- it is the decoder, and it is the grammar's
--- own pairing -- so a "language" here is just a choice of `root`, i.e.
--- of what a program means once its data has been read.
---
---     root = emit                the quine interpreter (`Quine.Tiny`)
---     root = read a grammar      the meta-circular one (`Quine.Meta`)
+-- THE INTERPRETER, parameterised by what the ROOT does.
 module Interp (X : Type₀) (x₀ : X) (root : Chr → String → X) where
 
   Val : NT → Type₀
@@ -322,13 +233,9 @@ module Interp (X : Type₀) (x₀ : X) (root : Chr → String → X) where
   interp : (P : NT) → Deriv P ⊢ Δ (Val P)
   interp = AI.recA alg
 
-  -- ================================================================
-  -- THE PIPELINE, still a term.
-  --
-  -- `mapR` applies the interpreter on the success branch and leaves the
-  -- refutation alone, so `outD` is `⊤G ⊢ Result (¬G Deriv P) (Δ (Val P))`
-  -- and nothing has been externalised.
-  -- ================================================================
+  -- THE PIPELINE, still a term. `mapR` applies the interpreter on the
+  -- success branch and leaves the refutation alone, so `outD` is `⊤G ⊢
+  -- Result (¬G Deriv P) (Δ (Val P))` and nothing has been externalised.
 
   outD : (P : NT) → ⊤G ⊢ Result (¬G Deriv P) (Δ (Val P))
   outD P = mapR (¬G Deriv P) (Δ (Val P)) (interp P) ∘g derives? P

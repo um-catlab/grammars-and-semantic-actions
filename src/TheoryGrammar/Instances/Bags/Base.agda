@@ -1,5 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- The commutative-monoid signature, interleaving, and the promodel. -}
+{- The commutative-monoid signature, interleaving, and the `Fibered`. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Bags.Base (A : Type₀) where
@@ -26,12 +26,10 @@ open import TheoryGrammar.Graded
 Bag : Type₀
 Bag = List A
 
--- Signature.  Same as monoids -- commutativity is an EQUATION, and
+-- Signature: same as monoids.  Commutativity is an EQUATION, and
 -- equations live in the model, not the signature.
 
-
 -- Interleaving: the commutative splitting.
-
 data Ilv : Bag → Bag → Bag → Type₀ where
   nil   : Ilv [] [] []
   left  : ∀ {x u v w} → Ilv u v w → Ilv (x ∷ u) v (x ∷ w)
@@ -46,6 +44,39 @@ ilvApp []      []      = nil
 ilvApp []      (x ∷ v) = right (ilvApp [] v)
 ilvApp (x ∷ u) v       = left (ilvApp u v)
 
+-- The unit laws of `Ilv`.  `ilv-nilL` is `ilvApp []` on the nose;
+-- `ilv-nilR` is not, for the same reason `Strings`' `split3-idʳ` is
+-- not -- `ilvApp u []` lands at `u ++ []`.
+
+ilv-nilL : (v : Bag) → Ilv [] v v
+ilv-nilL = ilvApp []
+
+-- PRIMITIVE.  The right unit, which `ilvApp` cannot give.
+ilv-nilR : (u : Bag) → Ilv u [] u
+ilv-nilR []      = nil
+ilv-nilR (x ∷ u) = left (ilv-nilR u)
+
+-- ASSOCIATIVITY of interleaving: p ⊎ (q ⊎ r) regrouped as q ⊎ (p ⊎ r).
+-- A fact about `Ilv` alone, so it belongs beside it.
+ilvAssoc : ∀ {p q r u w} → Ilv p u w → Ilv q r u
+         → Σ[ y ∈ Bag ] (Ilv q y w × Ilv p r y)
+ilvAssoc nil       nil        = [] , nil , nil
+ilvAssoc (left s)  t          =
+  let (y , e1 , e2) = ilvAssoc s t in _ , right e1 , left e2
+ilvAssoc (right s) (left t)   =
+  let (y , e1 , e2) = ilvAssoc s t in _ , left e1 , e2
+ilvAssoc (right s) (right t)  =
+  let (y , e1 , e2) = ilvAssoc s t in _ , right e1 , right e2
+
+-- PRIMITIVE.  An empty left part leaves the whole alone ...
+ilv-nilL-inv : {v w : Bag} → Ilv [] v w → v Eq.≡ w
+ilv-nilL-inv nil       = Eq.refl
+ilv-nilL-inv (right p) = Eq.ap (_ ∷_) (ilv-nilL-inv p)
+
+-- ... and so does an empty right part.
+ilv-nilR-inv : {u w : Bag} → Ilv u [] w → u Eq.≡ w
+ilv-nilR-inv nil      = Eq.refl
+ilv-nilR-inv (left p) = Eq.ap (_ ∷_) (ilv-nilR-inv p)
 
 MonSplit : (o : MonOp) → Bag → Type₀
 MonSplit nilop w = IsNil w
@@ -60,10 +91,9 @@ bagFib .carrier _   = Bag
 bagFib .Split       = MonSplit
 bagFib .parts       = MonParts
 
--- The total point, separately.  Bags have a total union, so the split
--- costs this instance nothing; what it buys is that the connectives
--- never consult it.  Note `Ilv` is NOT the fibre of `++` -- a splitting
--- need not be a concatenation -- so the point really is only lax.
+-- The total point, separately: the connectives never consult it.  `Ilv`
+-- is NOT the fibre of `++` -- a splitting need not be a concatenation --
+-- so the point really is only lax.
 bagPoint : LaxPoint bagFib
 bagPoint .op nilop _  = []
 bagPoint .op appop f  = f true ++ f false

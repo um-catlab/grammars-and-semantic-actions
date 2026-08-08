@@ -1,90 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  THE FUNDAMENTAL THEOREM OF ARITHMETIC AS A PARSING THEOREM.
-
-  ------------------------------------------------------------------
-  The framing, and why it is the right one.
-  ------------------------------------------------------------------
-
-  A grammar over the Dirichlet promodel is a family indexed by a
-  positive integer; a `μ` of a description is a grammar defined by a
-  recursion whose recursive slots sit at the parts of a splitting, i.e.
-  at DIVISORS.  Because `deg n = n` (Graded.agda), the framework's Löb
-  recursion over "strictly smaller degree" is literally strong induction
-  on the natural number, and the promodel restricts it to divisors.  So
-
-      Löb over the Dirichlet promodel  =  strong induction on divisors,
-
-  and "a canonical factorisation of n" is not an auxiliary construction
-  but the parse tree of n against the grammar
-
-      Fact k  =  ⌈1⌉  ⊕  ⊕ᴰ[ p prime, p ≥ k ] ( ⌈p⌉ ⊗ Fact p ).
-
-  Read that as a context-free grammar over the alphabet of primes, where
-  "concatenation" is multiplication.  The index k is a lower bound on the
-  primes still allowed: it is what forces the factors to come out in
-  nondecreasing order, and hence what makes the grammar UNAMBIGUOUS.
-  Without it, `⌈1⌉ ⊕ ⊕ᴰ[p] (⌈p⌉ ⊗ Fact)` would parse 6 twice, as 2·3 and
-  as 3·2.  With it, 6 has exactly one parse.  This is exactly the reason
-  a grammar for balanced strings is written with an explicit nesting
-  discipline rather than as `ε ⊕ (Dyck ⊗ Dyck)`.
-
-  Then the two halves of the fundamental theorem are two standard
-  properties of a grammar:
-
-      EXISTENCE   =  totality of `hyloC` -- every n has a parse.
-      UNIQUENESS  =  unambiguity of the grammar -- it has at most one.
-
-  and the classical Euler product
-
-      ζ  =  ⊗ᴰ_p  ⌈p⌉*
-
-  is the closed form of the very same grammar: the unique factorisation
-  theorem says the canonical-factorisation grammar is isomorphic to ⊤,
-  which in the convolution algebra is the statement that ζ factors as an
-  infinite ⊗ of Kleene stars, one per prime.  `KL*` at this promodel is
-  `μ` of `⌈1⌉ ⊕ (⌈p⌉ ⊗ Var)` -- the same description with the ⊕ᴰ over
-  primes deleted -- and it is guarded for exactly the reason the string
-  Kleene star is guarded: `⌈p⌉` is "non-nullable", which here means p ≥ 2.
-
-  ------------------------------------------------------------------
-  What is proved here, and what is not.
-  ------------------------------------------------------------------
-
-  PROVED, with no holes:
-
-    * the grammar, as a generic `μ` over a description built from
-      `⌜_⌝`, `⊕e`, `⊗e`, `Var` -- not a hand-written datatype;
-    * `factGuarded`, the guardedness certificate, which is the real
-      structural content: the recursive slot sits at n/p and p ≥ 2, so
-      `Proper` holds and the recursion descends;
-    * the `hyloC` wiring, with the algebra run at the SPECIFICATION
-      (`Fact` below) rather than at a bare output type, so the
-      factorisation comes out already carrying its own correctness proof
-      -- the Quicksort trick, and the reason `factorize` cannot be
-      written wrongly;
-    * the constructors `one-f` / `mul-f` and the destructor `unroll-f`,
-      so the grammar can be used without touching `Sh`/`Pos`.
-
-  PARKED as one hole, with its `⊢` type stated:
-
-    * `lpf`, "split off the least prime factor ≥ k".  This is the single
-      genuine COMPUTATION in the file, and it is number theory rather
-      than grammar theory -- a bounded search for the least divisor ≥ 2,
-      plus one transport (associativity of `Times`).  See the long
-      comment at `lpf` for the exact decomposition; nothing structural
-      depends on it, and the worked parse at the bottom of the file
-      exercises the rest of the machinery without it.
-
-  ------------------------------------------------------------------
-  PHASE.  `IsPrime`, `NoSmall`, and `lpf` are phase-1 primitives, each with
-  a `⊢` type or an explicitly stated shape.  `into` is pure plumbing
-  between two spellings of one type (as `intoQ` is in Bags/Quicksort:
-  descriptions carry a `Lift` on constants and their slot family is not
-  `if`-shaped).  `fcoalg`, `falg`, `factorize` are phase 2: they are
-  composites of `∘g`, `⊕-elim`, `⊕ᴰ-in`, `⊕ᴰ-elim`, `liftg`, `⊗I`, `⊗E`
-  and the primitives.  No number is ever matched on outside phase 1.
--}
+{- THE FUNDAMENTAL THEOREM OF ARITHMETIC AS A PARSING THEOREM. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Dirichlet.Factorization where
@@ -109,11 +24,9 @@ open import TheoryGrammar.SemanticAction using (Case; passes; _↦_; _at_)
 
 open import TheoryGrammar.Instances.Dirichlet.Graded public
 
--- ==================================================================
 -- Primes.  Irreducibility is stated with the SUBSTRATE'S OWN
 -- splittings: p is prime when every factorisation of it has a unit on
 -- one side.  `IsUnit` is the recursive "= 1" predicate from Base.
--- ==================================================================
 
 IsPrime : ℕ₊ → Type₀
 IsPrime p = (2 ≤ val p)
@@ -133,10 +46,8 @@ pv pp = pp .fst
 forget : {k : ℕ} → P≥ k → Prime
 forget pp = pp .fst , pp .snd .fst
 
--- ==================================================================
 -- THE GRAMMAR, as a description.  Nonterminals are indexed by ℕ: the
 -- nonterminal `k` is "a factorisation using only primes ≥ k".
--- ==================================================================
 
 factSlot : ℕ₊ → Bool → Functor tt
 factSlot p true  = ⌜ ⌈ p ⌉ ⌝            -- the prime itself
@@ -152,14 +63,9 @@ factF k = ⊕e Bool (factAlt k)
 Factorisation : ℕ → Gr
 Factorisation k n = μ factF (k , n)
 
--- ==================================================================
--- GUARDEDNESS.  The one strict step is the ⊗e: the recursive slot holds
--- n/p, and its complement holds p, which is ≥ 2 -- so `Proper` holds
--- and `slotProper` discharges it.  Line for line the same shape as
--- `starGuarded` in Instances/Strings/KleeneStar and `decompGuarded` in
--- Instances/Strings/Decomposition; the ONLY instance-specific input is
--- `ge2NU`, "a number ≥ 2 is a non-unit", proved once in Graded.
--- ==================================================================
+-- GUARDEDNESS. The one strict step is the ⊗e: the recursive slot holds
+-- n/p, and its complement holds p, which is ≥ 2 -- so `Proper` holds and
+-- `slotProper` discharges it.
 
 factGuarded : (k : ℕ) → Guarded (factF k)
 factGuarded k = <⊕e Bool (factAlt k) alt
@@ -180,70 +86,65 @@ factGuarded k = <⊕e Bool (factAlt k) alt
     alt true  = <⌜⌝ δ
     alt false = <⊕e (P≥ k) _ (λ pp → ⊗-guard mulop (factSlot (pv pp)) (go pp))
 
--- ==================================================================
 -- Constructors and destructor for the grammar, so nothing downstream
 -- has to see `Sh`/`Pos`.  (`roll-f` is the algebra, point-free.)
--- ==================================================================
 
 module _ {k : ℕ} where
 
+  -- The description, read as connectives. `⟦_⟧c` makes `⊕e`/`⊗e`/`⌜⌝` into
+  -- `⊕ᴰ`/`⊗ˢ`/`Liftg` DEFINITIONALLY, so these names are the grammars the
+  -- combinators below act on -- they exist only so the families can be
+  -- passed explicitly, which `⊕ᴰ-I`/`⊗ˢ-map` need.
+  FactBody : Bool → Gr
+  FactBody b = ⟦ factAlt k b ⟧c (μ factF)
+
+  MulAt : P≥ k → Gr
+  MulAt pp = ⟦ ⊗e mulop (factSlot (pv pp)) ⟧c (μ factF)
+
+  FactSlot : (pp : P≥ k) → Bool → Gr
+  FactSlot pp a = ⟦ factSlot (pv pp) a ⟧c (μ factF)
+
+  -- ... and the three maps, as terms.  All three used to open the
+  -- container form by hand -- two building `sup`, one a `with` on
+  -- `unroll` -- and `Grade.rollg`/`unrollg` remove the need.
   one-f : δ ⊢ Factorisation k
-  one-f n e = sup (true , lift e) λ ()
+  one-f = rollg factF k ∘g ⊕ᴰ-I Bool {A = FactBody} true ∘g liftg
 
   mul-f : (pp : P≥ k) → (⌈ pv pp ⌉ ⊗' Factorisation (val (pv pp))) ⊢ Factorisation k
-  mul-f pp n ((d , e , t) , h) =
-    sup (false , pp , (d , e , t) , λ { true → lift (h true) ; false → tt* })
-        λ { (true , ()) ; (false , _) → h false }
+  mul-f pp =
+    rollg factF k
+    ∘g ⊕ᴰ-I Bool {A = FactBody} false
+    ∘g ⊕ᴰ-I (P≥ k) {A = MulAt} pp
+    ∘g ⊗ˢ-map mulop
+         {A = λ b → if b then ⌈ pv pp ⌉ else Factorisation (val (pv pp))}
+         {B = FactSlot pp}
+         (λ { true → liftg ; false → idg })
 
   unroll-f : Factorisation k
            ⊢ (δ ⊕ ⊕ᴰ (P≥ k) (λ pp → ⌈ pv pp ⌉ ⊗' Factorisation (val (pv pp))))
-  unroll-f n t with unroll t
-  ... | (true  , e)            , f = inl (lower e)
-  ... | (false , pp , sp , sh) , f =
-    inr (pp , sp , λ { true → lower (sh true) ; false → f (false , tt*) })
+  unroll-f =
+    ⊕ᴰ-E {A = FactBody}
+      (λ { true  → ⊕-I₁ ∘g lowerg
+         ; false → ⊕-I₂ ∘g ⊕ᴰ-E {A = MulAt}
+                     (λ pp → ⊕ᴰ-I (P≥ k) pp
+                             ∘g ⊗ˢ-map mulop
+                                  {A = FactSlot pp}
+                                  {B = λ b → if b then ⌈ pv pp ⌉
+                                                   else Factorisation (val (pv pp))}
+                                  (λ { true → lowerg ; false → idg })) })
+    ∘g unrollg factF k
 
   roll-f : (δ ⊕ ⊕ᴰ (P≥ k) (λ pp → ⌈ pv pp ⌉ ⊗' Factorisation (val (pv pp))))
          ⊢ Factorisation k
   roll-f = ⊕-elim one-f (⊕ᴰ-elim mul-f)
 
--- ==================================================================
--- THE COALGEBRA.
---
--- The carrier is not `⊤`.  It cannot be: `μ factF (k , n)` is inhabited
--- only when every prime factor of n is ≥ k, so a coalgebra at `⊤` would
--- be claiming that every (k , n) is factorable with primes ≥ k, which is
--- false.  The carrier is therefore the invariant itself, and the fact
--- that the framework FORCES you to name it is worth noticing: the
--- coalgebra carrier of a hylomorphism is exactly the loop invariant of
--- the corresponding imperative search.
--- ==================================================================
+-- THE COALGEBRA. The carrier is not `⊤`.
 
-{-
-  THE INVARIANT.  Two candidates present themselves:
-
-      Above  k n  =  every PRIME factor of n is ≥ k
-      NoSmall k n  =  every factor of n that is ≥ 2 is ≥ k
-                      (equivalently: n has no divisor in [2,k))
-
-  They are equivalent, but not symmetrically so: NoSmall ⟹ Above is
-  immediate (a prime factor is a factor ≥ 2), while Above ⟹ NoSmall goes
-  through "every number ≥ 2 has a prime factor", which is the very
-  theorem being proved.  So `NoSmall` is the right choice, and choosing
-  it is what shrinks the remaining work:
-
-    * it is VACUOUS at k = 0, so the top-level call needs no input;
-    * it is what makes the least admissible divisor PRIME, without any
-      prior theory of primes -- see the hole comment below;
-    * it is re-established at the cofactor by the same minimality
-      argument, again with no new number theory.
-
-  This is worth recording as a design fact about the framework: the
-  coalgebra carrier of a `hyloC` is the loop invariant of the
-  corresponding search, and the framework forces you to name it before
-  you can even state the search.  Picking the strong-but-cheap invariant
-  rather than the semantically obvious one is a decision the type made
-  visible.
--}
+{- THE INVARIANT. Two candidates present themselves: Above k n = every
+   PRIME factor of n is ≥ k NoSmall k n = every factor of n that is ≥ 2 is
+   ≥ k (equivalently: n has no divisor in [2,k)) They are equivalent, but
+   not symmetrically so: NoSmall ⟹ Above is immediate (a prime factor is a
+   factor ≥ 2),... -}
 NoSmall : ℕ → Gr
 NoSmall k n = (d e : ℕ₊) → Times (val d) (val e) (val n) → 2 ≤ val d → k ≤ val d
 
@@ -260,43 +161,10 @@ NoSmall→Above : {k : ℕ} {n : ℕ₊} → NoSmall k n
               → Times (val p) (val e) (val n) → k ≤ val p
 NoSmall→Above ns p pr e t = ns p e t (pr .fst)
 
-{-
-  PRIMITIVE (phase 1) -- PARKED AS A HOLE.
-
-  `lpf k` is "split off the least admissible divisor".  It is the only
-  genuine COMPUTATION in the development, and the only thing between here
-  and a closed proof of the fundamental theorem.  With `NoSmall` as the
-  invariant it decomposes as follows.  Given n with `NoSmall k n`:
-
-    (i)   if n = 1, take the left injection;
-    (ii)  otherwise search for the LEAST d with 2 ≤ d and d ∣ n.  It
-          exists, since d = n qualifies, and the search is bounded by n.
-          This needs decidable divisibility -- `n mod d ≡ 0` via
-          Cubical.Data.Nat.Mod -- and a least-witness principle;
-    (iii) d ≥ k, directly from the incoming `NoSmall k n`;
-    (iv)  d is PRIME: if d = a · b with a , b ≥ 2 then a ∣ n and
-          2 ≤ a < d, contradicting minimality in (ii).  Note that this
-          uses nothing about primes -- the invariant does the work;
-    (v)   the cofactor e = n/d satisfies `NoSmall d e`: a factor c of e
-          with c ≥ 2 is a factor of n with c ≥ 2, so c ≥ d by minimality.
-
-  (iv) and (v) both need ASSOCIATIVITY of `Times` -- from `Times a b d`
-  and `Times d e n`, produce `Times a (b · e) n` -- which is `·-assoc`
-  transported across `timesPath`/`timesAll`, i.e. the same one-line
-  pattern as `timesSwap` in Divisors.agda.
-
-  So what is missing is (ii), the bounded search with its minimality
-  certificate, plus the transport in (iv)/(v).  Perhaps 150 lines of
-  arithmetic, none of it about the calculus.  EVERYTHING STRUCTURAL --
-  the grammar, `factGuarded`, the `hyloC` wiring, the specification-
-  valued algebra, and the worked parse at the bottom of this file -- is
-  independent of this hole.
--}
--- ==================================================================
+{- PRIMITIVE (phase 1) -- PARKED AS A HOLE. -}
 -- THE ONE COMPUTATION.  Decidable divisibility, and the least divisor
 -- ≥ 2 by bounded search.  All arithmetic; nothing here is about the
 -- calculus, which is exactly why it sat apart from everything else.
--- ==================================================================
 
 private
   nzPlus2 : (j : ℕ) → NonZero (j + 2)
@@ -380,11 +248,11 @@ private
   leastFactor n 2n =
     search n 2 2n ≤-refl (λ c f t 2c → 2c) n (≤-suc (≤-suc ≤-refl))
 
--- ==================================================================
 -- ... and the primitive itself.  Matching on the carrier is what makes
 -- this phase 1; every consumer below is a composite of combinators.
--- ==================================================================
 
+-- PRIMITIVE (phase 1): the DECOMPOSITION AXIOM for this carrier -- every
+-- positive number is 1 or has a least prime factor.
 lpf : (k : ℕ)
     → NoSmall k ⊢ (δ ⊕ ⊕ᴰ (P≥ k) (λ pp → ⌈ pv pp ⌉ ⊗' NoSmall (val (pv pp))))
 lpf k (zero , ()) ns
@@ -399,8 +267,7 @@ lpf k (suc (suc m) , tt) ns = go (leastFactor N 2≤N)
 
     -- Destructured rather than projected: `leastFactor` is defined by a
     -- `with` on the divisibility test, so `LF.lfd (leastFactor …)` is a
-    -- stuck term and nothing depending on it would reduce.  Matching the
-    -- record once puts plain variables in scope instead.
+    -- stuck term and nothing depending on it would reduce.
     go : LF N
        → (δ ⊕ ⊕ᴰ (P≥ k) (λ pp → ⌈ pv pp ⌉ ⊗' NoSmall (val (pv pp))))
            (suc (suc m) , tt)
@@ -413,8 +280,7 @@ lpf k (suc (suc m) , tt) ns = go (leastFactor N 2≤N)
         -- (iv) THE LEAST FACTOR IS IRREDUCIBLE, and minimality is the
         -- whole proof: if it split as a·b with both sides ≥ 2 then `a`
         -- would also divide N (that is `timesAssoc`) and be strictly
-        -- smaller, which the minimality certificate forbids.  No prior
-        -- theory of primes is used anywhere.
+        -- smaller, which the minimality certificate forbids.
         irred : (a b : ℕ₊) → Times (val a) (val b) d
               → IsUnit (val a) ⊎ IsUnit (val b)
         irred (zero , ()) b tab
@@ -465,14 +331,8 @@ fcoalg k =
          (⊕ᴰ-elim (λ pp → ⊕ᴰ-in false ∘g ⊕ᴰ-in pp ∘g into k pp))
   ∘g lpf k
 
--- ==================================================================
--- THE ALGEBRA, RUN AT THE SPECIFICATION.
---
--- The motive IS the statement to be proved: "a list of primes whose
--- product is n".  Nothing is rechecked afterwards -- the algebra emits
--- the proof as it builds the list, so a wrong implementation does not
--- typecheck.  This is `qalgV` from Bags/Quicksort, at a different theory.
--- ==================================================================
+-- THE ALGEBRA, RUN AT THE SPECIFICATION. The motive IS the statement to be
+-- proved: "a list of primes whose product is n".
 
 prod : List Prime → ℕ
 prod []       = 1
@@ -502,11 +362,9 @@ falg k =
                    (λ d e s pf inner →
                       consFact (forget pp) d e n s (lower pf) inner) t }
 
--- ==================================================================
 -- THE THEOREM.  Existence of a prime factorisation IS the totality of
 -- the hylomorphism; the guardedness certificate is what makes it total,
 -- and the specification-valued algebra is what makes it correct.
--- ==================================================================
 
 factorize : (k : ℕ) (n : ℕ₊) → NoSmall k n → Σ[ ps ∈ List Prime ] (prod ps ≡ val n)
 factorize k n inv = hyloC factGuarded fcoalg falg (k , n) inv
@@ -514,16 +372,7 @@ factorize k n inv = hyloC factGuarded fcoalg falg (k , n) inv
 fundamentalTheorem : (n : ℕ₊) → Σ[ ps ∈ List Prime ] (prod ps ≡ val n)
 fundamentalTheorem n = factorize 0 n (noSmall0 n)
 
--- ==================================================================
 -- A WORKED PARSE, independent of the parked primitive.
---
--- `factorize` is blocked on `lpf`, which is the SEARCH.  Everything
--- else -- the grammar, its constructors, the specification-valued
--- algebra -- is closed, and this section exhibits that by parsing a
--- number by hand and reading the parse back through `falg`.  What comes
--- out is the factorisation together with its correctness proof, and it
--- reduces: the final `refl` is the evaluation.
--- ==================================================================
 
 -- `fold` at a connective-form algebra is the GENERIC `Inductive.foldC`;
 -- this file used to re-derive it (as did `Lambda.Passes.Framework`,

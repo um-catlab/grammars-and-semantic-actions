@@ -62,9 +62,7 @@ open import TheoryGrammar.Instances.LinLam.Codegen
   hiding (Pass; idPass)
 import TheoryGrammar.Instances.Heap.Graded as H
 
--- ==================================================================
 -- (0) The two theories, bundled.
--- ==================================================================
 
 linTheory : Theory ℓ-zero ℓ-zero ℓ-zero ℓ-zero ℓ-zero
 linTheory = theory monoidSig linFib
@@ -72,12 +70,7 @@ linTheory = theory monoidSig linFib
 heapTheory : Theory ℓ-zero ℓ-zero ℓ-zero ℓ-zero ℓ-zero
 heapTheory = theory monoidSig H.heapFib
 
--- ==================================================================
 -- (1) THE CARRIER MAP AND ITS PRESERVATION, AS THE φ = id INSTANCE.
---
--- Note there is nothing on the right-hand sides but projections.  If the
--- generalisation had needed a coercion, one would have to appear here.
--- ==================================================================
 
 layoutOver : ReindexOver (idSigMor monoidSig) linFib H.heapFib
 layoutOver = ofReindex layoutMap
@@ -86,9 +79,7 @@ layPresOver : (o : MonOp) → SplitPresAtOver layoutOver o
 layPresOver o .homSplitO = layPres o .homSplit
 layPresOver o .homPartsO = layPres o .homParts
 
--- ==================================================================
 -- (2) ... and the translation is an isomorphism on the nose.
--- ==================================================================
 
 _ : (o : MonOp) → presToOver layoutMap o (layPres o) ≡ layPresOver o
 _ = λ o → refl
@@ -100,10 +91,8 @@ _ : (o : MonOp) (P : SplitPresAt layoutMap o)
   → presFromOver layoutMap o (presToOver layoutMap o P) ≡ P
 _ = λ o P → refl
 
--- ==================================================================
 -- (3) REFLECTION NEEDS NO TRANSLATION AT ALL: the two types are equal,
 -- and `layRefl` inhabits the new one with nothing written.
--- ==================================================================
 
 _ : (o : MonOp) → ReflectsSplitAtOver layoutOver o ≡ Along.ReflectsSplitAt layoutMap o
 _ = λ o → refl
@@ -115,9 +104,7 @@ layReflOver = layRefl
 laySection : (o : MonOp) → ArSection (idSigMor monoidSig) o
 laySection = idArSection monoidSig
 
--- ==================================================================
 -- THE PASS, AND ITS REFLECTIVITY.
--- ==================================================================
 
 layoutPass : Pass linTheory heapTheory
 layoutPass .sigOf  = idSigMor monoidSig
@@ -135,12 +122,8 @@ layoutChain = layoutPass ◅ done
 layoutChainReflective : Reflective (composite layoutChain)
 layoutChainReflective = chainReflective layoutChain (layoutReflective , tt*)
 
--- ==================================================================
--- (4) THE COMPUTATION TEST.  `Codegen`'s own `refl` line, run through
--- the generalisation and then through the CHAIN.  Both still reduce, and
--- the last component -- the `_#_` proof that the two emitted regions do
--- not alias -- is still a nest of `tt`.
--- ==================================================================
+-- (4) THE COMPUTATION TEST. `Codegen`'s own `refl` line, run through the
+-- generalisation and then through the CHAIN.
 
 private
   twoU : Usage
@@ -174,28 +157,9 @@ _ : layoutChainReflective .reflectsAt appop twoU
   ≡ (true ∷ false ∷ [] , false ∷ true ∷ [] , twoSplit)
 _ = refl
 
--- ==================================================================
--- (5) THE PHASE-2 INTERFACE.  `Codegen`'s strong monoidality of the
--- layout -- `Lay B ⊛ Lay C ⊣⊢ Lay (B ∗ C)` -- rebuilt out of `push⊗O`
--- and `pull⊗O` instead of `push⊗`/`pull⊗`.  Both TYPES are unchanged,
--- which is the claim: the generic connective interface reproduces the
--- worked pass.  The `⊗ˢ-map` that `Codegen` composes on the outside is
--- absorbed into `push⊗O`'s `tr` argument, which is the only shape change
--- the signature-generic version forces (with `onAr` neither injective
--- nor surjective in general there is no canonical source slot family, so
--- the translation of payloads has to be supplied).
---
--- WHAT IS NOT `refl`, and why -- worth recording, because it is the
--- codebase's standing trap and not a defect of this generalisation.
--- `lay∗Over B C ≡ lay∗ B C` does NOT hold definitionally.  Both sides
--- coerce the payload along `homParts`, but through two nominally
--- distinct helpers (`Along.coeTy` and `AlongOver.coeTyT`), and the
--- equation they consume is `boolΠ Eq.refl Eq.refl a`, which is STUCK at
--- a variable arity `a`.  Neither helper reduces, so the two terms differ
--- as terms while agreeing at `a = true` and at `a = false`.  This is
--- exactly "arities have no η", and it is the same fact that forces
--- `respellIn`/`respellOut` to exist at all.
--- ==================================================================
+-- (5) THE PHASE-2 INTERFACE. `Codegen`'s strong monoidality of the layout
+-- -- `Lay B ⊛ Lay C ⊣⊢ Lay (B ∗ C)` -- rebuilt out of `push⊗O` and
+-- `pull⊗O` instead of `push⊗`/`pull⊗`.
 
 module AO = AlongOver layoutOver
 
@@ -203,14 +167,14 @@ lay∗Over : (B C : H.Gr) → (Lay B ⊛ Lay C) ⊢ Lay (B H.∗ C)
 lay∗Over B C =
   AO.push⊗O appop (layPresOver appop)
     (boolΠ {M = λ _ → Ctx} (Lay B) (Lay C))
-    (H.boolΠ {M = λ _ → H.Gr} B C)
+    (boolΠ {M = λ _ → H.Gr} B C)
     (respellIn B C)
 
 lay∗⁻Over : (B C : H.Gr) → Lay (B H.∗ C) ⊢ (Lay B ⊛ Lay C)
 lay∗⁻Over B C =
   AO.pull⊗O appop (layReflOver appop) (laySection appop)
     (boolΠ {M = λ _ → Ctx} (Lay B) (Lay C))
-    (H.boolΠ {M = λ _ → H.Gr} B C)
+    (boolΠ {M = λ _ → H.Gr} B C)
     (respellOut B C)
 
 -- ... but the TYPES are literally `Codegen`'s, which is checkable:

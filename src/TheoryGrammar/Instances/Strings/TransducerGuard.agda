@@ -1,20 +1,7 @@
 {-# OPTIONS -WnoUnsupportedIndexedMatch #-}
-{-
-  GUARDEDNESS OVER THE GLUE.
-
-  `TransducerMu` showed `Inductive` accepts a glued substrate; `fold` is
-  structural recursion on `μ`, so it never touched `Grading`.  This file
-  supplies what `Grading` wants -- and the point is that it supplies
-  almost nothing: `Gluing.Graded.gradeLeft` inherits the whole grading
-  from the input tape, because the degree only ever looks through `π₁`.
-
-  The one obligation left is the description's own: at the `cons` branch
-  the recursive slot must shrink, which holds because the SHAPE at the
-  other slot is a `Letter` and so pins that part to one character.  Note
-  where that comes from -- the shape, not the splitting -- which is why
-  guardedness is a property of the description and not of the substrate.
-  PRIMITIVE: `ntOfLetter` (one `Eq.refl` match).
--}
+{- GUARDEDNESS OVER THE GLUE. `TransducerMu` showed `Inductive` accepts a
+   glued substrate; `fold` is structural recursion on `μ`, so it never
+   touched `Grading`. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Strings.TransducerGuard
@@ -42,9 +29,7 @@ open TM In Out f public
 import TheoryGrammar.Instances.Strings.Graded as SG
 module SGI = SG In
 
--- ==================================================================
 -- THE GRADED GLUE.  Everything is inherited; nothing is proved here.
--- ==================================================================
 
 module GG = GradeGlue I.strFib O.strFib
               (λ s w v → LI.lenIx .hom s w Eq.≡ LO.lenIx .hom s v)
@@ -54,9 +39,7 @@ glueGraded = GG.gradedGlue (gradingOf SGI.strGraded)
 
 open Guard glueGraded ℓ-zero Unit (λ _ → tt)
 
--- ==================================================================
 -- THE DESCRIPTION IS GUARDED.
--- ==================================================================
 
 -- PRIMITIVE.  A part pinned to a single character is non-trivial, which
 -- is the string instance's properness predicate.

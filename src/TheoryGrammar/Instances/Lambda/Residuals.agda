@@ -1,17 +1,4 @@
-{-
-  The four residuals, one per (operation, slot), and what each costs.
-
-  A residual is a grammar AT THE SORT OF ITS SLOT, so focusing `lamOp`
-  at its binder gives a grammar over NAMES -- something no single-sorted
-  presentation can state.  `⊸ᶠ-β`/`⊸ᶠ-η` are `refl` generically for all
-  four, including the two cross-sorted ones.  What is NOT generic is the
-  adjunction with the tensor -- see `Adjunctions.agda`.
-
-  Defines the four foci `focFun`/`focBind`/`focBody`/`focVar` and the
-  residual each names: `_⟜ᵃ_`, `Binds`, `Under`, `Wraps`.  Proves
-  `bind-UP` and `body-UP`, the universal properties at the two
-  cross-sorted foci.
--}
+{- The four residuals, one per (operation, slot), and what each costs. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Residuals where
 

@@ -1,18 +1,5 @@
-{-
-  The passes compute.
-
-  Each `refl` needs the scope checker, the generic `μ`/`fold`, and the
-  pass's own `⊕-E` branches all to reduce.  Every name below is a TERM
-  (`⊤G ⊢ Δ Bool`, `⊤G ⊢ Result _ (Δ Raw)`): `runClosed`, `runId`/
-  `runEta`/`runDead`, `renDB` and `subScoped!` all stay inside the
-  calculus, and `run`/`runΔ` appear only in the `refl` lines --
-  externalising is the OBSERVATION, not part of the pipeline, so `Bool`
-  and `Maybe` never occur in a statement.  This file defines no reader
-  and no constant grammar.
-
-  `noClosed`, `no-closed-open` and `no-sub` then re-read two of the
-  negative observations as refutations.
--}
+{- The passes compute. Each `refl` needs the scope checker, the generic
+   `μ`/`fold`, and the pass's own `⊕-E` branches all to reduce. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Passes.Tests where
 
@@ -40,12 +27,9 @@ open Eta     ℕ discreteℕ
 open Dead    ℕ discreteℕ
 open Rename  ℕ
 
--- ==================================================================
--- Observing a pass.  `runClosed` is the GENERIC `runResult`: `closed?`
--- is a decision (a `Result (¬G _) _`) and a pass composed with `term`
--- is an `Action (Scoped Γ) Raw`.  The `RawG` / `some` / `none` triple
--- this replaces was `Result ⊤G` and `Maybe` written out by hand.
--- ==================================================================
+-- Observing a pass. `runClosed` is the GENERIC `runResult`: `closed?` is a
+-- decision (a `Result (¬G _) _`) and a pass composed with `term` is an
+-- `Action (Scoped Γ) Raw`.
 
 DecCl : TmG
 DecCl = ¬G (Scoped [])
@@ -58,9 +42,7 @@ runId   = runClosed idPass
 runEta  = runClosed etaPass
 runDead = runClosed deadPass
 
--- ==================================================================
 -- The passes compute.  Cases are batched: one `refl` per suite.
--- ==================================================================
 
 bigger : Raw
 bigger = app (lam 0 (var 0)) (lam 1 (lam 2 (var 1)))
@@ -96,10 +78,8 @@ _ : passes (runΔ Raw DecCl runDead at
              ∷ [] ))
 _ = refl
 
--- ==================================================================
 -- Free transport along a split-preserving carrier map: the generic
 -- `mapμ` computes, and the transported derivation still elaborates.
--- ==================================================================
 
 renDB : ⊤G ⊢ Result DecCl (Δ (DB 0))
 renDB = mapR DecCl (Δ (DB 0))
@@ -113,13 +93,8 @@ _ : passes (runΔ (DB 0) DecCl renDB at
              ∷ [] ))
 _ = refl
 
--- ==================================================================
 -- `subScoped?` : the scope checker TRANSPORTED along substitution, by
--- `CarrierMap.Along.pullTerm`.  It is still a map out of `⊤`, only at a
--- reindexed world -- so the generic `okA` reads it unchanged, and
--- what the test says is that transporting a decision commutes with
--- deciding the transported thing.
--- ==================================================================
+-- `CarrierMap.Along.pullTerm`.
 
 module Inl = Inline ℕ discreteℕ
 
@@ -141,10 +116,8 @@ _ : passes (run (subScoped! 0 (var 1) (1 ∷ [])) at
              ∷ [] ))
 _ = refl
 
--- ==================================================================
 -- The pass rejections, as theorems: an unscoped term has NO closing
 -- derivation, so the pass is not merely undefined on it.
--- ==================================================================
 
 noClosed : (t : Raw) → run (okA (Scoped []) DecCl ∘g closed?) t ≡ false
          → (¬G (Scoped [])) t

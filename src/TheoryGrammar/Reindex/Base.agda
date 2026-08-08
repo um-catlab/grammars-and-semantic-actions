@@ -1,7 +1,7 @@
 {-
   REINDEXING ALONG A MAP OF SIGNATURES.
 
-  `CarrierMap.Reindex` relates two promodels over ONE signature.  That is
+  `CarrierMap.Reindex` relates two `Fibered` over ONE signature.  That is
   enough for a pass that rewrites terms of a fixed theory, and it is not
   enough for a COMPILER, because a compiler's phases do not share a
   theory: the AST theory `λSig` has three operations with sorted slots,
@@ -9,10 +9,10 @@
   linearity checker is precisely a map from the first to the second.
   `LinLam/Check.agda` records the consequence in its header --
 
-      "`CarrierMap.Reindex` relates two promodels over ONE signature, so
+      "`CarrierMap.Reindex` relates two `Fibered` over ONE signature, so
        there is NO `Reindex` between the de Bruijn theory and the
        linear-context theory, and the bridge cannot be a map of
-       promodels at all."
+       `Fibered` at all."
 
   This file supplies the missing notion.  Nothing here is new
   mathematics; the whole content is BOOKKEEPING DONE IN THE Eq-WORLD, so
@@ -20,7 +20,6 @@
   to the one it generalises, ON THE NOSE.  That is the design constraint
   and it is checked in `Reindex.Sanity`.
 
-  --------------------------------------------------------------------
   THE SHAPE.  `ChangeOfTheory.SigMor σ τ` already has the four
   components a signature morphism needs:
 
@@ -43,7 +42,6 @@
       slot to be HIT (`ArSection` below).  A pass that drops a slot can
       still preserve; it cannot reflect a tensor.
 
-  --------------------------------------------------------------------
   WHY THE COERCIONS ARE ON THE `hom` SIDE.
 
   `resEq o : τ .resultSort (onOp o) Eq.≡ onSort (σ .resultSort o)` says
@@ -69,7 +67,6 @@
 
   and `SplitPresAtOver` becomes `SplitPresAt` field for field.
 
-  --------------------------------------------------------------------
   COMPOSITION.  A chain of passes needs `SigMor` to compose, `ReindexOver`
   to compose over it, and both `SplitPresAtOver` and
   `ReflectsSplitAtOver` to compose.  All four are below.  The composite's
@@ -89,7 +86,6 @@
   abstraction barrier, so it matches `Eq.refl`, projects records, and
   builds them by copattern.  `AlongOver` is the interface phase 2 sees.
 
-  --------------------------------------------------------------------
   A DIFFERENT `Reindex`, NOT TO BE CONFUSED WITH THIS ONE.
 
   cubical-categorical-logic's `Multicategory/Reindex.agda` (branch
@@ -106,7 +102,7 @@
   and it has nothing to say about splittings.
 
   What is here is covariant and is not a pullback: `ReindexOver` is a MAP
-  OF PROMODELS lying over φ, i.e. a compiler pass, and its content is
+  OF `Fibered`s lying over φ, i.e. a compiler pass, and its content is
   precisely what `reindexᴰ` never asks -- whether decompositions travel
   (`SplitPresAtOver`) and whether they travel back (`ReflectsSplitAtOver`).
 
@@ -134,18 +130,14 @@ private variable
   ℓS ℓS' ℓS'' ℓ ℓ' ℓ2 ℓ2' ℓ3 ℓ3' : Level
   ℓX ℓX' ℓX'' ℓP ℓP' ℓP'' ℓA ℓB ℓV : Level
 
--- ==================================================================
 -- The one coercion primitive.  Generic in the family, so that the SAME
 -- lemma serves the result sort and the slot sorts.
--- ==================================================================
 
 coeIx : {ℓI ℓC : Level} {I : Type ℓI} (C : I → Type ℓC) {s t : I}
       → s Eq.≡ t → C s → C t
 coeIx C Eq.refl x = x                                    -- PRIMITIVE
 
--- ==================================================================
 -- SIGNATURE MORPHISMS FORM A CATEGORY.
--- ==================================================================
 
 idSigMor : {S : Type ℓS} (σ : SortedSig S ℓ ℓ') → SigMor σ σ
 idSigMor σ .onSort s   = s
@@ -169,13 +161,8 @@ _⨟σ_ : {S : Type ℓS} {S' : Type ℓS'} {S'' : Type ℓS''}
     ψ .sortEq (φ .onOp o) c
   Eq.∙ Eq.ap (ψ .onSort) (φ .sortEq o (ψ .onAr (φ .onOp o) c))
 
--- ==================================================================
--- A REINDEXING OVER A SIGNATURE MORPHISM.
---
--- `Reindex` with the sort map twisted by `φ .onSort`, and -- exactly as
--- there -- NO law.  The whole additive fragment is already available
--- (`AlongOver` below); every law is `SplitPresAtOver`, per-operation.
--- ==================================================================
+-- A REINDEXING OVER A SIGNATURE MORPHISM. `Reindex` with the sort map
+-- twisted by `φ .onSort`, and -- exactly as there -- NO law.
 
 record ReindexOver {S : Type ℓS} {S' : Type ℓS'}
                    {σ : SortedSig S ℓ ℓ'} {τ : SortedSig S' ℓ2 ℓ2'}
@@ -215,11 +202,9 @@ module _ {S : Type ℓS} {S' : Type ℓS'} {S'' : Type ℓS''}
        → ReindexOver (φ ⨟σ ψ) Fib Fib₂
   (h ⨟r k) .homO s x = k .homO (φ .onSort s) (h .homO s x)
 
--- ==================================================================
 -- THE TWO TRANSLATED CARRIER MAPS.  Everything below is stated with
 -- these and with no other coercion.  At `φ = id` both reduce to
 -- `h .homO _`, which is why the specialisation is definitional.
--- ==================================================================
 
 module _ {S : Type ℓS} {S' : Type ℓS'}
          {σ : SortedSig S ℓ ℓ'} {τ : SortedSig S' ℓ2 ℓ2'}
@@ -236,15 +221,11 @@ module _ {S : Type ℓS} {S' : Type ℓS'}
             → Fib' .carrier (τ .sortOf (φ .onOp o) b)
   homSlotOf o b x = coeIx (Fib' .carrier) (Eq.sym (φ .sortEq o b)) (h .homO _ x)
 
--- ==================================================================
--- SPLIT PRESERVATION, OVER φ.
---
--- Read the two fields against `CarrierMap.SplitPresAt`:  the splitting
--- transported lands at the operation `φ .onOp o` and at the point
--- `homAt o m`; the parts are indexed by TARGET slots `b`, and the
--- source part consulted is the one `onAr` names.  There is no coercion
--- in either field -- both were absorbed into `homAt`/`homSlot`.
--- ==================================================================
+-- SPLIT PRESERVATION, OVER φ. Read the two fields against
+-- `CarrierMap.SplitPresAt`: the splitting transported lands at the
+-- operation `φ .onOp o` and at the point `homAt o m`; the parts are
+-- indexed by TARGET slots `b`, and the source part consulted is the one
+-- `onAr` names.
 
 record SplitPresAtOver {S : Type ℓS} {S' : Type ℓS'}
                        {σ : SortedSig S ℓ ℓ'} {τ : SortedSig S' ℓ2 ℓ2'}
@@ -262,19 +243,7 @@ record SplitPresAtOver {S : Type ℓS} {S' : Type ℓS'}
 
 open SplitPresAtOver public
 
--- ==================================================================
 -- SPLIT REFLECTION, OVER φ -- THE BACK-PROJECTION.
---
--- This is what makes a chain of passes usable in reverse: given a
--- decomposition of the COMPILED object, produce the decomposition of the
--- SOURCE object it came from, together with the evidence that its parts
--- compile to the given ones.  It is the discrete Conduche condition of
--- `ChangeOfTheory`, now allowed to cross a signature.
---
--- Note it is a plain Σ-type, not a record.  That is deliberate: at
--- `φ = id` the type is then DEFINITIONALLY `Along.ReflectsSplitAt`, and
--- `Reindex.Sanity` states that as a `refl`.
--- ==================================================================
 
 ReflectsSplitAtOver :
   {S : Type ℓS} {S' : Type ℓS'}
@@ -291,15 +260,8 @@ ReflectsSplitAtOver {σ = σ} {τ} {φ} {Fib} {Fib'} h o =
        → Fib' .parts (φ .onOp o) (homAtOf h o m) sp' b
          Eq.≡ homSlotOf h o b (Fib .parts o m sp (φ .onAr o b)))
 
--- ==================================================================
--- PRESERVATION AT A POINT.
---
--- `SplitPresAtOver` is a Π of a record; `PresAt` is its fibre.  The two
--- are interderivable by the Π/Σ shuffle below (both round trips `refl`),
--- and the pointwise form is what an INSTANCE decides: `LinLam.presApp?`
--- decides `PresAt` at each application, and the global `SplitPresAtOver`
--- is exactly what fails for a non-linear term.
--- ==================================================================
+-- PRESERVATION AT A POINT. `SplitPresAtOver` is a Π of a record; `PresAt`
+-- is its fibre.
 
 PresAt : {S : Type ℓS} {S' : Type ℓS'}
          {σ : SortedSig S ℓ ℓ'} {τ : SortedSig S' ℓ2 ℓ2'}
@@ -337,10 +299,8 @@ module _ {S : Type ℓS} {S' : Type ℓS'}
              → fromPres (toPres f) ≡ f
   presRound' f = refl
 
--- ==================================================================
 -- THE IDENTITY PASS preserves and reflects every splitting, with no
 -- content: the transported splitting IS the splitting.
--- ==================================================================
 
 module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP) where
 
@@ -351,9 +311,7 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP
   idReflects : (o : σ .ops) → ReflectsSplitAtOver (idReindexOver Fib) o
   idReflects o m sp' = sp' , λ a → Eq.refl
 
--- ==================================================================
 -- COMPOSITION.  The spine.
--- ==================================================================
 
 module Comp {S : Type ℓS} {S' : Type ℓS'} {S'' : Type ℓS''}
             {σ : SortedSig S ℓ ℓ'} {τ : SortedSig S' ℓ2 ℓ2'}
@@ -363,11 +321,9 @@ module Comp {S : Type ℓS} {S' : Type ℓS'} {S'' : Type ℓS''}
             {Fib₂ : Fibered υ ℓX'' ℓP''}
             (h : ReindexOver φ Fib Fib₁) (k : ReindexOver ψ Fib₁ Fib₂) where
 
-  -- THE LEMMA.  `k`'s carrier map commutes with a coercion of its
-  -- argument, at the price of `ap` on the sort translation -- which is
-  -- exactly the shape the composite's `resEq`/`sortEq` have.  Both
-  -- equations are between VARIABLE endpoints, so both `Eq.refl` matches
-  -- are legal; that is the whole reason `SigMor` is stated in `Eq`.
+  -- THE LEMMA. `k`'s carrier map commutes with a coercion of its argument,
+  -- at the price of `ap` on the sort translation -- which is exactly the
+  -- shape the composite's `resEq`/`sortEq` have.
   private
     key : {s₁ s₂ : S'} (e : s₁ Eq.≡ s₂) {t : S''} (f : t Eq.≡ ψ .onSort s₁)
           (x : Fib₁ .carrier s₂)
@@ -415,10 +371,7 @@ module Comp {S : Type ℓS} {S' : Type ℓS'} {S'' : Type ℓS''}
                 (P .homPartsO m sp (ψ .onAr (φ .onOp o) c))
     Eq.∙ Eq.sym (compSlot o c (Fib .parts o m sp ((φ ⨟σ ψ) .onAr o c)))))
 
-  -- ... AND SO DOES REFLECTION.  This is the fact that decides whether
-  -- "keep enough data to project back to earlier passes" survives a
-  -- whole chain or only one link: it does, and the proof is the same
-  -- three-step chain run backwards.
+  -- ... AND SO DOES REFLECTION.
   reflComp : (o : σ .ops)
            → ReflectsSplitAtOver h o → ReflectsSplitAtOver k (φ .onOp o)
            → ReflectsSplitAtOver (h ⨟r k) o
@@ -437,14 +390,7 @@ module Comp {S : Type ℓS} {S' : Type ℓS'} {S'' : Type ℓS''}
 
 open Comp public using (compAt; compSlot; presComp; reflComp)
 
--- ==================================================================
 -- THE SINGLE-SIGNATURE NOTIONS ARE THE φ = id CASE, FIELD FOR FIELD.
---
--- No coercion appears in either translation, and both round trips are
--- `refl` -- which is the statement that the generalisation did not
--- change the definition, only its indexing.  `reflectsSame` is stronger
--- still: the two REFLECTION types are literally equal.
--- ==================================================================
 
 module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
          {Fib : Fibered σ ℓX ℓP} {Fib' : Fibered σ ℓX' ℓP'}
@@ -470,16 +416,7 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                ≡ Along.ReflectsSplitAt h o
   reflectsSame = refl
 
--- ==================================================================
 -- THE ONE GENUINELY NEW OBLIGATION A CHANGE OF SIGNATURE INTRODUCES.
---
--- `onAr` points backwards, so a τ-slot names a σ-slot.  Building a
--- SOURCE tensor out of a target one therefore needs every source slot to
--- be named -- otherwise the source tensor has a payload the target does
--- not carry, and no amount of reflection can invent it.  `ArSection` is
--- that condition, it is invisible at `φ = id` (where it is inhabited by
--- `Eq.refl`), and it composes.
--- ==================================================================
 
 ArSection : {S : Type ℓS} {S' : Type ℓS'}
             {σ : SortedSig S ℓ ℓ'} {τ : SortedSig S' ℓ2 ℓ2'}
@@ -501,9 +438,7 @@ compArSection φ ψ o s t a =
   t (s a .fst) .fst
   , (Eq.ap (φ .onAr o) (t (s a .fst) .snd) Eq.∙ s a .snd)
 
--- ==================================================================
 -- THE CONNECTIVES.  What phase 2 sees.
--- ==================================================================
 
 module AlongOver {S : Type ℓS} {S' : Type ℓS'}
                  {σ : SortedSig S ℓ ℓ'} {τ : SortedSig S' ℓ2 ℓ2'}
@@ -518,10 +453,7 @@ module AlongOver {S : Type ℓS} {S' : Type ℓS'}
   pullO : {s : S} → T.TheoryTy ℓA (φ .onSort s) → TheoryTy ℓA s
   pullO {s = s} B m = B (h .homO s m)
 
-  -- every derivation reinterprets, with no cost and no hypothesis.  This
-  -- is `ChangeOfTheory.reinterpretTerm` and `Along.pullTerm` at once:
-  -- crossing a signature costs the multiplicatives something, and costs
-  -- the additives NOTHING.
+  -- every derivation reinterprets, with no cost and no hypothesis.
   pullTermO : {s : S} {A : T.TheoryTy ℓA (φ .onSort s)}
               {B : T.TheoryTy ℓB (φ .onSort s)}
             → A T.⊢ B → pullO A ⊢ pullO B
@@ -556,13 +488,11 @@ module AlongOver {S : Type ℓS} {S' : Type ℓS'}
            → pullO (T.&ᴰ Y A) ≡ &ᴰ {s = s} Y (λ y → pullO (A y))
   pullO-&ᴰ _ _ = refl
 
-  -- ================================================================
-  -- The multiplicative fragment.  Two reindexings are needed and they
-  -- are DIFFERENT, which is the honest cost of crossing a signature:
-  -- the RESULT is reindexed along `homAt o`, each SLOT along
-  -- `homSlot o b` -- and the slots are indexed by TARGET arities, so a
-  -- source slot outside the image of `onAr` is simply not addressed.
-  -- ================================================================
+  -- The multiplicative fragment. Two reindexings are needed and they are
+  -- DIFFERENT, which is the honest cost of crossing a signature: the
+  -- RESULT is reindexed along `homAt o`, each SLOT along `homSlot o b` --
+  -- and the slots are indexed by TARGET arities, so a source slot outside
+  -- the image of `onAr` is...
 
   pullResO : (o : σ .ops) → T.TheoryTy ℓA (τ .resultSort (φ .onOp o))
            → TheoryTy ℓA (σ .resultSort o)
@@ -578,11 +508,9 @@ module AlongOver {S : Type ℓS} {S' : Type ℓS'}
            → x Eq.≡ y → B y → B x
     coeTyT B Eq.refl b = b
 
-  -- PUSH.  Given preservation and, at each TARGET slot, a way of turning
+  -- PUSH. Given preservation and, at each TARGET slot, a way of turning
   -- the source payload into the target's, the source tensor maps into the
-  -- reindexed target tensor.  `tr` is the only extra datum, and it is
-  -- forced: with `onAr` not assumed injective or surjective there is no
-  -- canonical source slot family to take.
+  -- reindexed target tensor.
   module _ (o : σ .ops) (P : SplitPresAtOver h o)
            (A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
            (B : (b : τ .arities (φ .onOp o))
@@ -590,21 +518,16 @@ module AlongOver {S : Type ℓS} {S' : Type ℓS'}
            (tr : (b : τ .arities (φ .onOp o))
                → A (φ .onAr o b) ⊢ pullSlotO o b (B b)) where
 
+    -- PRIMITIVE (phase 1): this is the CONSTRUCTION of the reindexing, not
+    -- a program in it.
     push⊗O : ⊗ˢ o A ⊢ pullResO o (T.⊗ˢ (φ .onOp o) B)
     push⊗O m (sp , k) =
         P .homSplitO m sp
       , λ b → coeTyT (B b) (P .homPartsO m sp b)
                      (tr b _ (k (φ .onAr o b)))
 
-  -- ================================================================
-  -- PULL.  Reflection inverts `push⊗O` -- but only if every SOURCE slot
-  -- is named by some target slot.  That extra condition is invisible in
-  -- the single-signature theory (`onAr` is the identity there) and is
-  -- the one genuinely new obligation a change of signature introduces:
-  -- a pass that FORGETS a slot may still preserve tensors and can never
-  -- reflect them, because the source tensor has a payload the target
-  -- does not carry.
-  -- ================================================================
+  -- PULL. Reflection inverts `push⊗O` -- but only if every SOURCE slot is
+  -- named by some target slot.
 
   private
     -- moving a payload from one slot to a PROVABLY equal slot.  The
@@ -624,6 +547,8 @@ module AlongOver {S : Type ℓS} {S' : Type ℓS'}
            (tr : (b : τ .arities (φ .onOp o))
                → pullSlotO o b (B b) ⊢ A (φ .onAr o b)) where
 
+    -- PRIMITIVE (phase 1): this is the CONSTRUCTION of the reindexing, not
+    -- a program in it.
     pull⊗O : pullResO o (T.⊗ˢ (φ .onOp o) B) ⊢ ⊗ˢ o A
     pull⊗O m (sp' , k) =
         R m sp' .fst

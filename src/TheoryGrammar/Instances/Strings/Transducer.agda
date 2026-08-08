@@ -1,19 +1,5 @@
 {-# OPTIONS -WnoUnsupportedIndexedMatch #-}
-{-
-  A GRAMMAR OVER THE GLUE, and what it costs.
-
-  `Trans` says the output tape is the letterwise image of the input.  The
-  question this file answers is what `Trans ⊗ˢ Trans ⊢ Trans` contains
-  once the aligned glue is doing the indexing.
-
-  ANSWER.  Three things, and the length agreement is not among them: it
-  is the index, so it is never mentioned.  What remains is recomposition
-  of each tape's splitting and `mapApp`, the letterwise property itself
-  -- and `mapApp` is the ONLY place `f` appears.  Note also what is not
-  statable without the glue: the payload is slotwise, which needs the two
-  tapes' parts PAIRED, and only a glued splitting pairs them.
-  PRIMITIVE: `mapApp`, `transTensor` (recomposition is `Strings/Recompose`).
--}
+{- A GRAMMAR OVER THE GLUE, and what it costs. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Strings.Transducer
@@ -44,9 +30,7 @@ mapApp : (u v : I.String) → map f (u ++ v) Eq.≡ (map f u ++ map f v)
 mapApp []      v = Eq.refl
 mapApp (c ∷ u) v = Eq.ap (λ z → f c ∷ z) (mapApp u v)
 
--- ==================================================================
 -- THE GRAMMAR.
--- ==================================================================
 
 Trans : G.TheoryTy ℓ-zero tt
 Trans g = map f (g .fst) Eq.≡ g .snd .fst
@@ -59,14 +43,7 @@ transSlots _ = Trans
 nilSlots : (a : MonAr nilop) → G.TheoryTy ℓ-zero tt
 nilSlots ()
 
--- ==================================================================
 -- ... AND ITS MULTIPLICATIVE STRUCTURE.
---
--- PRIMITIVE (phase 1).  Read the chain: recompose the input tape, push
--- `map f` across the append, rewrite each half by its payload, recompose
--- the output tape.  No length, no cut position, no arithmetic -- the
--- glued index carried all of it.
--- ==================================================================
 
 transTensor : G.⊗ˢ appop transSlots G.⊢ Trans
 transTensor = G.⊗ˢ-E appop {A = transSlots} {B = Trans} body
@@ -87,10 +64,8 @@ transNil = G.⊗ˢ-E nilop {A = nilSlots} {B = Trans} body
     Eq.ap (map f) (RI.isNilEq (g .fst) nw)
       Eq.∙ Eq.sym (RO.isNilEq (g .snd .fst) nv)
 
--- ==================================================================
 -- THE TESTS.  `f` is abstract, so nothing here can be computing by
 -- accident on the letters.
--- ==================================================================
 
 module _ (x y : In) where
 

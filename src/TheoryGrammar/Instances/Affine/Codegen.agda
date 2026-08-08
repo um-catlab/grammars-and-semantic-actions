@@ -19,7 +19,6 @@
   and this file separates the two questions, because they come apart
   cleanly and only one of them fails.
 
-  ------------------------------------------------------------------
   RESULT 1 (POSITIVE).  NO-ALIASING IS UNTOUCHED.
 
       apartLayA : Aff⊎ u₁ u₂ u → (i : ℕ) → lay i u₁ # lay i u₂
@@ -36,7 +35,6 @@
   The failure is localised at ONE operation, which is what `CarrierMap`
   is for -- compare `Passes/Inline.agda`'s `¬subSplitPres` at `varOp`.
 
-  ------------------------------------------------------------------
   RESULT 2 (NEGATIVE).  SPLIT PRESERVATION FAILS ON *COVERAGE*.
 
       noAffPres : ¬ SplitPresAt affLayoutMap appop
@@ -56,7 +54,6 @@
   none exists: `homParts` pins both regions to `[]` and then the
   interleaving field is uninhabited.
 
-  ------------------------------------------------------------------
   WHAT THIS MEANS.  The two failures a compiler could have here are
 
       ALIASING     two live variables emitted to one location
@@ -74,7 +71,6 @@
 
   and they are separate purchases.  `LinLam` happens to make both.
 
-  ------------------------------------------------------------------
   THE TWO REPAIRS, and why the second is the interesting one.
 
   (a) WEAKEN THE TARGET.  Replace `Ilv` by a sub-interleaving that
@@ -97,7 +93,6 @@
       NOT DONE HERE: it needs a command language on the target side, and
       `Heap/Hoare.agda` is where that would live.
 
-  ------------------------------------------------------------------
   PRIMITIVE (phase 1): `apartLayA`, `emptyLayA`, `noIlvGap`.  The layout
   itself is NOT redefined -- `CG.lay` is imported, so this file compares
   the affine source against the SAME allocator the linear phase uses.
@@ -120,7 +115,7 @@ open import TheoryGrammar.Fibered
 open import TheoryGrammar.RulesFib
 open import TheoryGrammar.CarrierMap
 
--- the SOURCE theory: the affine promodel
+-- the SOURCE theory: the affine `Fibered`
 open import TheoryGrammar.Instances.Affine.Base public
 
 -- the TARGET theory, qualified
@@ -131,9 +126,7 @@ import TheoryGrammar.Instances.Heap.Base as H
 -- `lay` and not a re-derived twin
 import TheoryGrammar.Instances.LinLam.Codegen as CG
 
--- ==================================================================
 -- §1  THE ALLOCATOR IS THE LINEAR ONE, UNCHANGED.
--- ==================================================================
 
 layout : Usage → H.Heap
 layout = CG.layout
@@ -141,13 +134,8 @@ layout = CG.layout
 affLayoutMap : Reindex affFib H.heapFib
 affLayoutMap .hom _ = layout
 
--- ==================================================================
--- §2  RESULT 1: NO-ALIASING SURVIVES.
---
--- `Codegen.apartLay` with one extra clause, and the clause is
--- `askip`'s.  `adrop` writes `false` in both slots, so neither part
--- allocates at the position and there is nothing to keep apart.
--- ==================================================================
+-- §2 RESULT 1: NO-ALIASING SURVIVES. `Codegen.apartLay` with one extra
+-- clause, and the clause is `askip`'s.
 
 -- PRIMITIVE (phase 1)
 apartLayA : ∀ {u₁ u₂ u} → Aff⊎ u₁ u₂ u → (i : ℕ)
@@ -175,9 +163,7 @@ affLayPresNil : SplitPresAt affLayoutMap nilop
 affLayPresNil .homSplit u e = emptyLayA u 0 e
 affLayPresNil .homParts u e ()
 
--- ==================================================================
 -- §3  RESULT 2: SPLIT PRESERVATION FAILS AT `appop`, ON COVERAGE.
--- ==================================================================
 
 -- THE GAP.  A heap with a cell, interleaved from two EMPTY heaps: no
 -- constructor of `Ilv` produces a cell the parts do not have.
@@ -201,12 +187,7 @@ _ = refl
 _ : layout dropW ≡ (0 , H.v1) ∷ []
 _ = refl
 
--- THEOREM.  NO SPLIT-PRESERVING LAYOUT OF THE AFFINE PROMODEL.
---
--- Stated against an ARBITRARY `homSplit`: `homParts` pins both emitted
--- regions to `[]`, and then the interleaving field of the target
--- splitting is uninhabited.  So it is not that `ilvLay` fails to
--- extend -- nothing can.
+-- THEOREM. NO SPLIT-PRESERVING LAYOUT OF THE AFFINE `Fibered`.
 noAffPres : SplitPresAt affLayoutMap appop → ⊥
 noAffPres P =
   go (P .homSplit dropW dropSp)
@@ -222,14 +203,8 @@ noAffPres P =
 noAffPresAll : ((o : MonOp) → SplitPresAt affLayoutMap o) → ⊥
 noAffPresAll f = noAffPres (f appop)
 
--- ==================================================================
--- §4  THE DIAGNOSIS, side by side.
---
--- The linear phase's two ingredients, at the affine splitting:
---   `apartLayA`  -- SURVIVES (§2).  This is no-aliasing.
---   `ilvLay`     -- FAILS   (§3).  This is no-leaking.
--- `SplitPresAt` asserts both at once, and only the second is lost.
--- ==================================================================
+-- §4 THE DIAGNOSIS, side by side. The linear phase's two ingredients, at
+-- the affine splitting: `apartLayA` -- SURVIVES (§2).
 
 -- the linear phase 4 still holds, cited so the contrast cannot drift
 linLayPres : (o : CG.MonOp) → SplitPresAt CG.layoutMap o

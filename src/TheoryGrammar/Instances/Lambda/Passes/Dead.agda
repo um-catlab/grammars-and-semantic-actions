@@ -1,19 +1,4 @@
-{-
-  PASS 2.  Dead-binding elimination:  (λn. b) a  ↦  b,  n unused in b.
-
-  `idAlg` with the `app` alternative replaced (`deadApp`; `deadAlg`,
-  `deadPass`), and `keepDead`/`dropBinder` its two outcomes.
-
-  This is the pass that wants WEAKENING.  Discarding the argument `a`
-  is, in the tensor, the projection `A ⊗ B ⊢ A` -- and that is not a
-  term of this calculus, because `_⊢_` preserves the index while the
-  projection changes it.  Here the discard is invisible only because
-  `Out Γ` is constant in the index: the existential form is affine by
-  construction, having already forgotten what the index was.
-
-  `Passes.Affine` states the same step in the `pull` form, where the
-  discard has to be paid for, and shows exactly what it costs.
--}
+{- PASS 2. Dead-binding elimination: (λn. b) a ↦ b, n unused in b. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Passes.Dead where
 
@@ -43,9 +28,7 @@ module Dead (Name : Type₀) (_≟_ : Discrete Name) where
     emit Γ (app u v) (sc-app Γ (app u v) (app-mk du dv))
 
   -- The function part is `lam n b`; drop the binder -- and with it the
-  -- argument `v` -- if `b` already lives at Γ.  The body's derivation at
-  -- `n ∷ Γ` is NOT an input: it is strictly weaker than the `Scoped Γ b`
-  -- the emit needs, which is why the decision cannot be elided.
+  -- argument `v` -- if `b` already lives at Γ.
   dropBinder : (Γ : Scope) (b u v : Raw)
              → Scoped Γ u → Scoped Γ v → Out Γ u
   dropBinder Γ b u v du dv =

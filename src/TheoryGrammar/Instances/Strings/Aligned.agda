@@ -1,18 +1,6 @@
 {-# OPTIONS -WnoUnsupportedIndexedMatch #-}
-{-
-  ALIGNED STRING PAIRS: the comma object of two string promodels over
-  `length`.  An element is two strings of the SAME LENGTH over different
-  alphabets, and neither determines the other -- so unlike `Nat/Glue`
-  (whose relation was the graph of a function, hence a reindexing in
-  disguise) this glue carries information neither factor has.
-
-  `pullbackDetermined` applies with a NON-trivial right leg: preservation
-  on the input side, reflection -- `LengthFib.cutS`, the discrete
-  Conduché half -- on the output side.  What it says is that cutting the
-  input tape cuts the output tape AT THE MATCHING POSITION, and the
-  `refl` tests below are that statement evaluated.
-  PRIMITIVE: none -- everything comes from `LengthFib` and `Gluing`.
--}
+{- ALIGNED STRING PAIRS: the comma object of two string `Fibered` over
+   `length`. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Strings.Aligned (In Out : Type₀) where
@@ -39,9 +27,7 @@ import TheoryGrammar.Instances.Nat.LengthFib as LF
 module LI = LF In
 module LO = LF Out
 
--- ==================================================================
 -- THE COMMA OBJECT.
--- ==================================================================
 
 open Pullback I.strFib O.strFib LI.lenIx LO.lenIx public
 
@@ -54,10 +40,8 @@ Aligned = glue .carrier tt
 alignedDetermined : Determined
 alignedDetermined = pullbackDetermined LI.lenPres LO.lenReflects
 
--- ==================================================================
 -- THE TESTS.  Abstract letters on both sides -- the alignment never
 -- inspects them, which is the point.
--- ==================================================================
 
 module _ (x y : In) (p q : Out) where
 
@@ -110,9 +94,7 @@ module _ (x y : In) (p q : Out) where
   _ : alignedDetermined appop g2 cut1 .snd false ≡ Eq.refl
   _ = refl
 
-  -- ================================================================
   -- ... and the glued splitting has BOTH tapes' halves at each slot.
-  -- ================================================================
 
   private
     glued : glue .Split appop g2
@@ -130,12 +112,9 @@ module _ (x y : In) (p q : Out) where
   _ : glue .parts appop g2 glued false .snd .fst ≡ q ∷ []
   _ = refl
 
-  -- ================================================================
-  -- EVERY INPUT-SIDE PROGRAM LIFTS.  `Determined` gives `π₁` reflection,
-  -- hence `Along.pull⊗`: an input-side `⊗ˢ` becomes a glued `⊗ˢ`, and
-  -- the output tape is cut to match.  This is the claim `Gluing` makes
-  -- generically, run on a closed term.
-  -- ================================================================
+  -- EVERY INPUT-SIDE PROGRAM LIFTS. `Determined` gives `π₁` reflection,
+  -- hence `Along.pull⊗`: an input-side `⊗ˢ` becomes a glued `⊗ˢ`, and the
+  -- output tape is cut to match.
 
   private
     TT : (a : MonAr appop) → I.TheoryTy ℓ-zero tt
@@ -157,12 +136,9 @@ module _ (x y : In) (p q : Out) where
   _ : lifted .fst .snd .fst .snd .fst ≡ q ∷ []
   _ = refl
 
-  -- ================================================================
-  -- `zip` ON REAL PAYLOADS.  One `⊗ˢ` over the glue yields TWO `⊗ˢ`s,
-  -- one per tape -- and they are at the SAME cut, because the cut is the
-  -- index rather than a side condition.  That is the correlation being
-  -- free: no lemma relates the two decompositions.
-  -- ================================================================
+  -- `zip` ON REAL PAYLOADS. One `⊗ˢ` over the glue yields TWO `⊗ˢ`s, one
+  -- per tape -- and they are at the SAME cut, because the cut is the index
+  -- rather than a side condition.
 
   private
     AIn : (a : MonAr appop) → I.TheoryTy ℓ-zero tt
@@ -189,16 +165,9 @@ module _ (x y : In) (p q : Out) where
   _ : zipped .snd .fst .snd .fst ≡ q ∷ []
   _ = refl
 
-  -- ================================================================
-  -- AND THE BOUNDARY.  `Coherent` -- any two splittings of related
-  -- wholes have related parts -- FAILS here, at the very glue that is
-  -- `Determined`.  Cut the input after one letter and the output after
-  -- none: the parts have lengths 1 and 0.
-  --
-  -- So the two conditions of `Gluing` are genuinely different, and `zip`
-  -- at this instance is lax and NOT strong.  `Product` remains the only
-  -- witness of `Coherent`, which is the honest state of affairs.
-  -- ================================================================
+  -- AND THE BOUNDARY. `Coherent` -- any two splittings of related wholes
+  -- have related parts -- FAILS here, at the very glue that is
+  -- `Determined`.
 
   private
     outCut0 : O.strFib .Split appop v2

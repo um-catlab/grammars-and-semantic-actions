@@ -1,8 +1,6 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- A context-free grammar in Chomsky normal form IS a description, with
-   the non-terminals as the description's non-terminals.  So `Deriv P` --
-   the parse trees of `w` from `P` -- is the generic `μ`, a grammar, and
-   not a `List` of non-terminal names. -}
+{- A context-free grammar in Chomsky normal form IS a description, with the
+   non-terminals as the description's non-terminals. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Strings.CYK (Char : Type₀) where
@@ -30,7 +28,8 @@ open import TheoryGrammar.Instances.Strings.Enumeration Char public
 
 -- the cut search, and the two abbreviations its hypothesis is stated in
 open DecEnum  strFib    using (⊗at; Refutes; dec-⊗-cuts; slotMiss)
-open DecGuard strGraded using (SortFam; ▷ᴬ; löbᵍ; dec-⊗▷; resourceOf)
+open DecGuard strGraded
+  using (SortFam; ▷ᴬ; ▷ᴾ; ▷ᴬ→▷ᴾ; löbᵍ; dec-⊗▷ᴾ; resourceOf; World; module TabΠ)
 
 -- `¬G_` and `Dec⟨_⟩` are the generic ones (`Decidable.Additive`, via
 -- `DecFib` in `Strings.Base`); this instance defines neither.
@@ -73,22 +72,9 @@ module CYK (V : Type₀)
   Der : G.Ix → Type₀
   Der = G.μ CYKF
 
-  -- ================================================================
-  -- THE DESCRIPTION, READ AS CONNECTIVES.
-  --
-  -- `⟦_⟧c` (Inductive) is the description spelled in the connectives:
-  -- `⊕e` IS `⊕ᴰ`, `&e` IS `&ᴰ`, `⊗e` IS `⊗ˢ`, `⌜_⌝` IS `Liftg`, all
-  -- DEFINITIONALLY.  So the abbreviations below are grammars, and
-  --
-  --     Layer P         ≡ ⊕ᴰ (Rule P) (RuleG P)
-  --     RuleG P (inl _) ≡ Liftg ⌈ c ∷ [] ⌉
-  --     RuleG P (inr _) ≡ SlotG Q ⊗' SlotG T
-  --     SlotG Q         ≡ &ᴰ Bool (λ b → …)   -- Deriv Q, and its resource
-  --
-  -- hold on the nose.  That is what lets the generic `dec-⊕ᴰ` /
-  -- `dec-⊗-cuts` / `dec-&ᴰ` be applied to a DESCRIPTION with no
-  -- coercion anywhere.
-  -- ================================================================
+  -- THE DESCRIPTION, READ AS CONNECTIVES. `⟦_⟧c` (Inductive) is the
+  -- description spelled in the connectives: `⊕e` IS `⊕ᴰ`, `&e` IS `&ᴰ`,
+  -- `⊗e` IS `⊗ˢ`, `⌜_⌝` IS `Liftg`, all DEFINITIONALLY.
 
   Layer : V → Gr
   Layer P = G.⟦ CYKF P ⟧c Der
@@ -102,29 +88,18 @@ module CYK (V : Type₀)
   binSlots : V → V → Bool → Gr
   binSlots Q T a = G.⟦ binSlot Q T a ⟧c Der
 
-  -- ================================================================
-  -- THE FIXED POINT, as maps of the calculus.  `Inductive` explains why
-  -- `rollg`/`unrollg` cannot be stated generically (a level
-  -- stratification, not a mathematical obstruction) and says to define
-  -- them per instance, where the levels are concrete.  These are the
-  -- only place `sup` / `toC` / `fromC` appear outside `leaf` / `node`.
-  -- ================================================================
+  -- THE FIXED POINT, as maps of the calculus.
 
+  -- the fixed point, as maps of the calculus.  Both come from
+  -- `Guard` now (`TheoryGrammar.Grading`); they used to be written
+  -- out here, pointfully, in this and three sibling files.
   unrollD : (P : V) → Deriv P ⊢ Layer P
-  unrollD P w t = G.toC (CYKF P) w (G.unroll t)
+  unrollD P = G.unrollg CYKF P
 
   rollD : (P : V) → Layer P ⊢ Deriv P
-  rollD P w t = G.roll (G.fromC (CYKF P) w t)
+  rollD P = G.rollg CYKF P
 
-  -- ================================================================
   -- THE RESOURCE CERTIFICATE A SLOT CARRIES -- a term.
-  --
-  -- `NEslot Q false = ⌜ NonTrivial ⌝`, so projecting the `false`
-  -- component of a slot and discharging the constant former's `Lift`
-  -- says: a slot of a binary rule certifies ITS OWN part to be
-  -- non-trivial.  This one term is the whole content of "CNF has no
-  -- ε-productions", and it is `&ᴰ-E` followed by `lowerg`.
-  -- ================================================================
 
   neOf : (Q : V) → SlotG Q ⊢ NonTrivial
   neOf Q = lowerg ∘g &ᴰ-E Bool {B = λ b → G.⟦ NEslot Q b ⟧c Der} false
@@ -132,15 +107,8 @@ module CYK (V : Type₀)
   derOf : (Q : V) → SlotG Q ⊢ Deriv Q
   derOf Q = &ᴰ-E Bool {B = λ b → G.⟦ NEslot Q b ⟧c Der} true
 
-  -- ================================================================
-  -- Guardedness.  Both slots of a binary rule are proper parts, so this
-  -- is the uniform rule -- CNF is precisely the shape that makes it so.
-  --
-  -- PRIMITIVE (phase 1): `neOfSh` is `neOf` at the level of SHAPES,
-  -- which is where guardedness lives (`Guarded` is stated with
-  -- `Sh`/`Pos`/`nx`).  It is the only place a shape is looked at, and it
-  -- is the shape analogue of a term that already exists.
-  -- ================================================================
+  -- Guardedness. Both slots of a binary rule are proper parts, so this is
+  -- the uniform rule -- CNF is precisely the shape that makes it so.
 
   neOfSh : (Q : V) (w : String) → G.Sh (NEvar Q) w → NonTrivial w
   neOfSh Q w sh = lower (sh false)
@@ -167,13 +135,9 @@ module CYK (V : Type₀)
       alt (inr (Q , T , _)) =
         G.<⊗e appop (binSlot Q T) (≤binSlot Q T) (pr Q T)
 
--- Every word is trivial or not.  This IS the decomposition axiom with
--- its branches swapped -- no argument left to make, because the
--- resource predicate is defined as the non-trivial branch.
---
--- `caseOf` is `withView` at `B = ⊤G`, where the payload is vacuous and
--- the `with` degenerates to `_∘g_`.  Every view used at `⊤` has this
--- shape; see `TheoryGrammar.View`.
+-- Every word is trivial or not. This IS the decomposition axiom with its
+-- branches swapped -- no argument left to make, because the resource
+-- predicate is defined as the non-trivial branch.
 decNT : Cover (NonTrivial ⊕ ⌈ [] ⌉)
 decNT = caseOf charCase ⊕-I₂ ⊕-I₁
 
@@ -185,10 +149,8 @@ decNT = caseOf charCase ⊕-I₂ ⊕-I₁
         go Eq.refl ()
 
 -- ... so non-triviality is DECIDED, as an internal probe: the cover
--- `decNT` says every word is trivial or not, and `¬NT[]` turns the
--- trivial branch into a refutation.  `⌈⌉-E` is what carries a fact
--- known at ONE world to a map out of that world's representable, so
--- this is a composite of combinators and one primitive.
+-- `decNT` says every word is trivial or not, and `¬NT[]` turns the trivial
+-- branch into a refutation.
 probe-NT : Probe NonTrivial
 probe-NT = caseOf decNT
              (dec-yes NonTrivial)
@@ -216,44 +178,15 @@ module Parser (V : Type₀)
             ; (true  , (false , ()))
             ; (false , (false , ())) }
 
-  -- ================================================================
-  -- THE PARSER.  The SAME term as `Decide` below, at the error grammar
-  -- `⊤G` instead of `¬G _`, and with every completeness hypothesis
-  -- deleted:
-  --
-  --     mapR ⊤G (Deriv P) (rollD P)
-  --       ∘ maybe-⊕ᴰ (Rule P) …          -- search the rules   (Result)
-  --           ∘ per rule:
-  --               mapR … ∘ matchLit c            -- the terminal
-  --               findΣ (cuts w) …               -- search the cuts
-  --                 ∘ per cut: dec-elim probe-NT …
-  --                     ∘ findΠBool               -- the two slots
-  --
-  -- `findΣ` / `findΠBool` are `decΣ` / `decΠBool` with the refutations
-  -- dropped (`TheoryGrammar.Enumerable`), and `maybe-⊕ᴰ` is `dec-⊕ᴰ`
-  -- with the completeness proof dropped.  A parser may drop them
-  -- because it claims nothing when it fails; a decision may not.  That
-  -- is the entire difference between `parse` and `derives?`, and it now
-  -- shows up in which arguments the two take.
-  --
-  -- `allRules` says the grammar is finite; `matchLit` is the literal
-  -- matcher, itself a term of the calculus.
-  -- ================================================================
+  -- THE PARSER. The SAME term as `Decide` below, at the error grammar `⊤G`
+  -- instead of `¬G _`, and with every completeness hypothesis deleted:
+  -- mapR ⊤G (Deriv P) (rollD P) ∘ maybe-⊕ᴰ (Rule P) … -- search the rules
+  -- (Result) ∘ per rule: mapR … ∘ matchLit c -- the terminal findΣ (cuts
+  -- w) … -- search the...
 
-  -- ================================================================
-  -- THE DECISION, as maps of the calculus.
-  --
-  -- The motive is `&ᴰ V (λ P → Dec⟨ Deriv P ⟩)` -- ONE GRAMMAR holding
-  -- the decision for every nonterminal at the current word.  An
-  -- `Ix`-family (`V × String → Type`) is not a grammar and has no
-  -- combinators, so a step written against one is forced to be
-  -- pointful; a `&ᴰ` over the nonterminals IS a grammar, so
-  -- `▷ᴬ Chart ⊢ Chart` is a term and every layer composes with `∘g`.
-  --
-  -- This is `Instances.Spans.CYK.Decide` verbatim with `appop` for
-  -- `cat` and `NonTrivial` for `NonEmpty`; that the two are the same
-  -- term over two different theories is the point of the exercise.
-  -- ================================================================
+  -- THE DECISION, as maps of the calculus. The motive is `&ᴰ V (λ P → Dec⟨
+  -- Deriv P ⟩)` -- ONE GRAMMAR holding the decision for every nonterminal
+  -- at the current word.
 
   module Decide (allRules    : (P : V) → List (Rule P))
                 (allComplete : (P : V) (r : Rule P) → r ∈L allRules P)
@@ -282,13 +215,10 @@ module Parser (V : Type₀)
                  ; false → dec-map NonTrivial (Liftg NonTrivial) liftg lowerg
                            ∘g probe-NT ∘g ⊤-I }
 
-    -- a binary rule: scan the cuts, chart available LATER.  The cut's
-    -- resource test is DERIVED by `resourceOf` from `probe-NT` and
-    -- `neOf` (terms) plus `ntProper` (a law of the grading, like
-    -- `deg<`), so nothing here mentions a cut.
-    decBin : (Q T : V) → ▷ᴬ ChartF ⊢ Dec⟨ ⊗ˢ appop (binSlots Q T) ⟩
+    -- a binary rule: scan the cuts, chart available LATER.
+    decBin : (Q T : V) → ▷ᴾ ChartF ⊢ Dec⟨ ⊗ˢ appop (binSlots Q T) ⟩
     decBin Q T =
-      dec-⊗▷ appop (binSlots Q T) ChartF
+      dec-⊗▷ᴾ appop (binSlots Q T) ChartF
              cuts (enumComplete appop)
              (resourceOf appop (binSlots Q T) (λ _ → NonTrivial) (λ _ → probe-NT)
                          (λ { true → neOf Q ; false → neOf T })
@@ -296,11 +226,11 @@ module Parser (V : Type₀)
              (λ m sp d → decΠBool (d true) (d false))   -- arity is finite
              λ { true → decSlot Q ; false → decSlot T }
 
-    decRule : (P : V) (r : Rule P) → ▷ᴬ ChartF ⊢ Dec⟨ RuleG P r ⟩
+    decRule : (P : V) (r : Rule P) → ▷ᴾ ChartF ⊢ Dec⟨ RuleG P r ⟩
     decRule P (inl (c , _))     = decLit c ∘g ⊤-I
     decRule P (inr (Q , T , _)) = decBin Q T
 
-    decRow : (P : V) → ▷ᴬ ChartF ⊢ Dec⟨ Deriv P ⟩
+    decRow : (P : V) → ▷ᴾ ChartF ⊢ Dec⟨ Deriv P ⟩
     decRow P =
       dec-map (Layer P) (Deriv P) (rollD P) (unrollD P)
       ∘g dec-⊕ᴰ (Rule P) (RuleG P) (allRules P) (allComplete P)
@@ -308,11 +238,31 @@ module Parser (V : Type₀)
 
     -- THE LÖB STEP, a term.  No index matched, no Agda function fed to
     -- `löb`, no element where a map belongs.
-    step : ▷ᴬ ChartF ⊢ Chart
+    step : ▷ᴾ ChartF ⊢ Chart
     step = &ᴰ-I {B = λ P → Dec⟨ Deriv P ⟩} decRow
 
+    -- `löbᵍ` still solves it: `▷ᴬ` is the STRONGER later, so a step
+    -- written against `▷ᴾ` may be run by either.
     chart : Cover Chart
-    chart = löbᵍ ChartF (λ _ → step) tt
+    chart = löbᵍ ChartF (λ _ → step ∘g ▷ᴬ→▷ᴾ ChartF) tt
+
+    -- THE SHARED CHART -- everything except the schedule.
+
+    module Shared (allV : List V)
+                  (allVComplete : (P : V) → P ∈L allV) where
+
+      private module TΠ = TabΠ V (λ P _ → Dec⟨ Deriv P ⟩) allV allVComplete
+
+      -- THE MISSING PIECE, as a type. Design notes, so the next attempt
+      -- does not rediscover them: THE LAYOUT.
+      StrSchedule : Type _
+      StrSchedule = (w : World) → TΠ.SchedQ w
+
+      chartD : StrSchedule → Cover Chart
+      chartD sch = TΠ.löbᴰ (λ _ → step) sch tt
+
+      derivesD? : StrSchedule → (P : V) → Probe (Deriv P)
+      derivesD? sch P = chartAt P ∘g chartD sch
 
     derives? : (P : V) → Probe (Deriv P)
     derives? P = chartAt P ∘g chart
@@ -321,19 +271,9 @@ module Parser (V : Type₀)
     derivesDec : (P : V) → Decision (Deriv P) (¬G (Deriv P))
     derivesDec P = decDefault (Deriv P) (derives? P)
 
-    -- ================================================================
-    -- THE PARSER is the decision, FORGOTTEN.
-    --
-    -- `Dec⟨ A ⟩` is `Result (¬G A) A` and `MaybeG A` is `Result ⊤G A`,
-    -- so `toMaybe` -- `mapE ⊤-I`, uniform in the error grammar -- is the
-    -- whole of it.  The old `Search` module reimplemented the recursion
-    -- at `MaybeG`; it was pointful, and it was also redundant.
-    --
-    -- What is genuinely lost is that a parser needs no completeness
-    -- proof (`Result.maybe-⊕ᴰ` and `Enumerable.findΣ` still record
-    -- that), so this `parse` assumes more than it must.  It assumes it
-    -- INTERNALLY, which is the trade that matters here.
-    -- ================================================================
+    -- THE PARSER is the decision, FORGOTTEN. `Dec⟨ A ⟩` is `Result (¬G A)
+    -- A` and `MaybeG A` is `Result ⊤G A`, so `toMaybe` -- `mapE ⊤-I`,
+    -- uniform in the error grammar -- is the whole of it.
 
     parse : (P : V) → Cover (MaybeG (Deriv P))
     parse P = toMaybe (Deriv P) ∘g derives? P

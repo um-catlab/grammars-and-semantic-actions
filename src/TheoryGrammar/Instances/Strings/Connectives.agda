@@ -32,17 +32,7 @@ literal c = ⌈ c ∷ [] ⌉
 infixr 20 _⊗'_
 
 -- The level coercion the constant former `⌜_⌝` of a description carries
--- (`Inductive.⟦ ⌜ B ⌝ ⟧c A w = Lift _ (B w)`).  Pure bookkeeping, and
--- both directions are maps of the calculus, so a description's constants
--- are discharged by composition rather than by `lift`/`lower` surgery.
-Liftg : Gr → Gr
-Liftg A w = Lift ℓ-zero (A w)
-
-liftg : {A : Gr} → A ⊢ Liftg A
-liftg _ = lift
-
-lowerg : {A : Gr} → Liftg A ⊢ A
-lowerg _ = lower
+-- (`Inductive.⟦ ⌜ B ⌝ ⟧c A w = Lift _ (B w)`).
 
 -- intro and elim for ⊗
 ⊗-mk : {A B : Gr} {u v w : String} → Split3 u v w → A u → B v → (A ⊗' B) w

@@ -1,16 +1,6 @@
-{-
-  The pipeline computes.  Each `refl` holds only if `typecheck`, the
-  generic μ's `sup`/`fold`, `dec-⌈⌉ᵗ` (which is `dec-⊗` at the `ty`
-  sort) and `dec-Look` all reduce.
-
-  Every name below is a TERM of the calculus -- `⊤G ⊢ Δ Bool` or
-  `⊤G ⊢ Result (¬G _) (Δ Ty)` -- and `run` / `runΔ` appear only in the
-  `refl` lines.  Cases are batched into suites with `passes … at …`.
-  This file defines no reader and no constant grammar.
-
-  The mode discipline shows up as a pair of tests on the SAME term:
-  `lam 0 (var 0)` does not synthesise, and does check at `base ⇒ base`.
--}
+{- The pipeline computes. Each `refl` holds only if `typecheck`, the
+   generic μ's `sup`/`fold`, `dec-⌈⌉ᵗ` (which is `dec-⊗` at the `ty` sort)
+   and `dec-Look` all reduce. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.SimplyTyped.Tests where
 
@@ -28,10 +18,8 @@ open import TheoryGrammar.View
 open SimplyTyped ℕ discreteℕ
 open Views stlcFib using (completeCase; certifies)
 
--- ==================================================================
 -- Terms.  With no constants at `base`, every closed term is built from
 -- annotated lambdas -- which is exactly the point of `ann`.
--- ==================================================================
 
 o : Ty
 o = base
@@ -63,21 +51,8 @@ freeVar = var 0                                       -- unbound
 shadow : Raw
 shadow = ann (lam 0 (lam 0 (var 0))) (o ⇒ᵗ (o ⇒ᵗ o))  -- λx. λx. x
 
--- ==================================================================
 -- The observations, all GENERIC (TheoryGrammar.SemanticAction), and all
--- TERMS: `⊤G ⊢ Δ Bool` and `⊤G ⊢ Result (¬G _) (Δ Ty)`.  `run` / `runΔ`
--- appear only in the `refl` lines -- externalising is the observation,
--- not part of the pipeline.
---
--- `closed-infer?` / `closed-check?` are decisions, i.e. maps out of `⊤`
--- at the shape `Result (¬G _) _`, so `okA` observes them.  The
--- SYNTHESISED TYPE is the witness, carried by `mapR` along the action
--- `tagA Ty` -- because `Syn Γ` IS a `⊕ᴰ Ty`, so its index is exactly
--- what the generic `tagA` projects.
---
--- Cases are batched with `passes (t at (w ↦ v ∷ …))`, so the term under
--- test is written once and one `refl` discharges the whole suite.
--- ==================================================================
+-- TERMS: `⊤G ⊢ Δ Bool` and `⊤G ⊢ Result (¬G _) (Δ Ty)`.
 
 infers! : ⊤G ⊢ Δ Bool
 infers! = okA (Syn []) (¬G (Syn [])) ∘g closed-infer?
@@ -88,10 +63,8 @@ checks! C = okA (Check [] C) (¬G (Check [] C)) ∘g closed-check? C
 synth : ⊤G ⊢ Result (¬G (Syn [])) (Δ Ty)
 synth = mapR (¬G (Syn [])) (Δ Ty) (tagA Ty) ∘g closed-infer?
 
--- ==================================================================
 -- Synthesis, and the MODE DISCIPLINE: a bare lambda synthesises
 -- nothing, but checks at the right type and only at the right type.
--- ==================================================================
 
 _ : passes (run infers! at ( idAnn   ↦ true
                            ∷ kAnn    ↦ true
@@ -117,9 +90,7 @@ _ = refl
 _ : passes (run (checks! ((o ⇒ᵗ o) ⇒ᵗ o)) at (bare ↦ false ∷ []))
 _ = refl
 
--- ==================================================================
 -- The synthesised types are the expected ones.
--- ==================================================================
 
 _ : passes (runΔ Ty (¬G (Syn [])) synth at
              ( idAnn   ↦ just (o ⇒ᵗ o)
@@ -130,11 +101,9 @@ _ : passes (runΔ Ty (¬G (Syn [])) synth at
              ∷ [] ))
 _ = refl
 
--- ==================================================================
 -- EVERY OTHER MAP OUT OF `⊤` IN THIS INSTANCE.  These live at three
 -- different SORTS -- names, types and terms -- and the interface does
 -- not notice: the sort is just the world the term is run at.
--- ==================================================================
 
 -- ---- `dec-⌈⌉ⁿ` : the representable at a NAME (world = Name)
 isName? : (m : ℕ) → ⊤G ⊢ Δ Bool
@@ -237,14 +206,10 @@ _ = refl
 _ : passes (run (isOp! baseOp) at (o ↦ true ∷ []))
 _ = refl
 
--- ==================================================================
--- THE REJECTIONS, AS THEOREMS.
---
--- `refute` turns each negative observation into the refutation the
--- decision was carrying: `Syn [] t → ⊥` says the term has NO type in
--- the empty context, which is what "ill typed" is supposed to mean.  A
--- `≡ false` on its own only says the checker returned no.
--- ==================================================================
+-- THE REJECTIONS, AS THEOREMS. `refute` turns each negative observation
+-- into the refutation the decision was carrying: `Syn [] t → ⊥` says the
+-- term has NO type in the empty context, which is what "ill typed" is
+-- supposed to mean.
 
 noSyn : (t : Raw) → run infers! t ≡ false → (¬G (Syn [])) t
 noSyn = refute (Syn []) (¬G (Syn [])) closed-infer?
@@ -286,17 +251,7 @@ no-chk-selfApp = noChk o selfApp refl
 yes-syn-idAnn : Syn [] idAnn
 yes-syn-idAnn = witness (Syn []) (¬G (Syn [])) closed-infer? idAnn refl
 
--- ==================================================================
 -- THE PARTITIONS, one per sort (SimplyTyped.Readable).
---
--- `⊗-decSplit o` decides each operation separately at `¬G (⊗ˢ o ⊤)`;
--- `tmCase` / `tyCase` say the same thing positively -- every term is
--- built by exactly one of `var`/`app`/`lam`/`ann`, every type by exactly
--- one of `base`/`⇒ᵗ`.  Rejecting one operation hands back WHICH it was.
---
--- Two sorts, two partitions: `Complete` fixes a sort, so a multi-sorted
--- syntax partitions each of its carriers separately.
--- ==================================================================
 
 tmName : ⊤G ⊢ Δ ℕ
 tmName = completeCase tmCase λ { oVar → pureA ℕ 0 ; oApp → pureA ℕ 1

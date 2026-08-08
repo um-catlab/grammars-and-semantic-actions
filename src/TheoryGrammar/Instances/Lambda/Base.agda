@@ -1,17 +1,5 @@
-{-
-  The connectives of the lambda theory: one tensor per operation, plus
-  the whole generic combinator layer in one `open`.
-
-  Downstream modules get their combinators from HERE; they import
-  `Decidable` only for the RECORDS it asks them to build, which a
-  notation module cannot supply.  `LamG` is the reason the theory is
-  many-sorted: its two slots live in different grammar sorts, so
-  `if_then_else_` cannot express it.
-
-  Defines the two grammar sorts `TmG`/`NmG`, the three tensors
-  `VarG`/`AppG`/`LamG`, and their intro (`var-mk`/`app-mk`/`lam-mk`)
-  and elim (`var-elim`/`app-elim`/`lam-elim`) rules.
--}
+{- The connectives of the lambda theory: one tensor per operation, plus the
+   whole generic combinator layer in one `open`. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Base where
 

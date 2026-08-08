@@ -1,24 +1,5 @@
-{-
-  MEASUREMENT: which laws of this instance hold by `refl`, and which
-  need `funExt`.
-
-  The pattern is uniform and has one cause, the one named in
-  `TheoryGrammar.Fibered`:
-
-    * `Σ`, `Π`, `Unit`, `Unit*` and `Lift` have definitional η, so any
-      round trip that only reassociates or re-wraps is `refl`;
-    * `Bool` (an arity) does NOT, so any round trip that REBUILDS a
-      function over an arity needs `funExt` -- with `refl` at every leaf.
-
-  So the funExt debt of this instance is exactly ONE PER ARITY WITHOUT
-  DEFINITIONAL η, and nothing else: the four `Bool` arities, plus -- in
-  `Fibered.parts-split` -- the degenerate case of `baseOp`'s EMPTY
-  arity.  `Eq._≡_` also lacks η, but that is not paid in `funExt` here;
-  it is paid as the two `Eq.refl` matches in `Dependent.agda`.
-
-  Measured here: `⊗-β`/`⊗-η`, `varG-rt`/`varG-rt⁻`, `app-rt`/`app-rt⁻`,
-  `⟦J⟧-rt⁻` and `j-rt⁻`.
--}
+{- MEASUREMENT: which laws of this instance hold by `refl`, and which need
+   `funExt`. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.SimplyTyped.Laws where
 
@@ -37,11 +18,9 @@ module StLaws (Name : Type₀) (_≟_ : Discrete Name) where
 
   open SimplyTyped Name _≟_
 
-  -- ================================================================
   -- REFL.  The multiplicative universal property, at every operation
-  -- including the empty one.  Inherited from the promodel: `Split` is
+  -- including the empty one.  Inherited from the `Fibered`: `Split` is
   -- data, so there is no proof term to match.
-  -- ================================================================
 
   -- Two laws, stated separately: a single `_×_`-valued statement would
   -- have to be split by every consumer anyway, and each half is checked
@@ -60,12 +39,9 @@ module StLaws (Name : Type₀) (_≟_ : Discrete Name) where
       → uncurryˢ o {A = A} {B = B} (curryˢ o {A = A} {B = B} f) ≡ f
   ⊗-η o _ = refl
 
-  -- ================================================================
-  -- REFL.  The unary tensor's index can be pushed in and pulled out
-  -- freely: `Unit`'s η makes the slot function trivial and `Σ`'s η
-  -- makes the pair trivial.  This is the whole reason `varG-pull` is
-  -- harmless even though it is not internal.
-  -- ================================================================
+  -- REFL. The unary tensor's index can be pushed in and pulled out freely:
+  -- `Unit`'s η makes the slot function trivial and `Σ`'s η makes the pair
+  -- trivial.
 
   varG-rt : (Γ : Ctx) → (varG-push Γ ∘g varG-pull Γ) ≡ idg {A = VarG (Look Γ)}
   varG-rt Γ = refl
@@ -74,11 +50,9 @@ module StLaws (Name : Type₀) (_≟_ : Discrete Name) where
            → (varG-pull Γ ∘g varG-push Γ) ≡ idg {A = ⊕ᴰ Ty (QVar Γ)}
   varG-rt⁻ Γ = refl
 
-  -- ================================================================
   -- REFL one way, funExt the other.  `app-collapse` only reassociates,
   -- so rebuilding the PAIR is free; rebuilding the Bool-indexed SLOT
   -- FUNCTION is not.
-  -- ================================================================
 
   app-rt : (Γ : Ctx)
          → (app-collapse Γ ∘g app-collapse⁻ Γ) ≡ idg {A = AppGᵈ Γ}
@@ -90,18 +64,13 @@ module StLaws (Name : Type₀) (_≟_ : Discrete Name) where
     { (AB , sp , h) →
         cong (λ z → AB , sp , z) (funExt λ { true → refl ; false → refl }) }
 
-  -- ================================================================
-  -- The container/connective respelling.  `chk`'s switch rule is REFL
-  -- -- its position type is `Unit*`, which has η -- and every other
-  -- clause needs exactly one `funExt`, over a `Bool` arity or over an
-  -- empty position type, with `refl` inside.
-  -- ================================================================
+  -- The container/connective respelling. `chk`'s switch rule is REFL --
+  -- its position type is `Unit*`, which has η -- and every other clause
+  -- needs exactly one `funExt`, over a `Bool` arity or over an empty
+  -- position type, with `refl` inside.
 
-  -- The `var` alternative is REFL: its shape is rebuilt by `lift ∘
-  -- lower` (η) and its position type is empty, so nothing has to be
-  -- reassembled.  `switch` is REFL for the same reason one level up --
-  -- its position type is `Unit*`.  The three alternatives whose
-  -- operation has a `Bool` arity each cost exactly one `funExt`.
+  -- The `var` alternative is REFL: its shape is rebuilt by `lift ∘ lower`
+  -- (η) and its position type is empty, so nothing has to be reassembled.
   ⟦J⟧-rt⁻ : {M : Ix → Type₀} (x : NT) → (⟦J⟧ {M} x ∘g ⟦J⟧⁻ {M} x) ≡ idg
   ⟦J⟧-rt⁻ {M} (syn , Γ , A) = funExt λ t → funExt λ
     { (inl (sp , h))            → refl
@@ -149,6 +118,4 @@ module StLaws (Name : Type₀) (_≟_ : Discrete Name) where
   -- NOT STATED: the other composite `⟦J⟧⁻ ∘ ⟦J⟧ ≡ idg` is true but its
   -- statement is a `PathP`, not a `Path`: in the container form the
   -- position function's TYPE depends on the shape, and the shape is the
-  -- component that needs the `funExt`.  That is a cost of the container
-  -- presentation, not of the theory -- the connective form `⟦_⟧c` has
-  -- no such dependency.
+  -- component that needs the `funExt`.

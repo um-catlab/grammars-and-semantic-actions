@@ -59,20 +59,7 @@ decompGuarded tt = <⊕e Bool decompAlt alt
     alt true  = <⌜⌝ ⌈ [] ⌉
     alt false = <⊕e Char _ (λ c → ⊗-guard appop (decompSlot c) (go c))
 
--- ================================================================
 -- ... and it is COMPLETE, with a POSITIVE complement on both sides.
---
--- `charCase` was already total.  What is added here is the exclusion --
--- a word cannot be both empty and headed by a character -- which makes
--- it a `Complete` view in the sense of `TheoryGrammar.View`.
---
--- The refinement over `Dec⟨ ⌈ [] ⌉ ⟩` is not logical: `¬G ⌈ [] ⌉` is a
--- grammar and `contra` excludes it just as well.  It is descriptive.
--- Rejecting `⌈ [] ⌉` here HANDS BACK `NonTrivial` -- the character and
--- the rest of the word -- rather than a function into `⊥`, and that is
--- what the parser downstream actually needs.  `certifies` maps this
--- back to the negative reading, so nothing is lost either way.
--- ================================================================
 
 -- PRIMITIVE, and the only content of the exclusion: the empty word is
 -- trivial.  A splitting of `[]` cannot have a one-character left part.

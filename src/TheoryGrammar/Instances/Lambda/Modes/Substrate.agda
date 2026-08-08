@@ -1,20 +1,4 @@
-{-
-  A CONTEXT PROMODEL FROM A TERNARY RELATION ON LISTS.
-
-  DENOTES: `R u v Γ` reads "Γ decomposes as u beside v".  The three
-  substrates differ only in R; collected here is all that does not --
-
-    fib, point  the promodel and its (lax) total point
-    Fam, Slots  a two-slot grammar family; one splitting's payload
-    slots       rebuild a slot function, one slot at a time
-    decSp       ONE splitting decided from its two slots; `decNil`
-                finishes `[]`, which `nilJ` says splits exactly once
-    Step        one constructor of R as a recursive step: `out`/`into`
-                move a witness across it, `chain` recurses
-
-  A substrate owes exactly its constructors: that residue IS the
-  difference between ordered, linear and relevant.
--}
+{- A CONTEXT `Fibered` FROM A TERNARY RELATION ON LISTS. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Modes.Substrate where
 
@@ -56,20 +40,16 @@ module Substrate
   CParts : (o : CtxOp) (Γ : Ctx) → CSplit o Γ → CtxAr o → Ctx
   CParts mul Γ (u , v , _) b = if b then u else v
 
-  -- The promodel.  `Split` is the whole content: it says WHICH
+  -- The `Fibered`.  `Split` is the whole content: it says WHICH
   -- decompositions count, and `parts` only projects.
   fib : Fibered ctxSig ℓ-zero ℓ-zero
   fib .carrier _ = Ctx
   fib .Split     = CSplit
   fib .parts     = CParts
 
-  -- The total point, separately from `fib`.  Its containment may be
-  -- STRICT -- `R u v w` need not imply `u ++ v ≡ w` -- so this really is
-  -- a lax point, and the multiplicative layer never consults it.
-  --
-  -- `parts-split` is the one law, and what it forces is that reading the
-  -- parts off the canonical splitting of `op f` gives back `f`.  It
-  -- costs `funExt` because `Bool` has no definitional eta.
+  -- The total point, separately from `fib`. Its containment may be STRICT
+  -- -- `R u v w` need not imply `u ++ v ≡ w` -- so this really is a lax
+  -- point, and the multiplicative layer never consults it.
   point : LaxPoint fib
   point .op mul f          = f true ++ f false
   point .split mul f       = f true , f false , rApp (f true) (f false)
@@ -94,9 +74,7 @@ module Substrate
   slots A P p q true  = p
   slots A P p q false = q
 
-  -- ================================================================
   -- One splitting, decided from its two slots.
-  -- ================================================================
 
   -- DENOTES: "this ONE decomposition either carries the payload or
   -- provably does not".  `hit` gets the payload, `miss` gets its
@@ -116,9 +94,7 @@ module Substrate
       (λ k → miss (λ h → k (h true)))
       dt
 
-  -- ================================================================
   -- The empty context: one splitting, so `decSp` finishes it.
-  -- ================================================================
 
   nilSp : CSplit mul []
   nilSp = [] , [] , rnil
@@ -139,11 +115,9 @@ module Substrate
       (λ k → dec-no (⊗ˢ mul A) [] (λ w → k (nilSlots A w)))
       (d nilSp true) (d nilSp false)
 
-  -- ================================================================
   -- One constructor of `R`, as a recursive step.  `con` moves the head
   -- name into the slots named by `sL`/`sR`; the recursive call then runs
   -- at `fam`, the caller's family with that shift built in.
-  -- ================================================================
 
   module Step (x : Name) (Γ : Ctx) (A : Fam)
               (sL sR : Ctx → Ctx)
@@ -180,9 +154,7 @@ module Substrate
       (u , v , r) , slots fam (CParts mul Γ (u , v , r)) (h true) (h false)
 
     -- THE GLUE, shared by all three substrates: consume the recursive
-    -- decision at `fam`.  A witness there is a witness here (`out`); a
-    -- refutation is handed to `k`, which either tries the next
-    -- constructor or -- when they are exhausted -- refutes them all.
+    -- decision at `fam`.
     chain : ((¬G (⊗ˢ mul fam)) Γ → Dec⟨ ⊗ˢ mul A ⟩ (x ∷ Γ))
           → Dec⟨ ⊗ˢ mul fam ⟩ Γ
           → Dec⟨ ⊗ˢ mul A ⟩ (x ∷ Γ)

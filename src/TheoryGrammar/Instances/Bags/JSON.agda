@@ -121,9 +121,7 @@ open import TheoryGrammar.Decidable.Tensor
 open import TheoryGrammar.Decidable.Enumerated
 open import TheoryGrammar.Decidable.Guarded
 
--- ==================================================================
 -- THE SIGNATURE.
--- ==================================================================
 
 data JSort : Type₀ where
   val obj arr : JSort
@@ -177,9 +175,7 @@ jsonSig .arities    = JAr
 jsonSig .sortOf     = JSortOf
 jsonSig .resultSort = JResult
 
--- ==================================================================
 -- THE CARRIERS.  One document, three sorts of piece.
--- ==================================================================
 
 data Val : Type₀ where
   num  : ℕ → Val                    -- a number
@@ -195,9 +191,7 @@ JCar val = Val
 JCar obj = List Member
 JCar arr = List Val
 
--- ==================================================================
 -- THE SPLITTINGS, as data indexed by the output.
--- ==================================================================
 
 -- the COMMUTATIVE one: a bag of members splits into two sub-bags
 data Ilv : List Member → List Member → List Member → Type₀ where
@@ -272,9 +266,7 @@ jsonFib .parts   = JParts
 open DecFib jsonFib public
 open Views  jsonFib public
 
--- ==================================================================
 -- The two multiplicatives, named.
--- ==================================================================
 
 infixr 21 _⊗ᵒ_ _⊗ᵃ_
 
@@ -286,22 +278,9 @@ A ⊗ᵒ B = ⊗ˢ uni (λ b → if b then A else B)
 _⊗ᵃ_ : TheoryTy ℓ-zero arr → TheoryTy ℓ-zero arr → TheoryTy ℓ-zero arr
 A ⊗ᵃ B = ⊗ˢ cat (λ b → if b then A else B)
 
--- ==================================================================
--- THE CLAIM, AS A TERM.
---
--- "Key order does not matter" is not an observation about the tests: it
--- is COMMUTATIVITY of the object sort's tensor, and it is a map of the
--- calculus, discharged by swapping an interleaving.  Since `_⊢_`
--- preserves the index, a term of this type says that at EVERY bag, a
--- decomposition into an A-part and a B-part is also a decomposition
--- into a B-part and an A-part -- which is exactly the fact an ordinary
--- parser has to re-establish with a normalisation pass.
---
--- There is deliberately NO analogous term for `_⊗ᵃ_`.  `Cat3` has no
--- swap: a cut of a list into a prefix and a suffix is not a cut into
--- the suffix and the prefix.  The two sorts differ in exactly this one
--- term, and everything the tests show follows from it.
--- ==================================================================
+-- THE CLAIM, AS A TERM. "Key order does not matter" is not an observation
+-- about the tests: it is COMMUTATIVITY of the object sort's tensor, and it
+-- is a map of the calculus, discharged by swapping an interleaving.
 
 ilvSwap : ∀ {u v w} → Ilv u v w → Ilv v u w
 ilvSwap nilI       = nilI
@@ -313,20 +292,10 @@ ilvSwap (rightI s) = leftI  (ilvSwap s)
   (v , u , ilvSwap s) , λ { true → h false ; false → h true }
 
 -- The constant former's level coercion (`⟦ ⌜ B ⌝ ⟧c A m = Lift _ (B m)`).
-Liftg : {s : JSort} → TheoryTy ℓ-zero s → TheoryTy ℓ-zero s
-Liftg A m = Lift ℓ-zero (A m)
 
-liftg : {s : JSort} {A : TheoryTy ℓ-zero s} → A ⊢ Liftg A
-liftg _ = lift
-
-lowerg : {s : JSort} {A : TheoryTy ℓ-zero s} → Liftg A ⊢ A
-lowerg _ = lower
-
--- ==================================================================
 -- THE GRADING.  One degree function per sort, and the joins each cost
 -- a `suc` -- which is exactly why the four unary operations are
 -- strictly decreasing with no side condition at all.
--- ==================================================================
 
 degV : Val → ℕ
 degA : List Val → ℕ
@@ -388,11 +357,9 @@ degA-R< : ∀ {u v l} → Cat3 u v l → 0 < degA u → degA v < degA l
 degA-R< nilC      pr = E.rec (¬-<-zero pr)
 degA-R< (consC s) pr = suc-≤-suc (≤-trans (degA-R s) ≤SumLeft)
 
--- ==================================================================
 -- THE RESOURCE PREDICATES, internally.  Built from `⌈_⌉`, the tensor,
 -- `⊕ᴰ` and `⊤` only -- no degree -- exactly as `Bags.Graded.NonTrivial`
 -- and `Spans.Graded.NonEmpty` are.
--- ==================================================================
 
 NEobj : TheoryTy ℓ-zero obj
 NEobj = ⊕ᴰ Member (λ mm → ⌈ mm ∷ [] ⌉ ⊗ᵒ ⊤G)
@@ -419,15 +386,10 @@ NEres val = ⊤G
 NEres obj = NEobj
 NEres arr = NEarr
 
--- ==================================================================
--- Properness, and the graded promodel.
---
--- For the two binary operations properness of a slot IS non-triviality
--- of its COMPLEMENT -- stated through `JParts` so that it reduces at a
--- variable splitting, exactly as `Spans.Graded.SpanProper` does.  For
--- the four joins it is `Unit`: the join costs a `suc`, so BOTH slots
--- (the real one and the dummy) always shrink.
--- ==================================================================
+-- Properness, and the graded `Fibered`. For the two binary operations
+-- properness of a slot IS non-triviality of its COMPLEMENT -- stated
+-- through `JParts` so that it reduces at a variable splitting, exactly as
+-- `Spans.Graded.SpanProper` does.
 
 JProper : (o : JOp) (m : JCar (JResult o)) → JSplit o m → JAr o → Type₀
 JProper uni     m sp a = NEobj (JParts uni m sp (not a))
@@ -495,9 +457,7 @@ jsonGraded .deg≤   = jdeg≤
 jsonGraded .deg<   = jdeg<
 
 -- THE RESOURCE LAW, one per binary operation: "if every slot of a
--- splitting is non-trivial then every slot is a proper part".  Both are
--- one line, because properness of a slot IS non-triviality of its
--- complement.  This is what `resourceOf` needs.
+-- splitting is non-trivial then every slot is a proper part".
 uniProper : (m : List Member) (sp : JSplit uni m)
           → ((a : Bool) → NEres obj (JParts uni m sp a))
           → (a : Bool) → JProper uni m sp a
@@ -515,14 +475,9 @@ boolArComplete : (a : Bool) → a ∈L boolAr
 boolArComplete true  = here
 boolArComplete false = there here
 
--- ==================================================================
--- THE SPLITTINGS ARE FINITELY ENUMERABLE.
---
--- The residual obligation, and the one place the cost of commutativity
--- is visible: a bag of `n` members has `2ⁿ` interleavings, against a
--- list's `n+1` cuts.  That is not an artefact of the encoding -- it IS
--- the price of key-order independence, paid once, here.
--- ==================================================================
+-- THE SPLITTINGS ARE FINITELY ENUMERABLE. The residual obligation, and the
+-- one place the cost of commutativity is visible: a bag of `n` members has
+-- `2ⁿ` interleavings, against a list's `n+1` cuts.
 
 allIlv : (w : List Member)
        → List (Σ[ u ∈ List Member ] Σ[ v ∈ List Member ] Ilv u v w)
@@ -605,9 +560,7 @@ jEnumComplete one     []       ()
 jEnumComplete one     (_ ∷ []) tt = here
 jEnumComplete one     (_ ∷ _ ∷ _)     ()
 
--- ==================================================================
 -- THE PROBES -- the file's primitives, each with an INTERNAL type.
--- ==================================================================
 
 -- PRIMITIVE (phase 1).  THE LEXICAL TABLE: is this value a number?  a
 -- string?  Matching the carrier is exactly what building a `Probe` is
@@ -653,17 +606,10 @@ probeR val = dec-⊤
 probeR obj = probe-NEobj
 probeR arr = probe-NEarr
 
--- ==================================================================
--- THE DESCRIPTION.
---
--- The schema is
---
---     Rec       = { id : Num , tags : Tags }      -- a BAG of members
---     Tags      = [ Num , Txt ]                   -- an ORDERED list
---
--- and the nonterminals are indexed by their SORT, which is what makes
--- the chart below a family over the sorts rather than over one type.
--- ==================================================================
+-- THE DESCRIPTION. The schema is Rec = { id : Num , tags : Tags } -- a BAG
+-- of members Tags = [ Num , Txt ] -- an ORDERED list and the nonterminals
+-- are indexed by their SORT, which is what makes the chart below a family
+-- over the sorts rather than over one type.
 
 data ValNT : Type₀ where
   ntNum ntTxt ntRec ntRec3 ntTags : ValNT
@@ -733,10 +679,7 @@ JF (val , ntTags)     = G.⊗e arrOf (arrOfSlots ntTagsBody)
 JF (obj , ntRecBody)  = G.⊗e uni (uniSlots ntIdMem ntTagsMem)
 JF (obj , ntIdMem)    = G.⊗e (mem kId)   (memSlots kId   ntNum)
 JF (obj , ntTagsMem)  = G.⊗e (mem kTags) (memSlots kTags ntTags)
--- ... and the same schema with a THIRD member.  A three-member bag has
--- six key orders and eight interleavings, and the grammar is the same
--- two-slot rule nested once: `{id} ⊎ ({tags} ⊎ {name})`.  Nothing about
--- the nesting privileges an order, so all six parse.
+-- ... and the same schema with a THIRD member.
 JF (val , ntRec3)     = G.⊗e objOf (objOfSlots ntRec3Body)
 JF (obj , ntRec3Body) = G.⊗e uni (uniSlots ntIdMem ntTagsName)
 JF (obj , ntTagsName) = G.⊗e uni (uniSlots ntTagsMem ntNameMem)
@@ -758,13 +701,12 @@ LayerAt x = G.⟦ JF x ⟧c Der
 SlotG : (s : JSort) (P : V s) → TheoryTy ℓ-zero s
 SlotG s P = G.⟦ Slot s P ⟧c Der
 
--- the fixed point, as maps of the calculus (one line each, per
--- `Inductive`'s header)
+-- the fixed point, as maps of the calculus.
 unrollD : (x : NT) → DerivAt x ⊢ LayerAt x
-unrollD x m t = G.toC (JF x) m (G.unroll t)
+unrollD = G.unrollg JF
 
 rollD : (x : NT) → LayerAt x ⊢ DerivAt x
-rollD x m t = G.roll (G.fromC (JF x) m t)
+rollD = G.rollg JF
 
 -- THE RESOURCE CERTIFICATE A SLOT CARRIES -- a term.
 neOf : (s : JSort) (P : V s) → SlotG s P ⊢ NEres s
@@ -773,16 +715,8 @@ neOf s P = lowerg ∘g &ᴰ-E Bool {B = λ b → G.⟦ NEslot s P b ⟧c Der} fa
 derOf : (s : JSort) (P : V s) → SlotG s P ⊢ DerivAt (s , P)
 derOf s P = &ᴰ-E Bool {B = λ b → G.⟦ NEslot s P b ⟧c Der} true
 
--- ==================================================================
--- GUARDEDNESS: the chart is filled by increasing degree, and the
--- recursion crosses the sorts.  Not needed by the decision below (which
--- consumes `deg<` directly), but it is the statement that the grammar
--- is well founded, and it is where the two ways of shrinking show up
--- side by side:
---
---   a slot of `uni`/`cat` shrinks because its SIBLING is non-trivial;
---   a slot of a JOIN shrinks because the join itself costs a `suc`.
--- ==================================================================
+-- GUARDEDNESS: the chart is filled by increasing degree, and the recursion
+-- crosses the sorts.
 
 -- PRIMITIVE (phase 1): `neOf` at the level of SHAPES, which is where
 -- guardedness lives.  The only place a `Sh` is looked at.
@@ -848,16 +782,10 @@ jfGuarded (arr , ntTxtElem)  =
   G.<⊗e one (oneSlots ntTxt)
         (λ { true → G.≤Var _ ; false → G.≤⌜⌝ (⊤G {arr}) }) (λ m sp sh a p → tt)
 
--- ==================================================================
--- THE DECISION PROCEDURE.
---
--- `Chart s` is ONE GRAMMAR holding the decision for every nonterminal
--- OF SORT s at the current carrier, and `SortFam` is a chart at every
--- sort at once -- which is exactly what a many-sorted `löb` needs.  The
--- `Ix`-family `NT × carrier → Type` is not a grammar and has no
--- combinators; `&ᴰ (V s)` is, and `V s` is definitionally the fibre of
--- `fst : NT → JSort`, so no transport appears anywhere below.
--- ==================================================================
+-- THE DECISION PROCEDURE. `Chart s` is ONE GRAMMAR holding the decision
+-- for every nonterminal OF SORT s at the current carrier, and `SortFam` is
+-- a chart at every sort at once -- which is exactly what a many-sorted
+-- `löb` needs.
 
 open DecEnum  jsonFib    using (⊗at; Refutes; dec-⊗-cuts; slotMiss)
 open DecGuard jsonGraded using (SortFam; ▷ᴬ; löbᵍ; dec-⊗▷; resourceOf)
@@ -882,13 +810,9 @@ decSlot s P =
              ; false → dec-map (NEres s) (Liftg (NEres s)) liftg lowerg
                        ∘g probeR s ∘g ⊤-I }
 
--- Every rule below is one of two shapes.  A JOIN has one recursive slot
--- and one dummy, and NO resource obligation -- `JProper` at a join is
--- `Unit`, so `resource` is discharged outright.  A BINARY rule has two
--- real slots and gets its resource test from `resourceOf`, which builds
--- it out of `probeR` and `neOf` (terms) plus `uniProper`/`catProper`
--- (laws of the grading, of the same kind as `deg<`).  Nothing here
--- mentions a splitting.
+-- Every rule below is one of two shapes. A JOIN has one recursive slot and
+-- one dummy, and NO resource obligation -- `JProper` at a join is `Unit`,
+-- so `resource` is discharged outright.
 decRule : (x : NT) → ▷ᴬ Chart {fst x} ⊢ Dec⟨ LayerAt x ⟩
 decRule (val , ntNum) =
   dec-map NumG (Liftg NumG) liftg lowerg ∘g probeNum ∘g ⊤-I

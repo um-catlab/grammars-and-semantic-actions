@@ -1,23 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- Strings are FREE: the scan has exactly one parse.
-
-   `Free F = ∀ i → isContr (μ F i)` was stated generically and nothing
-   satisfied it, so both it and `scanμ-scanner-irrelevant` were
-   vacuous.  This discharges it for the string scan, via
-   `shapeContr→Free` -- so it suffices that the ONE-STEP shape is
-   contractible, and the recursion is handled generically.
-
-   The two cases are the decomposition axiom in h-level form:
-
-     at ε      -- the `ε'` branch is contractible, the `⊗` branch empty
-                  (its left factor would have to be an atom, and no
-                  atom is empty);
-     at c ∷ w  -- the reverse, and the `⊗` branch is contractible
-                  because the atom pins the cut (`split3App` plus cons
-                  injectivity) and `split3IsProp` pins the witness.
-
-   Both halves of `PartsFaithful` appear, and they do different jobs:
-   the parts are pinned by the ATOM, the witness by SET-NESS. -}
+{- Strings are FREE: the scan has exactly one parse. -}
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Sum using (_⊎_; inl; inr)
 import Cubical.Data.Equality as Eq
@@ -62,9 +44,7 @@ private
   ΣBoolF cf ne .snd (false , p) = ΣPathP (refl , cf .snd p)
   ΣBoolF cf ne .snd (true  , p) = E.rec (ne p)
 
--- ==================================================================
 -- An atom is a proposition, and determines its character.
--- ==================================================================
 
 charIsProp : isSet String → (u : String) → isProp (char u)
 charIsProp ss u (c₁ , e₁) (c₂ , e₂) =
@@ -73,9 +53,7 @@ charIsProp ss u (c₁ , e₁) (c₂ , e₂) =
     cEq : c₁ ≡ c₂
     cEq = cons-inj₁ (sym (Eq.eqToPath e₁) ∙ Eq.eqToPath e₂)
 
--- ==================================================================
 -- The one-step shape, at each of the two cases.
--- ==================================================================
 
 private
   εAt[] : isContr (Sh (starAlt char true) [])
@@ -120,9 +98,7 @@ private
       spEq = strPartsFaithful ss (c ∷ w) (c ∷ [] , w , cons nil) (u , v , s)
                (funExt λ { true → sym uEq ; false → sym vEq })
 
--- ==================================================================
 -- ... and hence freeness.
--- ==================================================================
 
 scanShapeContr : isSet String → (x : Unit) (m : String)
                → isContr (Sh (ScanF x) m)

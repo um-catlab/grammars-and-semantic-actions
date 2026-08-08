@@ -1,16 +1,5 @@
-{-
-  The pipeline computes.  Each `refl` holds only if `check`, the generic
-  μ's `sup`, `fold` and `toIx` all reduce.
-
-  EVERY NAME BELOW IS A TERM OF THE CALCULUS -- a `⊤G ⊢ Δ Bool` or a
-  `⊤G ⊢ Result E (Δ X)` -- and `run` / `runΔ` appear only inside the
-  `refl` lines.  That is the point: externalising is the OBSERVATION, not
-  part of the pipeline, so a name of type `Raw → Maybe (DB 0)` would
-  already have left the calculus one step too early.
-
-  Nothing here defines a reader or a constant grammar; see
-  TheoryGrammar.SemanticAction.
--}
+{- The pipeline computes. Each `refl` holds only if `check`, the generic
+   μ's `sup`, `fold` and `toIx` all reduce. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Tests where
 
@@ -42,16 +31,7 @@ open'  = lam 0 (var 1)                                -- λx. y
 bigger = app (lam 0 (var 0)) (lam 1 (lam 2 (var 1)))  -- (λx.x)(λy.λz.y)
 shadow = lam 0 (lam 0 (var 0))                        -- λx. λx. x
 
--- ==================================================================
 -- THE SCOPE CHECKER, and elaboration through it.
---
--- `closed?` is a decision, i.e. a `Result (¬G _) _`.  Composing it with
--- the generic observer `okA` gives a term `⊤G ⊢ Δ Bool`; composing it
--- with `mapR` and the semantic action `toDB` gives a term
--- `⊤G ⊢ Result (¬G _) (Δ (DB 0))` -- a decision whose success branch
--- already carries the elaborated term, and whose failure branch still
--- carries the refutation.  Both are still inside the calculus.
--- ==================================================================
 
 DecCl : TmG
 DecCl = ¬G (Scoped [])
@@ -84,11 +64,9 @@ _ : passes (runΔ (DB 0) DecCl elab at
              ∷ [] ))
 _ = refl
 
--- ==================================================================
 -- EVERY OTHER MAP OUT OF `⊤` IN THIS INSTANCE, the same way.  Each is a
 -- `Result` at some error grammar, so `okA` observes acceptance and
 -- `mapR` carries a witness -- no matter which SORT the map lives at.
--- ==================================================================
 
 -- ---- `dec-⌈⌉` : the representable at a NAME.  Sort `nm`, so the world
 -- ---- this term is run at is a Name, not a Raw.
@@ -173,10 +151,7 @@ _ : passes (run (isOp! lamOp) at
              (idT ↦ true ∷ (app idT idT) ↦ false ∷ []))
 _ = refl
 
--- ---- `readback` : the initial-algebra map, `⊤G ⊢ Everything Γ`.  It
--- ---- cannot fail (shape `Result ⊥G`), so the observation is just a
--- ---- semantic action -- `size!` is `recA` at a `Δ ℕ`-valued algebra,
--- ---- and is itself a term `⊤G ⊢ Δ ℕ` (defined in `Lambda.Initial`).
+-- ---- `readback` : the initial-algebra map, `⊤G ⊢ Everything Γ`.
 _ : passes (run (size! []) at
              ( (var 0)           ↦ 1
              ∷ idT               ↦ 2
@@ -185,21 +160,7 @@ _ : passes (run (size! []) at
              ∷ [] ))
 _ = refl
 
--- ==================================================================
 -- THE REJECTIONS, AS THEOREMS -- and the CONTRAST that makes the point.
---
--- `refute` is uniform in the error grammar, so it applies to every
--- program above.  What comes back depends entirely on which `E` the
--- program was written at, and that is the whole content of the
--- `Result E A` framing:
---
---     E = ¬G A   a refutation `A m → ⊥`   -- a theorem
---     E = ⊤G     `tt`                     -- nothing at all
---
--- Until they are put through `refute` the two kinds of negative test
--- are indistinguishable; afterwards one is a proof and the other is a
--- unit.  See the demonstration at the bottom.
--- ==================================================================
 
 noClosed : (t : Raw) → run closed! t ≡ false → (¬G (Scoped [])) t
 noClosed = refute (Scoped []) DecCl closed?
@@ -229,18 +190,8 @@ no-app-var = refute (⊗ˢ appOp (λ _ → ⊤G)) (¬G (⊗ˢ appOp (λ _ → �
 no-name : (¬G (⌈_⌉ {s = nm} 3)) 4
 no-name = refute (⌈_⌉ {s = nm} 3) (¬G (⌈_⌉ {s = nm} 3)) (dec-⌈⌉ 3) 4 refl
 
--- ==================================================================
--- COMPLETENESS WITH A POSITIVE COMPLEMENT.
---
--- `⊗-decSplit o` already decides each operation, at `¬G (⊗ˢ o ⊤)`.
--- `opCase` (Lambda.Readable) says the same thing better: every raw term
--- is an o-composite for EXACTLY ONE `o`, so rejecting `appOp` hands back
--- WHICH operation it was instead of a function into `⊥`.
---
--- `certifies` maps the positive reading back to the negative one, so
--- the two agree -- which is `largest` at work: `¬G` is the largest
--- complement, and `opCase`'s branches factor through it.
--- ==================================================================
+-- COMPLETENESS WITH A POSITIVE COMPLEMENT. `⊗-decSplit o` already decides
+-- each operation, at `¬G (⊗ˢ o ⊤)`.
 
 -- reading a term by its operation is now one `⊕ᴰ` elimination
 opName : ⊤G ⊢ Δ ℕ
@@ -267,12 +218,10 @@ lam-not-app = certifies opCase lamOp appOp lam≢app
 same-refutation : (¬G (⊗ˢ appOp (λ _ → ⊤G))) idT
 same-refutation = lam-not-app idT (mkLam 0 (var 0) , λ _ → tt)
 
--- `⊗-decSplit` is now DERIVED, not primitive: a complete partition with
--- a discrete index decides each of its branches (`View.decBranch`), so
+-- `⊗-decSplit` is now DERIVED, not primitive: a complete partition with a
+-- discrete index decides each of its branches (`View.decBranch`), so
 -- `Lambda.Readable.⊗-decSplit` is `decBranch discreteLOp opCase` and the
--- nine hand-written clauses are gone.  These check that the derived
--- procedure still COMPUTES -- which is the thing a derivation can
--- silently cost.
+-- nine hand-written clauses are gone.
 isOp!' : (o : LOp) → ⊤G ⊢ Δ Bool
 isOp!' o = okA (⊗ˢ o (λ _ → ⊤G)) (¬G (⊗ˢ o (λ _ → ⊤G))) ∘g ⊗-decSplit o
 

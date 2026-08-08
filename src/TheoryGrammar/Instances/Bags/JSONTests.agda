@@ -1,46 +1,8 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  THE JSON DECISION, RUN.
-
-  `Bags.JSON` claims that key-order independence is DEFINITIONAL: the
-  object sort's tensor is interleaving, so a schema grammar accepts every
-  key order because there is nothing else it could do.  That claim is
-  only worth something if the term reduces, so this file is the
-  evidence -- the `refl` lines below are the chart being filled at
-  typecheck time, at one document and its permutations.
-
-  ONE DOCUMENT, TWO THEORIES.  Every test uses the SAME term,
-  `derives! val ntRec`, at a different `Val`.  The schema is
-
-      Rec  =  { id : Num , tags : [ Num , Txt ] }
-
-  and the point is the asymmetry between its two constructors:
-
-      docA  { id:7, tags:[1,"x"] }      true
-      docB  { tags:[1,"x"], id:7 }      true   -- KEYS reordered:   fine
-      docC  { id:7, tags:["x",1] }      false  -- ELEMENTS reordered: not
-
-  `docA` and `docB` are literally different lists -- `objV` holds a
-  `List Member` and the two lists are not equal -- so this is not a
-  triviality about the representation.  What makes them both parse is
-  that `⊗ˢ uni` quantifies over INTERLEAVINGS of the bag, and both
-  orders are interleavings of themselves; what makes `docC` fail is that
-  `⊗ˢ cat` quantifies over CUTS of the list, and no cut of `["x",1]`
-  puts a number first.  Neither fact is a lemma about JSON: they are the
-  two multiplicatives of the theory, at the two sorts.
-
-  THE NEGATIVE ANSWERS ARE THEOREMS.  `derives?` is a `Result (¬G _) _`,
-  so a `false` is a REFUTATION -- a proof that no parse tree exists at
-  that document, extracted by `refute`.  The last block does that for
-  the reordered array, the missing key, the extra key and the wrong
-  value type.
-
-  COST.  A bag of `n` members has `2ⁿ` interleavings against a list's
-  `n+1` cuts, and `löb` re-descends rather than tabulating (the same
-  caveat `Spans.Examples` records), so these documents are deliberately
-  tiny.  The two-member object is where the reordering claim lives; a
-  third member multiplies the splitting scan by two.
--}
+{- THE JSON DECISION, RUN. `Bags.JSON` claims that key-order independence
+   is DEFINITIONAL: the object sort's tensor is interleaving, so a schema
+   grammar accepts every key order because there is nothing else it could
+   do. -}
 module TheoryGrammar.Instances.Bags.JSONTests where
 
 open import Cubical.Foundations.Prelude
@@ -53,9 +15,7 @@ open import TheoryGrammar.SemanticAction using (passes; _↦_; _at_)
 
 open import TheoryGrammar.Instances.Bags.JSON
 
--- ==================================================================
 -- The documents.  `tags` is the ORDERED part; `{...}` is the BAG.
--- ==================================================================
 
 tags : Val
 tags = arrV (num 1 ∷ txt 2 ∷ [])
@@ -91,13 +51,9 @@ docF = objV ((kId , txt 7) ∷ (kTags , tags) ∷ [])
 docG : Val
 docG = objV ((kId , num 7) ∷ (kTags , tags) ∷ (kName , num 3) ∷ [])
 
--- ==================================================================
--- (i)   a small object parses
--- (ii)  the SAME object with the keys reordered gives the same answer
--- (iii) the invalid documents are refuted
---
--- One battery, one term, seven documents.
--- ==================================================================
+-- (i) a small object parses (ii) the SAME object with the keys reordered
+-- gives the same answer (iii) the invalid documents are refuted One
+-- battery, one term, seven documents.
 
 _ : passes (run (derives! val ntRec) at
              ( docA ↦ true      -- { id:7, tags:[1,"x"] }
@@ -129,17 +85,10 @@ _ : passes (run (derives! obj ntRecBody) at
              ∷ [] ))
 _ = refl
 
--- ==================================================================
--- THREE KEYS, ALL SIX ORDERS.
---
--- The schema `Rec3 = { id : Num , tags : [Num,Txt] , name : Txt }` is
--- the same two-slot rule nested once -- `{id} ⊎ ({tags} ⊎ {name})` --
--- so the grammar has a preferred BRACKETING and no preferred ORDER.
--- All six permutations of the document are accepted, and the term is
--- again written once.  (A three-member bag has eight interleavings at
--- the outer rule; this is the size at which the `2ⁿ` starts to be
--- visible, and it still elaborates in about a second.)
--- ==================================================================
+-- THREE KEYS, ALL SIX ORDERS. The schema `Rec3 = { id : Num , tags :
+-- [Num,Txt] , name : Txt }` is the same two-slot rule nested once -- `{id}
+-- ⊎ ({tags} ⊎ {name})` -- so the grammar has a preferred BRACKETING and no
+-- preferred ORDER.
 
 mId mTags mName : Key × Val
 mId   = kId   , num 7
@@ -159,13 +108,7 @@ _ : passes (run (derives! val ntRec3) at
              ∷ [] ))
 _ = refl
 
--- ==================================================================
 -- ... AND THE ANSWERS ARE THEOREMS.
---
--- `witness` hands back the parse tree; `refute` hands back a proof that
--- there is none.  Both read the same term at the same document, and
--- both are obtained from the `refl` already checked above.
--- ==================================================================
 
 RecOf : Val → Type₀
 RecOf = DerivAt (val , ntRec)

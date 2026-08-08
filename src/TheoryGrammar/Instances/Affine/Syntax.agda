@@ -1,6 +1,6 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 {-
-  AFFINE TERMS OVER THE OWNERSHIP PROMODEL -- a Rust fragment.
+  AFFINE TERMS OVER THE OWNERSHIP `Fibered` -- a Rust fragment.
 
   `LinLam/Syntax` reads the linear typing rules off `⊗ˢ` and reindexing:
 
@@ -19,7 +19,6 @@
   still well-formed: the value is dropped at the end of the scope.  In
   `LinLam` no such term exists, and `Contrast.noWkLin` says why.
 
-  ------------------------------------------------------------------
   WHY `tdrop` IS A CONSTRUCTOR AND NOT A THEOREM.
 
   One might hope weakening were derivable, as `Opt.insT` (shifting) is.
@@ -33,7 +32,6 @@
   so it costs no computational content and the `refl` tests at the end
   of this file still reduce.
 
-  ------------------------------------------------------------------
   ... AND IT IS EXACTLY THE MONAD ALGEBRA.
 
   `Base` builds `⇓ A = A ⊛ 𝟙`, the weakening monad, and proves that not
@@ -70,18 +68,16 @@ open import TheoryGrammar.Instances.Affine.Base public
 
 private variable ℓA ℓB : Level
 
--- ==================================================================
 -- §0  NOTATION -- `Own`/`Free` come from `Base`; `under` is the
 -- functorial action of the head-reindexing, as in `Opt.agda`.
--- ==================================================================
 
 SoloG : Ctx
 SoloG u = Solo u
 
--- the premise-grammar of the weakening rule: a payload at a SMALLER
--- usage, plus the entitlement.  `⇓` is the same thing built out of `⊛`.
+-- the premise-grammar of the weakening rule: a payload at a SMALLER usage,
+-- plus the entitlement.
 WkG : Ctx → Ctx
-WkG A v = Σ[ u ∈ Usage ] ((u ⊑ v) × A u)
+WkG A = ⊕ᴰ Usage λ u → (u ⊑_) & (λ _ → A u)
 
 -- PRIMITIVE (phase 1): reindexing along `u ↦ true ∷ u` is functorial
 under : {A B : Ctx} → A ⊢ B → Own A ⊢ Own B
@@ -99,9 +95,7 @@ under f u = f (true ∷ u)
 ⊑-isProp (false ∷ u) (true  ∷ v)     = ⊑-isProp u v
 ⊑-isProp (false ∷ u) (false ∷ v)     = ⊑-isProp u v
 
--- ==================================================================
 -- §1  THE TERMS.  Three linear rules, plus `tdrop`.
--- ==================================================================
 
 data ATm : Usage → Type₀ where
   tvar  : ∀ {u} → Solo u → ATm u
@@ -113,15 +107,13 @@ data ATm : Usage → Type₀ where
 ATmG : Ctx
 ATmG = ATm
 
--- ==================================================================
 -- §2  THE TYPING RULES, as terms of the calculus.
--- ==================================================================
 
 -- PRIMITIVE (phase 1): application is the tensor -- `⊛` IS the side
--- condition `Γ = Γ₁ ⊎ Γ₂`, and now it also permits `Γ` to own more
--- than `Γ₁ ⊎ Γ₂` does, which is `adrop`.
+-- condition `Γ = Γ₁ ⊎ Γ₂`, and now it also permits `Γ` to own more than
+-- `Γ₁ ⊎ Γ₂` does, which is `adrop`.
 appT : (ATmG ⊛ ATmG) ⊢ ATmG
-appT u ((u₁ , u₂ , s) , k) = tapp s (k true) (k false)
+appT = ⊛-E' ATmG ATmG λ u u₁ u₂ s a b → tapp s a b
 
 -- PRIMITIVE (phase 1): abstraction is reindexing along weakening
 lamT : Own ATmG ⊢ ATmG
@@ -135,17 +127,13 @@ varT u s = tvar s
 wkT : WkG ATmG ⊢ ATmG
 wkT v (u , p , t) = tdrop p t
 
--- ==================================================================
--- §3  `WkG` IS `⇓`, so the affine rule is the monad algebra.
---
--- Both directions are `Base`'s `split→⊑` / `⊑→split`; nothing new is
--- proved here, which is the point -- the syntax's weakening rule and
--- the promodel's weakening monad are the same fact.
--- ==================================================================
+-- §3 `WkG` IS `⇓`, so the affine rule is the monad algebra.
 
 ⇓→WkG : (A : Ctx) → ⇓ A ⊢ WkG A
 ⇓→WkG A = ⊛-E' A 𝟙 λ v u₁ u₂ s x e → u₁ , split→⊑ s (𝟙-Empty e) , x
 
+-- PRIMITIVE (phase 1): the `⊕ᴰ` tag is the SMALLER usage, computed from
+-- the splitting rather than fixed in advance, so `⊕ᴰ-I` does not apply.
 WkG→⇓ : (A : Ctx) → WkG A ⊢ ⇓ A
 WkG→⇓ A v (u , p , x) =
   ⊛-mk A 𝟙 v u (zeros v) (⊑→split p) x (𝟙-mk (zerosEmpty v))
@@ -159,10 +147,8 @@ atmAffine = wkT ∘g ⇓→WkG ATmG
 weakenT : ∀ {u v} → u ⊑ v → ATm u → ATm v
 weakenT = affWeaken atmAffine
 
--- ------------------------------------------------------------------
 -- 3.1  WEAKENING AT THE HEAD BIT, phase 2: `Base.affWk` followed by
 -- the algebra, under the binder.  No pointful Agda.
--- ------------------------------------------------------------------
 
 dropT : Free ATmG ⊢ Own ATmG
 dropT = under atmAffine ∘g affWk ATmG
@@ -174,11 +160,9 @@ dropT-is-tdrop : (u : Usage) (t : ATm (false ∷ u))
                → dropT u t ≡ tdrop (⊑-refl u) t
 dropT-is-tdrop u t = cong (λ p → tdrop p t) (⊑-isProp _ _ _ _)
 
--- ==================================================================
 -- §4  THE RECURSOR.  Four summands now, one per rule.  As in
 -- `Opt.agda` the recursion is genuinely primitive: `affGrading` grades
 -- by `live`, and going under a binder makes `live` go UP.
--- ==================================================================
 
 StepG : Ctx → Ctx
 StepG A = SoloG ⊕ ((A ⊛ A) ⊕ (Own A ⊕ WkG A))
@@ -214,11 +198,9 @@ foldRoll u (tapp s a b) = cong₂ (tapp s) (foldRoll _ a) (foldRoll _ b)
 foldRoll u (tlam b)     = cong tlam (foldRoll _ b)
 foldRoll u (tdrop p t)  = cong (tdrop p) (foldRoll _ t)
 
--- ==================================================================
 -- §5  PASSES.  Same category as `LinLam`, same freeness argument: a
 -- pass preserves the usage, so it cannot invent an owned variable.
 -- What it CAN now do -- and could not linearly -- is discard one.
--- ==================================================================
 
 Pass : Type₀
 Pass = ATmG ⊢ ATmG
@@ -234,10 +216,8 @@ infixl 5 _then_
 foldRollPass : foldATm ATmG roll ≡ idPass
 foldRollPass i u t = foldRoll u t i
 
--- ==================================================================
 -- §6  TERMS.  The first two are linear; the rest are NOT, and each one
 -- is a fact the linear calculus cannot state.
--- ==================================================================
 
 -- `λx. x` -- linear, and its own linear counterpart
 idAff : ATm []
@@ -251,22 +231,12 @@ idAff0 = tlam (tvar tt)
 selfApp : ATm []
 selfApp = tapp anil idAff idAff
 
--- ------------------------------------------------------------------
--- 6.1  THE AFFINE TERM.  `λx. λy. x` -- the K combinator.  Its inner
--- body owns `y` and does not use it, so it is `tdrop`ped.  There is no
--- `LinLam.Tm` of this shape, and `Contrast.noLinearK` says so via the
--- budget.
--- ------------------------------------------------------------------
+-- 6.1 THE AFFINE TERM. `λx. λy. x` -- the K combinator.
 
 constAff : ATm []
 constAff = tlam (tlam (tdrop {false ∷ true ∷ []} {true ∷ true ∷ []} tt (tvar tt)))
 
--- ------------------------------------------------------------------
--- 6.2  A DEAD BINDER.  `λ_. (λx.x)`: the bound variable is owned by
--- the body and used by nothing.  This is the term `Opt.deadBinder`
--- proves cannot exist linearly, and `Dead.deadWitness` turns it into
--- the refutation.
--- ------------------------------------------------------------------
+-- 6.2 A DEAD BINDER. `λ_.
 
 deadBody : Own ATmG []              -- i.e. ATm (true ∷ [])
 deadBody = tdrop tt idAff0
@@ -278,9 +248,7 @@ deadLam = tlam deadBody
 deadApp : ATm []
 deadApp = tapp anil deadLam idAff
 
--- ==================================================================
 -- §7  IT COMPUTES.
--- ==================================================================
 
 _ : idPass [] idAff ≡ idAff
 _ = refl

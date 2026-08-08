@@ -1,6 +1,6 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 {-
-  LINEAR TERMS OVER THE CONTEXT PROMODEL.
+  LINEAR TERMS OVER THE CONTEXT `Fibered`.
 
   With `Context.agda` in place the typing rules of the linear λ-calculus
   stop being rules with side conditions and become TERMS OF THE
@@ -46,19 +46,15 @@ open import TheoryGrammar.RulesFib
 
 open import TheoryGrammar.Instances.LinLam.Context public
 
--- ==================================================================
 -- "exactly one variable is live", as a recursive predicate.
--- ==================================================================
 
 Solo : Usage → Type₀
 Solo []          = ⊥
 Solo (true  ∷ u) = Empty u
 Solo (false ∷ u) = Solo u
 
--- ==================================================================
 -- The terms.  `tapp` carries the splitting, so an ill-split
 -- application is not a term -- linearity is structural.
--- ==================================================================
 
 data Tm : Usage → Type₀ where
   tvar : ∀ {u} → Solo u → Tm u
@@ -68,15 +64,12 @@ data Tm : Usage → Type₀ where
 TmG : Ctx
 TmG = Tm
 
--- ==================================================================
 -- THE TYPING RULES, as terms of the calculus.
--- ==================================================================
 
--- PRIMITIVE (phase 1): the intro rule for application.  It matches the
--- splitting because that is what an intro rule does -- compare `⊗-mk`
--- in every other instance.
+-- PRIMITIVE (phase 1): the intro rule for application.
 appT : (TmG ⊛ TmG) ⊢ TmG
-appT u ((u₁ , u₂ , s) , k) = tapp s (k true) (k false)
+appT = ⊗ˢ-E appop {A = boolΠ TmG TmG} {B = TmG}
+         (λ u sp k → tapp (sp .snd .snd) (k true) (k false))
 
 -- ... and its elimination, so downstream passes never match a term.
 appE : {C : Ctx} → ((TmG ⊛ TmG) ⊢ C) → (u : Usage)
@@ -94,12 +87,7 @@ lamT u t = tlam t
 varT : (λ u → Solo u) ⊢ TmG
 varT u s = tvar s
 
--- ==================================================================
--- A closed term: the linear identity `λx. x`.  Its usage is the empty
--- one, and the body's usage is `true ∷ []` -- the binder's variable, and
--- nothing else, which is what makes it LINEAR rather than merely
--- well-scoped.
--- ==================================================================
+-- A closed term: the linear identity `λx. x`.
 
 idLin : Tm []
 idLin = tlam (tvar tt)
@@ -108,11 +96,9 @@ idLin = tlam (tvar tt)
 selfApp : Tm []
 selfApp = tapp unil idLin idLin
 
--- ==================================================================
 -- WHAT THE INDEX BUYS.  Any transformation of terms is a `⊢`, so it
 -- preserves the usage -- an optimisation pass CANNOT silently drop or
 -- duplicate a variable.  Stated once here so later phases can cite it.
--- ==================================================================
 
 Pass : Type₀
 Pass = TmG ⊢ TmG

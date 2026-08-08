@@ -1,19 +1,6 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 {- THE FREE COMMUTATIVE MONOID IS A REFINEMENT MONOID -- the Riesz
-   refinement property, and the `I = ⊤` control for `Traces`.
-
-   The proof is the same intersection-of-two-colourings as for traces,
-   with every side condition deleted: `Ilv` is `ITr` at the total
-   independence relation.  So the four clauses here carry NO disjunction
-   and NO auxiliary lemma, which is the contrast with `Strings`.
-
-   MAIN: `cross` (the matrix), `bagRefinable` (`Refinement.Refinable` at
-   bag composition), and `rigid→singletonEq`.
-
-   `rigid→singletonEq` is the other half of the story: bags are refinable
-   and emphatically NOT rigid, so `Refinement.AtResult.rigid→partsPropAt`
-   cannot drop its second hypothesis -- refinability by itself buys no
-   precision whatsoever. -}
+   refinement property, and the `I = ⊤` control for `Traces`. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Bags.Refinement (A : Type₀) where
@@ -98,10 +85,8 @@ bagRefinable w (u₁ , v₁ , d₁) (u₂ , v₂ , d₂) = R
   R .colCell false true  = Eq.refl
   R .colCell false false = Eq.refl
 
--- ==================================================================
 -- REFINABLE, NOT RIGID.  `x ∷ y ∷ []` splits as `(x , y)` and as
 -- `(y , x)`; rigidity would identify those parts, hence the alphabet.
--- ==================================================================
 
 rigid→singletonEq : (rg : Rigid bagRefinable) (x y : A) → (x ∷ []) Eq.≡ (y ∷ [])
 rigid→singletonEq rg x y =
@@ -109,10 +94,8 @@ rigid→singletonEq rg x y =
     (x ∷ [] , y ∷ [] , left (right nil))
     (y ∷ [] , x ∷ [] , right (left nil)) true
 
--- ==================================================================
 -- It computes: the two crossed splittings above refine with the two
 -- off-diagonal cells inhabited and the diagonal empty.
--- ==================================================================
 
 private
   module _ (x y : A) where

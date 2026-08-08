@@ -1,17 +1,6 @@
-{-
-  A GRADING OF THE LEFT FACTOR GRADES THE GLUE.
-
-  `Grading` asks for a degree on the carrier, a properness predicate on
-  splittings, and the two monotonicity laws.  All four go through `π₁`
-  and nothing else, because `glue .parts` PROJECTS to `Fib .parts` -- so
-  the whole structure is inherited, definitionally, with no hypothesis on
-  the relation and no condition on the right factor.
-
-  That is what makes guarded recursion available over a glued substrate:
-  the degree never looks at the second component, so a description that
-  was guarded downstairs stays guarded upstairs.
-  PRIMITIVE: none.
--}
+{- A GRADING OF THE LEFT FACTOR GRADES THE GLUE. `Grading` asks for a
+   degree on the carrier, a properness predicate on splittings, and the two
+   monotonicity laws. -}
 module TheoryGrammar.Gluing.Graded where
 
 open import Cubical.Foundations.Prelude

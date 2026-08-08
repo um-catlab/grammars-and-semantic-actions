@@ -1,95 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  ONE GENERATING-FUNCTION IDENTITY, DONE INTERNALLY: CATALAN.
-
-  ------------------------------------------------------------------
-  WHAT IS BEING CLAIMED
-  ------------------------------------------------------------------
-
-  A ℕ-graded type is a power series with type coefficients
-  (`Instances/Nat/Base.agda`).  The Dyck grammar is the least fixed point
-
-      D  =  1  ⊕  x ⊗ D ⊗ x ⊗ D
-
-  and reading it off coefficientwise is exactly
-
-      C(x)  =  1 + x² C(x)²,       C₀ = 1,  C_{n+1} = Σ_{i+j=n} Cᵢ Cⱼ
-
-  the Catalan recurrence.  So the two terms `dyck-roll` / `dyck-unroll`
-  below ARE that recurrence -- not a statement about it, and not a proof
-  that some numbers satisfy it, but the bijection itself, at every degree
-  at once.  Degrees here are lengths of bracket words, so the coefficient
-  at 2k is Catalan(k) and the coefficient at 2k+1 is empty; the grammar
-  knows that because the description consumes TWO generators per node.
-
-  ------------------------------------------------------------------
-  HOW IT IS BUILT
-  ------------------------------------------------------------------
-
-  `D` is NOT a hand-written datatype.  It is `μ` of a DESCRIPTION, in the
-  generic functor language of `TheoryGrammar.Inductive`, exactly as
-  `Strings/KleeneStar.agda` builds `KL*` as `μ (ε ⊕ (A ⊗ Var))`.  What
-  has to be supplied, and all that has to be supplied, is:
-
-    * the description `dyckF`  (four lines, no proofs)
-    * `dyckGuarded`, i.e. every recursive occurrence sits at a strictly
-      smaller degree.  This is where the two generators earn their keep:
-      the recursive slots are guarded because their SIBLING is `x`, and
-      `x` forces the sibling to have degree 1.  `slotProper` is exactly
-      that argument, and `degNT` is the one primitive that turns "the
-      left factor is the generator" into "the right factor is smaller".
-
-  Guardedness is what makes `hyloC` available, so any fold or unfold over
-  Dyck words -- counting, evaluating, re-bracketing -- is a term of the
-  calculus and terminates by construction.
-
-  ------------------------------------------------------------------
-  PHASE DISCIPLINE
-  ------------------------------------------------------------------
-
-  Everything after the description is phase 2: `toDesc` / `fromDesc` are
-  composites of `⊕-E`, `⊕ᴰ-in`, `⊗ˢ-map`, `idg`, `liftg`, `lowerg`, and
-  the two fixpoint primitives `rollg` / `unrollg`.  Compare
-  `Strings/KleeneStar.agda`, where `nil*` / `cons*` / `unroll*` are
-  written pointfully, matching `sup` and threading `tt*` and `lower` by
-  hand.  Those are avoidable: the only real content in crossing between
-  `⟦ F ⟧c` and the surface connectives is (a) `⊕e` versus `⊕`, discharged
-  by `⊕ᴰ-in` / `⊕-E`, and (b) the `Lift` that `⟦ ⌜ A ⌝ ⟧c` puts on
-  constants, discharged by `liftg` / `lowerg`.  Both are bookkeeping, and
-  both compose.
-
-  `rollg` / `unrollg` are generic in the description and in the
-  nonterminal, and they LOOK like they belong upstream in
-  `TheoryGrammar.Inductive` alongside `roll` / `unroll`.  They cannot go
-  there, and the reason is recorded in that file: `μ F : Ix → Type ℓμ`
-  with `ℓμ = ℓSh ⊔ ℓV ⊔ ℓX`, while `⟦_⟧c` takes motives at exactly `ℓSh`,
-  so `⟦ F x ⟧c (μ F)` is ill-typed unless `ℓV` and `ℓX` sit below `ℓSh`.
-  Making `⟦_⟧c` motive-polymorphic would fix it and would cost a `Lift`
-  at every recursive position -- worse than the disease.  So they are
-  defined per instance, where the levels are concrete; here `X = Unit`
-  and the carrier is `ℕ`, so `ℓμ = ℓSh` and each is one line.
-
-  ------------------------------------------------------------------
-  AND ITS IMAGE AT STRINGS
-  ------------------------------------------------------------------
-
-  `Instances/Nat/Length.agda` shows `length` reflects splittings, so
-  `pull` carries a ℕ-level ⊗-isomorphism to a string-level one
-  (`transportGF`).  Applied here, the Catalan bijection above becomes an
-  isomorphism of STRING grammars over any alphabet: `pull D` is "the
-  strings whose LENGTH admits a Dyck bracketing", and the recurrence
-  transports verbatim.  (`pull D` is of course not the string Dyck
-  language itself -- `length` forgets which letters were used, so the
-  transported statement is the length-graded shadow.  Getting the
-  language on the nose is a change of SIGNATURE, not of model.)
-
-  One friction, recorded rather than papered over: `Length.agda` works at
-  `Strings/Base.agda`'s copy of `monoidSig`, while this file works at
-  `Nat/Base.agda`'s copy.  The two `MonOp` datatypes are identical and
-  definitionally distinct, so the composite cannot be written down
-  without the shared-signature refactor described in `Length.agda`'s
-  header.
--}
+{- ONE GENERATING-FUNCTION IDENTITY, DONE INTERNALLY: CATALAN. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Nat.Species where
@@ -110,11 +20,9 @@ open import TheoryGrammar.Graded
 
 open import TheoryGrammar.Instances.Nat.Graded public
 
--- ==================================================================
 -- THE DESCRIPTION.  `⊗e` is binary (its arity is `Bool`), so the
 -- four-factor body  x ⊗ D ⊗ x ⊗ D  is three nested `⊗e`s, read
 -- right-associated exactly as `_⊗'_` is.
--- ==================================================================
 
 -- x ⊗ D
 dyck₄ : Bool → Functor tt
@@ -138,13 +46,10 @@ dyckAlt false = ⊗e appop dyck₂
 dyckF : Unit → Functor tt
 dyckF _ = ⊕e Bool dyckAlt
 
--- ==================================================================
--- GUARDEDNESS.  The recursive slots are `dyck₃ true` (the first D) and
+-- GUARDEDNESS. The recursive slots are `dyck₃ true` (the first D) and
 -- `dyck₄ false` (the second D); both live inside the right factor of a
 -- product whose LEFT factor is the generator `x`, and `x` at degree i
--- forces i = 1.  So `slotProper` fires once, at the outermost ⊗, and
--- everything under it merely has to not grow.
--- ==================================================================
+-- forces i = 1.
 
 dyckGuarded : (u : Unit) → Guarded (dyckF u)
 dyckGuarded tt = <⊕e Bool dyckAlt alt
@@ -167,31 +72,15 @@ dyckGuarded tt = <⊕e Bool dyckAlt alt
     alt true  = <⌜⌝ ε'
     alt false = ⊗-guard appop dyck₂ go
 
--- ==================================================================
 -- THE GRAMMAR, and the fixpoint primitives.
--- ==================================================================
 
 D : Gr
 D n = μ dyckF (tt , n)
 
--- PRIMITIVE (phase 1), and GENERIC -- belongs upstream in
--- `TheoryGrammar.Inductive`.  `roll`/`unroll` there are stated in the
--- CONTAINER form `⟦ F ⟧`; these are the same two maps in the CONNECTIVE
--- form `⟦ F ⟧c`, which is the one programs are written against.
-rollg : (F : (u : Unit) → Functor tt)
-      → ⟦ F tt ⟧c (μ F) ⊢ (λ n → μ F (tt , n))
-rollg F n t = roll (fromC (F tt) n t)
+-- `rollg` / `unrollg` USED TO BE DEFINED HERE, with a comment saying they
+-- were generic and belonged upstream.
 
-unrollg : (F : (u : Unit) → Functor tt)
-        → (λ n → μ F (tt , n)) ⊢ ⟦ F tt ⟧c (μ F)
-unrollg F n t = toC (F tt) n (unroll t)
-
--- ==================================================================
--- The description's body, spelled in the connectives.  Each `Bodyₖ` is
--- DEFINITIONALLY `⟦ dyckₖ _ ⟧c (μ dyckF)`; the names exist only so the
--- families can be passed explicitly to `⊗ˢ-map`, which cannot infer them
--- (the CLAUDE.md trap: grammar-valued implicits are not recoverable).
--- ==================================================================
+-- The description's body, spelled in the connectives.
 
 Body : Gr
 Body n = ⟦ dyckF tt ⟧c (μ dyckF) n
@@ -213,9 +102,7 @@ Body₄ a n = ⟦ dyck₄ a ⟧c (μ dyckF) n
 DyckBody : Gr
 DyckBody = ε' ⊕ (x ⊗' D ⊗' x ⊗' D)
 
--- ==================================================================
 -- Crossing between the surface form and the description, in phase 2.
--- ==================================================================
 
 to₄ : (x ⊗' D) ⊢ ⊗ˢ appop Body₄
 to₄ = ⊗ˢ-map appop {A = λ b → if b then x else D} {B = Body₄}
@@ -249,20 +136,13 @@ fromDesc : Body ⊢ DyckBody
 fromDesc = ⊕ᴰ-elim {A = BodyAlt} (λ { true  → ⊕-I₁ ∘g lowerg
                                     ; false → ⊕-I₂ ∘g from₂ })
 
--- ==================================================================
--- THE CATALAN RECURRENCE, as two terms.
---
---     D  ≅  1 ⊕ x·D·x·D            i.e.   C(x) = 1 + x²C(x)²
---
--- Both directions are composites of combinators and the two fixpoint
--- primitives.  No `Add3` and no `sup` appears after the description.
--- ==================================================================
+-- THE CATALAN RECURRENCE, as two terms. D ≅ 1 ⊕ x·D·x·D i.e.
 
 dyck-roll : DyckBody ⊢ D
-dyck-roll = rollg dyckF ∘g toDesc
+dyck-roll = rollg dyckF tt ∘g toDesc
 
 dyck-unroll : D ⊢ DyckBody
-dyck-unroll = fromDesc ∘g unrollg dyckF
+dyck-unroll = fromDesc ∘g unrollg dyckF tt
 
 -- The three constructors, as corollaries, so the grammar can be USED
 -- without ever mentioning its description again.

@@ -1,18 +1,4 @@
-{-
-  Elaboration to de Bruijn (`DB`), as the generic `fold`.
-
-  Motive `Mot : (Γ , t) ↦ DB (length Γ)`.  There is no `Maybe`:
-  scope-correctness sits in the INDEX, so `toDB` is total.  Its algebra
-  `dbStepA` is `⟦Sc⟧` followed by the elimination rules, one per
-  alternative; no clause looks at a term or at a shape.  `toIxA` reads
-  the index off a scope membership.
-
-  Everything below is a SEMANTIC ACTION -- `Action A X = A ⊢ Δ X`, from
-  `TheoryGrammar.SemanticAction` -- and not a map into a hand-written
-  constant grammar `λ _ → X`.  That is what lets elaboration be composed
-  with a parser or a checker by the generic `runResult`, with no `Maybe`
-  spelled out at the use site and no mention of `Raw` there at all.
--}
+{- Elaboration to de Bruijn (`DB`), as the generic `fold`. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.DeBruijn where
 
@@ -38,17 +24,8 @@ module DeBruijn (Name : Type₀) where
     dapp : ∀ {k} → DB k → DB k → DB k
     dlam : ∀ {k} → DB (suc k) → DB k
 
-  -- `toIxA Γ` DENOTES: "a proof that `n` occurs in `Γ` YIELDS the
-  -- position at which it occurs".  The evidence is not re-derived: the
-  -- index is read off the shape of the membership proof.
-  --
-  -- The hit branch
-  -- DISCARDS the representable rather than eliminating it with `⌈⌉-E`:
-  -- `⌈⌉-E` matches `Eq.refl`, and a witness built from `Discrete Name`
-  -- via `pathToEq` does not reduce to `Eq.refl` in cubical.  The index
-  -- is fixed by the POSITION in the scope, not by the proof, so nothing
-  -- is lost -- and this is the difference between the tests computing
-  -- and not.
+  -- `toIxA Γ` DENOTES: "a proof that `n` occurs in `Γ` YIELDS the position
+  -- at which it occurs".
   toIxA : (Γ : Scope) → Action (In Γ) (Fin (length Γ))
   toIxA []      = ⊥A
   toIxA (m ∷ Γ) = caseA (pureA (Fin (length (m ∷ Γ))) fzero)
@@ -59,12 +36,10 @@ module DeBruijn (Name : Type₀) where
   Mot : Ix → Type₀
   Mot i = Δ (DB (length (i .fst))) (i .snd)
 
-  -- One action per alternative.  Every branch is a composite of the
-  -- generic `Δ`-combinators (`Δ-map`, `Δ-pair`, `Δ-at`) with this
-  -- instance's own tensor eliminators; no constant grammar, no `Maybe`,
-  -- and nothing built by hand.  `Δ-at` is what crosses from a slot's
-  -- world to the whole's -- the move a residual would otherwise need,
-  -- and available here only because `Δ` is discrete.
+  -- One action per alternative. Every branch is a composite of the generic
+  -- `Δ`-combinators (`Δ-map`, `Δ-pair`, `Δ-at`) with this instance's own
+  -- tensor eliminators; no constant grammar, no `Maybe`, and nothing built
+  -- by hand.
   module _ (Γ : Scope) where
     private k = length Γ
 

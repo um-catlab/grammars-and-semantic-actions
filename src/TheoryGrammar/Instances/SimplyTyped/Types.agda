@@ -1,21 +1,4 @@
-{-
-  EQUALITY OF TYPES, decided inside the calculus.
-
-  `TyEq A B` is `⌈ B ⌉ A`, the representable at sort `ty`.  Its
-  substitution principle is `⌈⌉-E` -- the Yoneda lemma -- so transport
-  along a type equality is a rule of the calculus, not a `subst`; and
-  its decidability is `dec-⊗` at `baseOp` and `arrOp`, via the generic
-  iso `⌈ op o m⃗ ⌉ ≅ ⊗ˢ o (λ a → ⌈ m⃗ a ⌉)`.
-
-  So `Discrete Ty` is never assumed: the third sort pays for itself by
-  supplying its own decision procedure through the same tensor rule the
-  term sort uses.  (`Discrete Name` still is assumed -- names have no
-  operations, so there is no tensor to decide.)
-
-  Defined here: `tyCast` (substitution), `tyEq-refl`/`-sym`/`-trans`,
-  `dec-⌈⌉ᵗ` (the decision), and the two facts about `Ty` that the
-  representable iso buys -- `base≢arr` and `⇒ᵗ-injˡ`/`⇒ᵗ-injʳ`.
--}
+{- EQUALITY OF TYPES, decided inside the calculus. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.SimplyTyped.Types where
 
@@ -38,9 +21,7 @@ module StTypes (Name : Type₀) where
   open StBase Name
   open StReadable Name
 
-  -- ================================================================
   -- Substitution along a type equality IS the Yoneda elimination rule.
-  -- ================================================================
 
   -- `tyCast P A B e` denotes transport of a derivation along the type
   -- equality `e`, as a MAP of the calculus: `⌈⌉-E`, the Yoneda lemma.
@@ -57,9 +38,7 @@ module StTypes (Name : Type₀) where
   tyEq-trans : (A B C : Ty) → TyEq A B → TyEq B C → TyEq A C
   tyEq-trans A B C e f = tyCast (λ X → Kty {s = ty} A X) B C f A e
 
-  -- ================================================================
   -- The tuples that present `base` and `_⇒ᵗ_` as operations.
-  -- ================================================================
 
   -- `mBase`/`mArr A B` denote the SLOT TUPLES of the two type
   -- constructors, so that `base` is `Op baseOp mBase` and `A ⇒ᵗ B` is
@@ -76,11 +55,9 @@ module StTypes (Name : Type₀) where
       → (a : TAr o) → TheoryTy ℓ-zero (TSortOf o a)
   ⌈⌉ᵗ o m⃗ a = ⌈ m⃗ a ⌉
 
-  -- ================================================================
   -- Decidability of `⌈ A ⌉`, by the generic tensor rule.  The only
   -- recursion is on the description of the type being matched against;
   -- the type being tested is never pattern-matched.
-  -- ================================================================
 
   -- `dec-⌈⌉ᵗ A` denotes "is the type in front of me `A`?", answered
   -- inside the calculus: a yes carries a `TyEq`, a no carries its
@@ -97,19 +74,8 @@ module StTypes (Name : Type₀) where
                λ { true  → dec-⌈⌉ᵗ A (TParts arrOp C sp true)  tt
                  ; false → dec-⌈⌉ᵗ B (TParts arrOp C sp false) tt })
 
-  -- ================================================================
-  -- WHAT THE ISO BUYS ABOUT `Ty`, with no lemma of its own:
-  --
-  --   base≢arr  the two type constructors are DISJOINT.  `⌈⌉-into`
-  --             turns a type equality into an arrow-splitting of
-  --             `base`, and `Readable.baseArr-⊥` -- the `ty`
-  --             partition's `exclusive` -- refutes it.  No match on a
-  --             splitting appears; the representation is read only in
-  --             `Readable`.
-  --   ⇒ᵗ-slots  the two SLOT TUPLES agree, by `op-inj`, i.e. by unique
-  --             readability plus `unsplit`.  Injectivity in each
-  --             argument separately is one `funExt⁻` from it.
-  -- ================================================================
+  -- WHAT THE ISO BUYS ABOUT `Ty`, with no lemma of its own: base≢arr the
+  -- two type constructors are DISJOINT.
 
   base≢arr : (A B : Ty) → TyEq base (A ⇒ᵗ B) → E.⊥
   base≢arr A B e =

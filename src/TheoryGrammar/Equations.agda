@@ -1,36 +1,4 @@
-{-
-  EACH EQUATION OF THE THEORY LIFTS TO AN ISOMORPHISM OF CONNECTIVES.
-
-  The mechanism, and why linearity is exactly the side condition.
-
-  A term `t : Tm V vs s` of the signature denotes a COMPOSITE connective:
-
-      ⟪ var v ⟫   A = A v
-      ⟪ node o ts ⟫ A = ⊗[ o ] (λ a → ⟪ ts a ⟫ A)
-
-  For a LINEAR term (each variable used exactly once) this composite
-  collapses: a point of `⟪ t ⟫ A m` is a valuation ρ of the variables,
-  a proof that t evaluates at ρ to m, and an element of `A v (ρ v)` for
-  each v.  Nothing else survives -- the nesting of the ⊗s has been
-  flattened away.  So `⟪ t ⟫` depends on t ONLY through the function
-
-      eval t : (valuations) → carrier
-
-  and therefore two terms with the same denotation in the model give
-  ISOMORPHIC connectives.  That is the lifting theorem: `eqn→Iso`.
-
-  This is where linearity earns its keep.  If a variable occurred twice
-  the flattening would need two independent valuations for it and a
-  diagonal to identify them, and the collapse fails; if it occurred zero
-  times the valuation is unconstrained and the collapse fails the other
-  way.  Linear equations lift, non-linear ones (idempotence, inverses)
-  do not -- which is the same boundary as "expressible by an operad".
-
-  Below, the flattened form `⊗ᶠ` is taken as PRIMARY and the lifting
-  theorem is proved about it, so no linearity predicate on terms is
-  needed: `⊗ᶠ` is by construction the flattening, and `⊗[ o ]` is the
-  instance at a single operation (`⊗ᶠ≡⊗`).
--}
+{- EACH EQUATION OF THE THEORY LIFTS TO AN ISOMORPHISM OF CONNECTIVES. -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Equations where
 
@@ -43,9 +11,7 @@ open import TheoryGrammar.Base
 
 private variable ℓS ℓ ℓ' ℓX ℓA ℓB ℓV : Level
 
--- ==================================================================
 -- Terms of the signature (mirrors Cubical.Algebra.Theory.Sorted.Tm).
--- ==================================================================
 
 data Tm {S : Type ℓS} (σ : SortedSig S ℓ ℓ') (V : Type ℓV) (vs : V → S)
   : S → Type (ℓ-max ℓS (ℓ-max ℓ (ℓ-max ℓ' ℓV))) where
@@ -65,9 +31,7 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
   eval ρ (var v)     = ρ v
   eval ρ (node o ts) = M .op o (λ a → eval ρ (ts a))
 
-  -- ================================================================
   -- The flattened convolution along an arbitrary "shape function".
-  -- ================================================================
 
   ⊗ᶠ : {V : Type ℓV} {vs : V → S} {s : S}
      → (Val vs → M .carrier s)                 -- the shape
@@ -80,31 +44,7 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
       → Tm σ V vs s → ((v : V) → TheoryTy ℓA (vs v)) → TheoryTy _ s
   ⟪ t ⟫ = ⊗ᶠ (λ ρ → eval ρ t)
 
-  -- ================================================================
   -- THE REASSOCIATED FORM, and why it is the one to build maps INTO.
-  --
-  -- `⊗ᶠ` pairs a valuation with a payload indexed by it.  That is fine
-  -- to consume but bad to produce, because `Val vs` is a Π and Π has no
-  -- η at a variable context: a valuation reassembled slotwise, as
-  -- `λ { x → … ; y → … }`, is only PROPOSITIONALLY the valuation it came
-  -- from.  The equation component `f ρ Eq.≡ m` then sits over a `funExt`,
-  -- i.e. a `PathP` over a family Agda cannot see is constant, and the
-  -- bridge stalls.
-  --
-  -- Reassociating moves the payload inside the Π:
-  --
-  --     Σ[ ρ ∈ Π v. carrier (vs v) ] Π v. A v (ρ v)
-  --          ≅   Π v. Σ[ c ∈ carrier (vs v) ] A v c
-  --
-  -- and now the funExt is over a family that does NOT mention the
-  -- payload, so `f (fst ∘ θ)` IS definitionally constant along it and
-  -- the equation component is `refl` again.
-  --
-  -- This is the same move `Fibered.agda` makes one level down -- split
-  -- the data apart from the equation, expose the pieces as projections --
-  -- and it is made for the same reason.  `⊗ᶠ` remains the definition;
-  -- `⊗ᶠ'` is the form to target.
-  -- ================================================================
 
   ⊗ᶠ' : {V : Type ℓV} {vs : V → S} {s : S}
       → (Val vs → M .carrier s)
@@ -125,9 +65,7 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
   ⊗ᶠ-reassoc f A m .Iso.sec _ = refl
   ⊗ᶠ-reassoc f A m .Iso.ret _ = refl
 
-  -- ================================================================
   -- Equality of shapes gives isomorphism of connectives.
-  -- ================================================================
 
   private
     -- Eq groupoid, by matching (so the round trips compute)
@@ -153,10 +91,8 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
     ⊗ᶠ-cong p m .Iso.sec (ρ , e , h) i = ρ , ∙ᵉ-symʳ (p ρ) e i , h
     ⊗ᶠ-cong p m .Iso.ret (ρ , e , h) i = ρ , ∙ᵉ-symˡ (p ρ) e i , h
 
-  -- ================================================================
   -- THE LIFTING THEOREM.  An equation of the theory, satisfied by the
   -- model, gives an isomorphism between the two composite connectives.
-  -- ================================================================
 
   module _ {V : Type ℓV} {vs : V → S} {s : S}
            (lhs rhs : Tm σ V vs s)
@@ -166,9 +102,7 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
             → ∀ m → Iso (⟪ rhs ⟫ A m) (⟪ lhs ⟫ A m)
     eqn→Iso sat = ⊗ᶠ-cong {A = A} sat
 
-  -- ================================================================
   -- ⊗[ o ] is the instance of ⊗ᶠ at a single operation.
-  -- ================================================================
 
   module _ (o : σ .ops) {A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a)} where
 

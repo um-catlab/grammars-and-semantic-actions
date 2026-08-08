@@ -1,20 +1,5 @@
-{-
-  A SPLITTING DISPLAYED OVER A PROJECTION.
-
-  `Splitting` factors the carrier out of `Fibered`; this factors the
-  splittings themselves.  Given a base `Splitting` on `X` and a map
-  `π : Y → X`, a `Lifting` says how to carry a base splitting up to `Y`:
-  which lifts exist, what they hold, and that `π` sends the lifted parts
-  back to the base ones.  `total` assembles the two into a `Splitting`
-  on `Y`, and `π` becomes a `Reindex` that preserves every splitting.
-
-  Why it is the right factoring: `Gluing.Glue` IS one of these, along
-  `π₁`, with `over` equal to `Eq.refl` -- `glue-is-total` is that, by
-  `refl`.  And unlike `Glue` it does not fix `Y` to be a total space, so
-  TWO liftings of DIFFERENT theories along DIFFERENT projections can be
-  combined over one `Y` with `_⊎Spl_`.
-  PRIMITIVE: none.
--}
+{- A SPLITTING DISPLAYED OVER A PROJECTION. `Splitting` factors the carrier
+   out of `Fibered`; this factors the splittings themselves. -}
 module TheoryGrammar.Lifting where
 
 open import Cubical.Foundations.Prelude
@@ -65,9 +50,7 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {X : S → Type ℓX}
   projPres o .homSplit _ sq      = sq .fst
   projPres o .homParts y sq a    = Eq.sym (L .over o y (sq .fst) (sq .snd) a)
 
--- ==================================================================
 -- GLUING IS A LIFTING, on the nose.
--- ==================================================================
 
 module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
          (Fib : Fibered σ ℓX ℓP) (Fib' : Fibered σ ℓX' ℓP')
@@ -81,7 +64,7 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   glueLifting .parts↑ o g sp l a   = glue .parts o g (sp , l) a
   glueLifting .over   o g sp l a   = Eq.refl
 
-  -- THE MEASUREMENT.  The glued promodel's splittings ARE the total of
+  -- THE MEASUREMENT.  The glued `Fibered`'s splittings ARE the total of
   -- this lifting -- not isomorphic to them.
   glue-is-total : total glueLifting ≡ splittingOf glue
   glue-is-total = refl
@@ -91,20 +74,7 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   proj-is-π₁ : proj glueLifting ≡ π₁
   proj-is-π₁ = refl
 
--- ==================================================================
--- TWO SIGNATURES ON ONE CARRIER.
---
--- This is what `Gluing` could not state.  `Glue` fixes `Y` to the total
--- space of a relation over ONE theory's carrier, so both factors had to
--- share a signature.  A `Lifting` only asks for a projection, so two of
--- them -- of DIFFERENT theories, along DIFFERENT projections -- combine
--- over one `Y` by `_⊎Spl_`.  Strings under concatenation glued to heaps
--- under disjoint union is this, with `π`/`π'` the two components and
--- each lifting saying how the OTHER component is distributed.
---
--- INSTANTIATED by `Instances/Heap/WithInput.agda`, where both liftings
--- share the other component and the interchange law comes out free.
--- ==================================================================
+-- TWO SIGNATURES ON ONE CARRIER. This is what `Gluing` could not state.
 
 module _ {S : Type ℓS} {σ τ : SortedSig S ℓ ℓ'}
          {X X' : S → Type ℓX} {Y : S → Type ℓY}

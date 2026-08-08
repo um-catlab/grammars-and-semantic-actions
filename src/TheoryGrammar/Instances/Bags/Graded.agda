@@ -18,6 +18,7 @@ open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
+open import TheoryGrammar.View
 
 open import TheoryGrammar.Instances.Bags.Commutativity A public
 
@@ -42,13 +43,9 @@ ilvLenR< nil       pr = E.rec (¬-<-zero pr)
 ilvLenR< (left s)  pr = suc-≤-suc (ilvLenR s)
 ilvLenR< (right s) pr = suc-≤-suc (ilvLenR< s pr)
 
--- The promodel.
-
-
--- THE RESOURCE PREDICATE, internally: `m` is non-trivial when it
--- decomposes with an ATOM on the left.  Built from `⌈_⌉`, `⊗`, `⊕ᴰ` and
--- `⊤` only -- no length -- so it makes sense at any promodel with atoms.
--- This is exactly what `bagCase` produces.
+-- The resource predicate, internally: `m` is non-trivial when it
+-- decomposes with an ATOM on the left.  No length, so it makes sense at
+-- any `Fibered` with atoms.
 NonTrivial : Gr
 NonTrivial = ⊕ᴰ A (λ x → ⌈ x ∷ [] ⌉ ⊗' ⊤G)
 
@@ -74,21 +71,41 @@ bagGraded .deg< nilop m sp ()
 bagGraded .deg< appop m (u , v , s) true  pr = ilvLenL< s (ntLen pr)
 bagGraded .deg< appop m (u , v , s) false pr = ilvLenR< s (ntLen pr)
 
--- QUICKSORT'S FUNCTOR, and why its recursion is guarded.
---
---     H X b  =  (b is empty)  ⊕  Σ[piv] X lo ⊗ ⌈piv⌉ ⊗ X hi
---
--- The two recursive slots are discharged DIFFERENTLY, which is the
--- whole reason `⊗-guard` takes a per-slot certificate:
---
---   * `lo` shrinks because its COMPLEMENT (piv ∷ hi) is nonempty --
---     `slotProper`.  The pivot is the witness.
---   * `hi` does NOT shrink for that reason: its sibling `lo` may be
---     empty.  It shrinks because the pivot sits INSIDE its own factor,
---     so that factor is already guarded -- `slotGuarded`.
---
--- This is the agent's finding made mechanical: the decrease comes from
--- the pivot, not from the partition.  A bare `b = lo ⊎ hi` in a
--- commutative monoid does not decrease at all.
+-- `Small` is `NonTrivial`'s internal complement: empty, or one atom.
+-- No length anywhere.
+Small : Gr
+Small = ⌈ [] ⌉ ⊕ ⊕ᴰ A (λ x → ⌈ x ∷ [] ⌉)
+
+-- a non-trivial bag, from its first element
+ntCons : (x : A) (u : Bag) → NonTrivial (x ∷ u)
+ntCons x u = x , ⊗-mk (left (ilvApp [] u)) Eq.refl tt
+
+-- THE DECOMPOSITION AXIOM. A bag is empty or it is an element and a rest,
+-- and the two cases exclude each other.
+
+open Views bagFib using (Cover; Complete; total; exclusive)
+
+bagCase : Cover (⌈ [] ⌉ ⊕ NonTrivial)
+bagCase []       _ = inl Eq.refl
+bagCase (x ∷ xs) _ = inr (x , ⊗-mk (left (ilvApp [] xs)) Eq.refl tt)
+
+-- `[]` admits no one-element splitting: the exclusion half.
+nil-empty : NonTrivial [] → E.⊥
+nil-empty (x , (u , v , s) , h) = go (h true) s
+  where go : u Eq.≡ x ∷ [] → Ilv u v [] → E.⊥
+        go Eq.refl ()
+
+BagCase : Bool → Gr
+BagCase b = if b then ⌈ [] ⌉ else NonTrivial
+
+bagComplete : Complete Bool BagCase
+bagComplete .total =
+  ⊕-E (⊕ᴰ-I Bool {A = BagCase} true) (⊕ᴰ-I Bool {A = BagCase} false) ∘g bagCase
+bagComplete .exclusive true  true  d = λ _ _ → E.rec (d refl)
+bagComplete .exclusive false false d = λ _ _ → E.rec (d refl)
+bagComplete .exclusive true  false _ =
+  λ { .([]) (Eq.refl , ne) → E.rec (nil-empty ne) }
+bagComplete .exclusive false true  _ =
+  λ { .([]) (ne , Eq.refl) → E.rec (nil-empty ne) }
 
 open Guard bagGraded ℓ-zero Unit (λ _ → tt) public

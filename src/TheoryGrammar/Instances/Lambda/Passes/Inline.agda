@@ -1,20 +1,5 @@
-{-
-  PASS 3.  Inlining, i.e. substitution -- a NEGATIVE result, localised
-  to a single operation.  `sub n u t` DENOTES "t with u put for n".
-
-  ADDITIVELY it is a carrier map, so the whole fragment transports
-  definitionally: `pull-Dec` is `refl`, `subScoped?` the scope checker
-  itself transported by `pullTerm`.  MULTIPLICATIVELY the split is
-  exactly by operation --
-
-      appOp  preserved  (`subPres-app`, `pushˢ-app`, `pushApp`)
-      lamOp  preserved  (`subPres-lam`, `pushˢ-lam`)
-      varOp  FAILS      sub n u (var n) = u, which need not be a var
-  -- and at `varOp` it fails BOTH ways: `¬subSplitPres` refutes
-  preservation, `¬subReflects` reflection (`ChangeOfTheory`'s discrete
-  Conduché condition) at `appOp`.  The surviving positive case is
-  `Passes.Rename`: substituting a VARIABLE is a renaming.
--}
+{- PASS 3. Inlining, i.e. substitution -- a NEGATIVE result, localised to a
+   single operation. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Passes.Inline where
 
@@ -41,9 +26,7 @@ module Inline (Name : Type₀) (_≟_ : Discrete Name) where
   open Decide Name _≟_
 
   -- PRIMITIVE (carrier map): single substitution, `t` with `u` put for
-  -- `n`.  The metalanguage `Dec` is consumed by its OWN elimination
-  -- rule, `decRec`, exactly as an internal `Dec⟨_⟩` is consumed by
-  -- `dec-elim`: no `with`, no `yes`/`no` pattern.
+  -- `n`.
   sub : Name → Raw → Raw → Raw
   sub n u (var m)   = decRec (λ _ → u) (λ _ → var m) (m ≟ n)
   sub n u (app x y) = app (sub n u x) (sub n u y)
@@ -62,9 +45,7 @@ module Inline (Name : Type₀) (_≟_ : Discrete Name) where
     cong (decRec (λ _ → u) (λ _ → var n))
          (isPropDec (Discrete→isSet _≟_ n n) (n ≟ n) (yes refl))
 
-  -- ================================================================
   -- POSITIVE, additively: no hypothesis at all.
-  -- ================================================================
 
   module _ (n : Name) (u : Raw) where
 
@@ -78,13 +59,7 @@ module Inline (Name : Type₀) (_≟_ : Discrete Name) where
     subScoped? : (Γ : Scope) → ⊤G ⊢ S.pull Dec⟨ Scoped Γ ⟩
     subScoped? Γ = S.pullTerm (scoped? Γ)
 
-  -- ================================================================
   -- POSITIVE, multiplicatively, AWAY FROM `varOp`.
-  --
-  -- `homSplit` forces the image of a splitting; `homParts` forces its
-  -- slots to be the images of the source's.  Both are `Eq.refl` here,
-  -- which is what "substitution commutes with the node" means.
-  -- ================================================================
 
     subPres-app : SplitPresAt (subCM n u) appOp
     subPres-app .homSplit _ (mkApp x y) = mkApp (sub n u x) (sub n u y)
@@ -113,9 +88,7 @@ module Inline (Name : Type₀) (_≟_ : Discrete Name) where
                       {B = λ b → S.pull (if b then A else B)}
                       (λ { true → idg ; false → idg })
 
-  -- ================================================================
   -- NEGATIVE, at `varOp` -- and it is the whole story.
-  -- ================================================================
 
   module _ (n : Name) (a b : Raw) where
 

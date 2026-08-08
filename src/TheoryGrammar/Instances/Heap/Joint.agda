@@ -1,23 +1,7 @@
-{-
-  HEAPS, THROUGH THE SAME JOINT LEMMA.
-
-  `Connectives.noHeapPoint` goes through a copy of the lemma kept local
-  to this directory; here it is re-derived from the upstream
-  `TheoryGrammar.Domain.no-point-joint`, the one `Field/Joint` also uses.
-  The bad datum is the TUPLE `(h , h)` for a nonempty `h`: it overlaps
-  itself.  No slot is bad -- that is the point.
-
-  So this file also carries the NEGATIVE half: `SlotwiseSuffices` is
-  refuted here (`no-slotwise-joint`), using `Located`'s `dom-total-L/R`
-  and `img-total` unchanged.  Slotwise definedness at every slot, plus
-  surjectivity, still do not give a total point.
-
-  DEFINES `cell`, `selfTuple`, `not-composable-self`, `noHeapPoint-joint`,
-  `not-composable`, `slotwise-self`, `no-slotwise-joint`,
-  `slotwise-total`, `cell-composable`.
-
-  PRIMITIVE: none.  `apart-self` and `respell` are `Connectives`'.
--}
+{- HEAPS, THROUGH THE SAME JOINT LEMMA. `Connectives.noHeapPoint` goes
+   through a copy of the lemma kept local to this directory; here it is re-
+   derived from the upstream `TheoryGrammar.Domain.no-point-joint`, the one
+   `Field/Joint` also uses. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 open import Cubical.Foundations.Prelude
 
@@ -36,19 +20,12 @@ open import TheoryGrammar.Instances.Heap.Located
 
 -- only the NEW names: the connectives are already in scope from
 -- `Connectives`, and a second copy of them would be ambiguous.
---   `Tuple o`          DENOTES a pair of heaps offered to `∗`
---   `Composableᴳ o m⃗`  DENOTES "this heap IS the join of exactly m⃗"
---   `Composable o m⃗`   DENOTES "m⃗ joins AT ALL" -- the domain of
---                      definition, a predicate on PAIRS, which is the
---                      whole difference from `Domˢ`
 open JointDomain heapFib
   using (Tuple; Composableᴳ; Composable; Domˢ; Imageˢ; ¬G_;
          point→composable; no-point-joint; no-point-internal;
          joint→dom; SlotwiseSuffices)
 
--- ==================================================================
 -- 1.  THE BAD TUPLE: one cell, twice.
--- ==================================================================
 
 cell : Heap
 cell = single 0 v0
@@ -65,10 +42,8 @@ not-composable-self =
   ∘g ⊗ˢ-map appop {A = λ a → ⌈ selfTuple a ⌉}
                   {B = boolΠ ⌈ cell ⌉ ⌈ cell ⌉} respell
 
--- ==================================================================
 -- 2.  THEOREM.  `heapFib` has no total point -- through the JOINT
 --     lemma, the same one the field goes through.
--- ==================================================================
 
 noHeapPoint-joint : LaxPoint heapFib → ⊥
 noHeapPoint-joint = no-point-internal appop selfTuple not-composable-self
@@ -76,14 +51,7 @@ noHeapPoint-joint = no-point-internal appop selfTuple not-composable-self
 not-composable : Composable appop selfTuple → ⊥
 not-composable c = E.rec* (not-composable-self (c .fst) (c .snd))
 
--- ==================================================================
--- 3.  AND THE CONVERSE IMPLICATION IS REFUTED.
---
--- Every slot of the bad tuple is in its slotwise domain -- `Located`'s
--- `dom-total-L`/`dom-total-R`, h = h ∗ emp and h = emp ∗ h -- and the
--- tuple still does not compose.  This is what `Domˢ o i` cannot see: it
--- is indexed by ONE slot, and the failure is in the pair.
--- ==================================================================
+-- 3. AND THE CONVERSE IMPLICATION IS REFUTED.
 
 slotwise-self : (i : MonAr appop) → Domˢ appop i (selfTuple i)
 slotwise-self = boolΠ {M = λ i → Domˢ appop i (selfTuple i)}
@@ -93,7 +61,7 @@ no-slotwise-joint : SlotwiseSuffices → ⊥
 no-slotwise-joint sw = not-composable (sw appop selfTuple slotwise-self)
 
 -- Surjectivity is no help either: `Imageˢ appop` IS the unit here
--- (`Located.img-total`, h = h ∗ emp), at the same promodel that has no
+-- (`Located.img-total`, h = h ∗ emp), at the same `Fibered` that has no
 -- point.  Both old grammars are ⊤ at every slot; the joint one fails.
 slotwise-total : (i : MonAr appop) → ⊤G ⊢ Domˢ appop i
 slotwise-total = boolΠ {M = λ i → ⊤G ⊢ Domˢ appop i} dom-total-L dom-total-R
@@ -101,18 +69,11 @@ slotwise-total = boolΠ {M = λ i → ⊤G ⊢ Domˢ appop i} dom-total-L dom-to
 -- THE BLINDNESS, as three separate theorems rather than one conjunctive
 -- one -- a statement with an `×` in its conclusion is two statements
 -- wearing a coat, and none of the three below needs the other two:
---
---   `Located.img-total`   ⊤G ⊢ Imageˢ appop      -- surjective
---   `slotwise-total`      ⊤G ⊢ Domˢ appop i      -- total at every slot
---   `noHeapPoint-joint`   LaxPoint heapFib → ⊥   -- and still no point
---
--- (And no refutation of `no-point-slotwise`'s shape exists at any heap,
--- at either slot -- `Located.no-slotwise-L/R`.  Cited, not restated.)
+-- `Located.img-total` ⊤G ⊢ Imageˢ appop -- surjective `slotwise-total` ⊤G
+-- ⊢ Domˢ appop i --...
 
--- ==================================================================
 -- 4.  THE TOTAL FRAGMENT COMPOSES EVERYTHING.  Same carrier, same
 --     `parts`, one conjunct of one splitting deleted (`Base.cellFib`).
--- ==================================================================
 
 open JointDomain cellFib using ()
   renaming (Tuple to TupleC; Composable to ComposableC;

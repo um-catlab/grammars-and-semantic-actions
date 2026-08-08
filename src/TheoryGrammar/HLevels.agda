@@ -1,25 +1,5 @@
 {-# OPTIONS --lossy-unification #-}
-{- SET-VALUED GRAMMARS, and why the hypothesis belongs on the WORLDS.
-
-   I had been asking for `isSet Char` -- a condition on the string
-   instance's alphabet.  That is the wrong level.  The condition that
-   does the work is that the WORLDS form a set, and then:
-
-     * each representable `⌈ a ⌉ w = w ≡ a` is a PROPOSITION, since it
-       is a path in a set;
-     * set-ness is closed under every connective -- coproducts,
-       products, the dependent versions, implication, and the
-       convolution;
-
-   so every grammar built from representables is a set automatically,
-   with nothing assumed per-grammar.  `isSet Char` is then not a
-   hypothesis one asks for but a consequence one checks: it is what
-   makes `List Char` a set, which is what makes `strFib`'s carrier one.
-
-   This is also where `PartsFaithful` (TheoryGrammar.Fibered) gets its
-   teeth for strings: `Split3 u v w` is a path in the carrier once the
-   carrier is a set, so the parts pin the witness.  The K-failures in
-   `SeqUnambig` were the absence of this. -}
+{- SET-VALUED GRAMMARS, and why the hypothesis belongs on the WORLDS. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.HLevels where
@@ -44,12 +24,8 @@ module SetG {S : Type ℓS} (X : S → Type ℓX) where
   isSetGrammar : {s : S} → TheoryTy ℓA s → Type (ℓ-max ℓX ℓA)
   isSetGrammar {s = s} A = (w : X s) → isSet (A w)
 
-  -- ================================================================
   -- REPRESENTABLES ARE PROPOSITIONS -- this is the base case, and the
-  -- reason the hypothesis belongs on the worlds.  `⌈ a ⌉ w` is `w ≡ a`,
-  -- a path in the carrier; if the carrier is a set that path type is a
-  -- proposition, hence a set.  Everything else is closure.
-  -- ================================================================
+  -- reason the hypothesis belongs on the worlds.
 
   ⌈⌉-isProp : {s : S} → isSet (X s) → (a w : X s) → isProp (⌈ a ⌉ w)
   ⌈⌉-isProp sx a w = subst isProp Eq.PathPathEq (sx w a)
@@ -57,11 +33,9 @@ module SetG {S : Type ℓS} (X : S → Type ℓX) where
   ⌈⌉-isSet : {s : S} → isSet (X s) → (a : X s) → isSetGrammar (⌈ a ⌉)
   ⌈⌉-isSet sx a w = isProp→isSet (⌈⌉-isProp sx a w)
 
-  -- ================================================================
   -- CLOSURE.  Nothing here is surprising; the point is that the list
   -- is complete, so a grammar written in the connectives never needs
   -- its own set-ness proof.
-  -- ================================================================
 
   isSet-⊤ : {s : S} → isSetGrammar (⊤G {s})
   isSet-⊤ _ = isSetUnit
@@ -90,12 +64,8 @@ module SetG {S : Type ℓS} (X : S → Type ℓX) where
            → ((y : Y) → isSetGrammar (F y)) → isSetGrammar (&ᴰ Y F)
   isSet-&ᴰ sf w = isSetΠ (λ y → sf y w)
 
--- ==================================================================
--- ... and the convolution, which needs the SPLITTINGS to be a set as
--- well as the slots.  That is the honest extra hypothesis: `Split` is
--- Type-valued on purpose, so its h-level is a property of the promodel
--- and not something the connectives can supply.
--- ==================================================================
+-- ... and the convolution, which needs the SPLITTINGS to be a set as well
+-- as the slots.
 module SetFib {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP)
   where
 

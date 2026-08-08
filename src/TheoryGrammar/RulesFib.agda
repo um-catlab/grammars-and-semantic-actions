@@ -1,29 +1,5 @@
-{-
-  THE COMBINATOR LAYER over a promodel: intro and elim for EVERY
-  connective, in one place, so instances compose rather than re-derive.
-
-  This is the piece that was missing.  `Rules.agda` gives the additives
-  over a `Model`; `Fibered.agda` gives `⊗ˢ`/`⊸ᶠ` currying.  Neither was
-  usable from an instance, so the bag algorithms grew their own partial
-  copies and then leaked into Agda-level functions (`merge : Bag → Bag →
-  Bag`, motives like `λ _ → Bag`).  Everything an instance needs is here.
-
-  The discipline this enables, and the reason it matters:
-
-      a program in the calculus is a term  A ⊢ B,
-      built ONLY from these combinators and clearly-marked primitives.
-
-  For sorting, that changes the statement.  Instead of an Agda function
-  `Bag → Bag` plus a separately-proved permutation lemma, sorting becomes
-
-      merge      :  Sorted ⊗ Sorted  ⊢  Sorted
-      mergesort  :  ⊤              ⊢  Sorted
-
-  and permutation-correctness is FREE: `_⊢_` preserves the index and `⊗ˢ`
-  splits it, so any term of that type necessarily rearranges rather than
-  invents.  The half of correctness that had to be proved by hand
-  (`permMerge`) is exactly the half that working internally gives away.
--}
+{- THE COMBINATOR LAYER over a `Fibered`: intro and elim for EVERY
+   connective, in one place, so instances compose rather than re-derive. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.RulesFib where
 
@@ -47,13 +23,17 @@ module RulesF {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX
   -- the connectives, and the additive rules, inherited
   open FibNotation Fib public
   open RulesCarrier (Fib .carrier) public
-    -- (the Model-level ⊗ rules are simply absent now: RulesCarrier has none)
+    hiding (Liftg; liftg; lowerg)
+    -- (the Model-level ⊗ rules are simply absent now: RulesCarrier has
+    -- none; the three hidden names are RE-EXPORTED below, specialised to
+    -- the level a description's constant former actually uses)
+
+  -- a private handle on the same module, for the specialisations below
+  private module C = RulesCarrier (Fib .carrier)
 
   private variable s : S
 
-  -- ================================================================
   -- Composition.
-  -- ================================================================
 
   idg : {A : TheoryTy ℓA s} → A ⊢ A
   idg _ x = x
@@ -64,9 +44,7 @@ module RulesF {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX
 
   infixr 9 _∘g_
 
-  -- ================================================================
   -- ⊗ˢ  --  intro and elim at the SUBSTRATE's splittings.
-  -- ================================================================
 
   module _ (o : σ .ops)
            {A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a)} where
@@ -88,14 +66,28 @@ module RulesF {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX
            → ((a : σ .arities o) → A a ⊢ B a) → ⊗ˢ o A ⊢ ⊗ˢ o B
     ⊗ˢ-map f m (sp , h) = sp , λ a → f a _ (h a)
 
-  -- ================================================================
-  -- Derived connectives, so instances never reach for Agda's.
-  -- ================================================================
+  -- A `⊕ᴰ` AT EVERY SLOT DISTRIBUTES OUT.  `⊗ˢ` is a Σ over the
+  -- splitting and a Π over the arity, and Π distributes over Σ, so the
+  -- slots' tags come out as ONE function of the arity.  Both directions
+  -- are `refl`.  Instances that branch on a subterm inside a tensor slot
+  -- were each proving a binary special case of this.
+  module _ (o : σ .ops) (Y : σ .arities o → Type ℓY)
+           (P : (a : σ .arities o) → Y a → TheoryTy ℓA (σ .sortOf o a)) where
 
-  -- The option type is `Result` at the error grammar `⊤G`, and every
-  -- other parser shape is `Result` at a different one -- so it is
-  -- DEFINED in `TheoryGrammar.Result` (additively; it never mentioned
-  -- the operations) and only re-exported here, where instances look.
+    ⊗ˢ-⊕ᴰ-out : ⊗ˢ o (λ a → ⊕ᴰ (Y a) (P a))
+              ⊢ ⊕ᴰ ((a : σ .arities o) → Y a) (λ f → ⊗ˢ o (λ a → P a (f a)))
+    ⊗ˢ-⊕ᴰ-out m (sp , h) = (λ a → h a .fst) , sp , λ a → h a .snd
+
+    ⊗ˢ-⊕ᴰ-in : ⊕ᴰ ((a : σ .arities o) → Y a) (λ f → ⊗ˢ o (λ a → P a (f a)))
+             ⊢ ⊗ˢ o (λ a → ⊕ᴰ (Y a) (P a))
+    ⊗ˢ-⊕ᴰ-in m (f , sp , h) = sp , λ a → f a , h a
+
+  -- Derived connectives, so instances never reach for Agda's.
+
+  -- The option type is `Result` at the error grammar `⊤G`, and every other
+  -- parser shape is `Result` at a different one -- so it is DEFINED in
+  -- `TheoryGrammar.Result` (additively; it never mentioned the operations)
+  -- and only re-exported here, where instances look.
   open Res (Fib .carrier) public
     using (Result; ok; err; caseR; caseR-at; bindR; mapR; mapE; joinR; catchR;
            orElseR; altR; altList; altList-⊕ᴰ; bothR;
@@ -107,9 +99,20 @@ module RulesF {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX
   Some : (Y : Type ℓY) → (Y → TheoryTy ℓA s) → TheoryTy (ℓ-max ℓY ℓA) s
   Some = ⊕ᴰ
 
-  -- ================================================================
+  -- Liftg AT THE DESCRIPTION'S OWN LEVEL. `RulesCarrier.Liftg` takes the
+  -- lift level explicitly, because a bare carrier gives no reason to
+  -- prefer one.
+
+  Liftg : TheoryTy ℓA s → TheoryTy (ℓ-max ℓA (ℓ-max ℓ' ℓP)) s
+  Liftg = C.Liftg (ℓ-max ℓ' ℓP)
+
+  liftg : {A : TheoryTy ℓA s} → A ⊢ Liftg A
+  liftg = C.liftg
+
+  lowerg : {A : TheoryTy ℓA s} → Liftg A ⊢ A
+  lowerg = C.lowerg
+
   -- Sanity: the additive rules really are available here.
-  -- ================================================================
 
   private
     _ : {A : TheoryTy ℓA s} → A ⊢ ⊤G

@@ -1,93 +1,4 @@
-{-
-  THE LAWS OF THE GRADED EXPONENTIAL, AND WHICH OF THEM ARE FREE.
-
-  `TheoryGrammar.Equations` lifts an equation of the theory to an
-  isomorphism of connectives, and its header states the side condition:
-  the composite `⟪ t ⟫` agrees with the nested-`⊗` reading only when the
-  term `t` is LINEAR.  This file applies that to the semimodule axioms
-  and finds that the split it induces is exactly the linear/non-linear
-  split of the resulting TYPE THEORY.  Three cases, and all three are
-  different:
-
-    1·w = w                LINEAR      !⟨1⟩A ≅ A            FREE
-    (r·s)·w = r·(s·w)      LINEAR      !⟨r⟩!⟨s⟩A ≅ !⟨r·s⟩A   FREE
-    (r+s)·w = r·w ++ s·w   NON-LINEAR  !⟨r+s⟩A ⊢ !⟨r⟩A ⊗ !⟨s⟩A
-                                                            NOT free, but TRUE
-    r·(u ++ v) = r·u ++ r·v            !⟨r⟩(A ⊗ B) ⊢ !⟨r⟩A ⊗ !⟨r⟩B
-                                                            FALSE
-
-  The first two are the counit and the comultiplication of a graded
-  comonad, and they arrive from `eqn→Iso`/`⊗ᶠ-cong` with no work beyond
-  a bridge that says "the flattened composite is the nested one".  The
-  framework PREDICTS the structure of graded modal type theory; nothing
-  is postulated.
-
-  THE THIRD CASE IS THE INTERESTING ONE, because it shows exactly what
-  the linearity condition is protecting.  The equation
-  `(r+s)·w = r·w ++ s·w` HOLDS in the promodel, so `⊗ᶠ-cong` still
-  applies and still produces an isomorphism -- but the connective it
-  produces is
-
-      Diag r s A m  =  Σ[ w ] (rep r w ++ rep s w Eq.≡ m) × A w
-
-  with ONE valuation of `w`, whereas
-
-      (!⟨r⟩A ⊗ᵃ !⟨s⟩A) m  =  Σ[ u , v ] (... ) × A u × A v
-
-  has TWO.  The isomorphism is genuinely delivered; it just lands one
-  step short of the law, and that step is precisely the duplication of
-  the argument.  `diag→⊗` below is that step, and it is a PRIMITIVE:
-  the only reason it can be written is that a POINT of `A w` may be
-  used twice even though the connective `⊗ᵃ` cannot copy.  So the
-  boundary is not "the non-linear law fails"; it is "the non-linear law
-  needs a copying primitive, and the flattening tells you exactly where
-  to insert it".
-
-  THE FOURTH CASE fails outright, and it is worth saying why, because
-  it is not the reason one expects.  `!⟨r⟩(A ⊗ B) ⊢ !⟨r⟩A ⊗ !⟨r⟩B` is
-  the law whose non-linearity is in the GRADE (r occurs twice on the
-  right), and one predicts it holds when the grade is representable,
-  since `⌈ r ⌉` is subterminal and two copies of a proof are free.
-  Here the grade is ALWAYS representable -- `!⟨ r ⟩` is defined at a
-  numeral -- and the law still fails, because
-  `rep r (u ++ v) ≠ rep r u ++ rep r v`: (uv)² = uvuv while u²v² = uuvv.
-  Duplicability of the grade is necessary and not sufficient; the
-  missing ingredient is EXCHANGE.  In a commutative promodel (the
-  `Bags` instance) the equation would hold and the law would go the way
-  of case 3: not free, but true after a copying primitive.
-
-  ---------------------------------------------------------------------
-  MECHANICS.  Two choices below deserve comment.
-
-  ONE VARIABLE, SCALARS AS PARAMETERS.  The first part of the file
-  states every equation in a context of a SINGLE variable of sort
-  `elt`, with the scalars entering as metalanguage naturals through
-  `⌈ r ⌉`.  This is the standard "theory with parameters" presentation,
-  and it is not merely a convenience: `Val vs = (v : V) → carrier (vs
-  v)`, and for `V = Unit` this type has definitional η, so every round
-  trip in every bridge closes by `refl`.
-
-  With a three-element variable context -- the general form, at the end
-  of the file, where the scalars are genuine VARIABLES -- it does not.
-  A valuation has to be rebuilt slotwise, `λ { xr → … ; xs → … ; xm →
-  … }` is not definitionally the valuation it came from, and the
-  missing η would turn each round trip into a `PathP` over a `funExt`.
-  That is the same "arities have no η" tax that `etaBool` pays at every
-  `⊗ˢ`, one level up.  `⊗ᶠ-reassoc` removes it, by the same move
-  `Fibered.agda` makes for `⊗`: replace `Σ[ρ] Π v. A v (ρ v)` by
-  `Π v. Σ[c] A v c`, which has both ηs.  With that one lemma the
-  general form goes through as well, so the answer to "does the
-  flattening bridge defeat `eqn→Iso`?" is NO -- but only after the
-  reassociation, which is a fact about `⊗ᶠ` and belongs upstream.
-
-  BRIDGES.  `⊗ᶠ` is the flattened composite over the MODEL, `⊗ˢ` is the
-  connective over the SUBSTRATE.  They are isomorphic but not equal --
-  `⊗ᶠ` carries `op o m⃗ Eq.≡ m`, `⊗ˢ` carries a `Split`.  `repBridge`
-  and `flatNest` are that isomorphism at one and at two levels of
-  nesting, and constructing them IS the linearity content: `flatNest`
-  is where two nested `Σ`s collapse to one, which is the collapse the
-  `Equations` header describes abstractly.
--}
+{- THE LAWS OF THE GRADED EXPONENTIAL, AND WHICH OF THEM ARE FREE. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 open import Cubical.Foundations.Prelude
 
@@ -107,9 +18,7 @@ open import TheoryGrammar.Fibered
 open import TheoryGrammar.Equations
 open import TheoryGrammar.Instances.Semimodule.Connectives Char public
 
--- ==================================================================
 -- The model, and the one-variable context.
--- ==================================================================
 
 M : Model semiSig ℓ-zero
 M = ⌊ smPoint ⌋
@@ -146,14 +55,7 @@ FlatCong q I m .Iso.sec (ρ , e , k) =
 FlatCong q I m .Iso.ret (ρ , e , k) =
   ΣPathP (refl , ΣPathP (refl , funExt λ v → I (ρ v) .Iso.ret (k v)))
 
--- ==================================================================
--- BRIDGE 1.  One action tensor is its own flattening.
---
--- This is where `⊗ˢ`'s `Split` and `⊗ᶠ`'s equation are exchanged.  The
--- forward map must MATCH the equation to produce a splitting; the
--- backward map must produce the equation from the splitting, which is
--- `repcong`.  Note `ret` is `refl`: that is `Unit`'s η paying off.
--- ==================================================================
+-- BRIDGE 1. One action tensor is its own flattening.
 
 private
   repcong : {p q : ℕ} {w : String} → p Eq.≡ q → rep q w Eq.≡ rep p w
@@ -180,16 +82,7 @@ repBridge q A m .Iso.sec (mkRep p w , h) =
   ∙ ΣPathP (refl , etaBool h)
 repBridge q A m .Iso.ret (ρ , Eq.refl , k) = refl
 
--- ==================================================================
--- BRIDGE 2.  THE FLATTENING ITSELF: a nested composite collapses.
---
--- `Flat r (Flat s A)` has TWO valuations and two equations; `Flat2 r s
--- A` has one of each.  The collapse works because the inner equation
--- `rep s (ρ' tt) Eq.≡ ρ tt` pins the outer valuation -- i.e. because
--- the variable occurs exactly ONCE.  This is the concrete instance of
--- the abstract collapse described in the `Equations` header, and it is
--- the step that a non-linear term would not survive.
--- ==================================================================
+-- BRIDGE 2. THE FLATTENING ITSELF: a nested composite collapses.
 
 private
   nestFwd : (r s : ℕ) (A : Elt) (m : String) → Flat r (Flat s A) m → Flat2 r s A m
@@ -213,13 +106,8 @@ flatNest r s A m .Iso.inv = nestInv r s A m
 flatNest r s A m .Iso.sec _ = refl
 flatNest r s A m .Iso.ret (ρ , e , k) = nestRet r s A m (ρ tt) e (k tt)
 
--- ==================================================================
 -- THE UNIT LAW, from `eqn→Iso` at a genuine equation of the theory.
---
---     act(one, x) = x
---
--- One variable, used once: LINEAR.
--- ==================================================================
+-- act(one, x) = x One variable, used once: LINEAR.
 
 unitLHS : Tm semiSig V₁ vs₁ elt
 unitLHS = node actOp (pairB (node oneOp (λ ())) (var tt))
@@ -256,17 +144,8 @@ idBridge A m .Iso.ret (ρ , Eq.refl , k) = refl
 !-unit-I : (A : Elt) → A ⊢ (!⟨ 1 ⟩ A)
 !-unit-I A m = !-unit A m .Iso.inv
 
--- ==================================================================
--- THE COMPOSITION LAW.
---
---     (r·s)·w = r·(s·w)
---
--- One variable, used once on each side: LINEAR.  The scalars are
--- parameters, so the shapes are given directly to `⊗ᶠ-cong` (which is
--- what `eqn→Iso` is: `eqn→Iso = ⊗ᶠ-cong` at term-shapes -- see
--- `Equations.agda`).  The general form with the scalars as genuine
--- VARIABLES is at the end of the file.
--- ==================================================================
+-- THE COMPOSITION LAW. (r·s)·w = r·(s·w) One variable, used once on each
+-- side: LINEAR.
 
 mulEqn : (r s : ℕ) (A : Elt) (m : String) → Iso (Flat (r · s) A m) (Flat2 r s A m)
 mulEqn r s A m =
@@ -292,17 +171,8 @@ mulEqn r s A m =
 !-comp-I : (r s : ℕ) (A : Elt) → (!⟨ r · s ⟩ A) ⊢ (!⟨ r ⟩ (!⟨ s ⟩ A))
 !-comp-I r s A m = !-comp r s A m .Iso.inv
 
--- ==================================================================
--- THE NON-LINEAR LAW THAT IS TRUE.
---
---     (r+s)·w = r·w ++ s·w
---
--- One variable, used ONCE on the left and TWICE on the right.  The
--- equation holds in the model, so `⊗ᶠ-cong` applies unchanged and
--- delivers an honest isomorphism `Flat (r+s) A ≅ Diag r s A`.  What it
--- does NOT deliver is the law, because `Diag` is not a tensor: it has
--- one valuation where the tensor has two.
--- ==================================================================
+-- THE NON-LINEAR LAW THAT IS TRUE. (r+s)·w = r·w ++ s·w One variable, used
+-- ONCE on the left and TWICE on the right.
 
 addEqn : (r s : ℕ) (A : Elt) (m : String) → Iso (Flat (r + s) A m) (Diag r s A m)
 addEqn r s A m =
@@ -313,12 +183,7 @@ addEqn r s A m =
     (λ ρ → Eq.sym (Eq.pathToEq (rep-add r s (ρ tt))))
     m
 
--- PRIMITIVE (phase 1).  THE COPY.  This is the whole of the non-linear
--- content, isolated: `k tt` is used TWICE.  It can be written only
--- because a POINT of `A w` may be duplicated in the metalanguage; no
--- combinator of `RulesF` produces `A ⊢ A ⊗ᵃ A`, and none could -- the
--- index would have to be both `w` and `w ++ w`.  The flattening tells
--- you exactly where the copy goes, and refuses to make it for you.
+-- PRIMITIVE (phase 1). THE COPY.
 diag→⊗ : (r s : ℕ) (A : Elt) → Diag r s A ⊢ ((!⟨ r ⟩ A) ⊗ᵃ (!⟨ s ⟩ A))
 diag→⊗ r s A _ (ρ , Eq.refl , k) =
   cat-I (splitAll (rep r (ρ tt)) (rep s (ρ tt)))
@@ -334,53 +199,13 @@ diag→⊗ r s A _ (ρ , Eq.refl , k) =
 
 -- The converse does NOT exist, and the reason is visible in the types:
 -- `(!⟨r⟩A ⊗ᵃ !⟨s⟩A) m` supplies two independent witnesses `A u`, `A v`
--- with no reason for `u ≡ v`, while `!⟨r+s⟩A m` demands a single `w`
--- with `m = rep (r+s) w`.  Contraction is not invertible; the graded
--- comonad is lax, not strong, and the flattening says so.
+-- with no reason for `u ≡ v`, while `!⟨r+s⟩A m` demands a single `w` with
+-- `m = rep (r+s) w`.
 
--- ==================================================================
--- THE NON-LINEAR LAW THAT IS FALSE.
---
---     r·(u ++ v) = r·u ++ r·v
---
--- Non-linear in the GRADE: `r` occurs twice on the right.  Here the
--- grade is representable (`!⟨ r ⟩` is defined at a numeral, and `⌈ r ⌉`
--- is subterminal), so duplicating it is free -- and the law still
--- fails, because the equation itself fails:
---
---     rep 2 (a ∷ b ∷ [])       = a b a b
---     rep 2 (a ∷ []) ++ rep 2 (b ∷ []) = a a b b
---
--- So `⊗ᶠ-cong` cannot even be invoked: its premise is unsatisfiable.
--- There is deliberately no hole for
---
---     !-dist : (r : ℕ) (A B : Elt) → (!⟨ r ⟩ (A ⊗ᵃ B)) ⊢ ((!⟨ r ⟩ A) ⊗ᵃ (!⟨ r ⟩ B))
---
--- because it is not a theorem of this promodel, and a hole would
--- claim that it is.  In a COMMUTATIVE promodel the equation holds and
--- the law joins case 3: obtainable from `⊗ᶠ-cong` plus one copying
--- primitive for the grade.
--- ==================================================================
+-- THE NON-LINEAR LAW THAT IS FALSE. r·(u ++ v) = r·u ++ r·v Non-linear in
+-- the GRADE: `r` occurs twice on the right.
 
--- ==================================================================
 -- THE GENERAL FORM: scalars as genuine variables.
---
--- With `R S : Scl` arbitrary grammars of scalars rather than numerals,
--- the composition law reads
---
---     ActG (R ·ᵍ S) A  ≅  ActG R (ActG S A)
---
--- and is the three-variable equation `act(mul(r,s),m) = act(r,act(s,m))`,
--- still LINEAR (each of r, s, m occurs once on each side).  `eqn→Iso`
--- applies to it verbatim, and the bridges go through once `⊗ᶠ` is
--- reassociated -- see `⊗ᶠ-reassoc`.  The result, `·ᵍ-comp`, is the
--- comultiplication of the graded comonad at ARBITRARY scalar grammars;
--- `!-comp` above is its instance at `R = ⌈ r ⌉`, `S = ⌈ s ⌉`.
---
--- `·ᵍ-act` / `act-·ᵍ` at the very end are the same two maps written by
--- hand, for comparison: they need `subst` on the index at every step,
--- which is exactly the bookkeeping the `⊗ᶠ` route discharges.
--- ==================================================================
 
 data V₃ : Type₀ where
   xr xs xm : V₃
@@ -405,30 +230,11 @@ mulEqn₃ : (Aᵥ : (v : V₃) → TheoryTy ℓ-zero (vs₃ v)) (m : String)
         → Iso (⟪_⟫ M mulRHS Aᵥ m) (⟪_⟫ M mulLHS Aᵥ m)
 mulEqn₃ Aᵥ m = eqn→Iso M mulLHS mulRHS {A = Aᵥ} mulSat m
 
--- THE BRIDGE, AND THE ONE LEMMA IT NEEDS.
---
--- `Val vs₃ = (v : V₃) → carrier (vs₃ v)` has no η: a valuation
--- reassembled slotwise as `λ { xr → … ; xs → … ; xm → … }` is only
--- PROPOSITIONALLY the valuation it came from, so a naive bridge has an
--- equation component sitting over a `funExt`, i.e. a `PathP` over a
--- family that Agda cannot see is constant.
---
--- The cure is the one `Fibered.agda` applies to `⊗`: stop pairing a
--- valuation with a separate payload and REASSOCIATE,
---
---     Σ[ ρ ∈ Π v. carrier (vs v) ] Π v. A v (ρ v)
---          ≅   Π v. Σ[ c ∈ carrier (vs v) ] A v c
---
--- Both round trips of that are `refl` (Σ-η and Π-η), and in the
--- reassociated form the funExt is over a family that does NOT mention
--- the payload, so `f (fst ∘ θ)` is definitionally constant along it
--- and the equation component becomes `refl` again.
---
--- THIS NOW LIVES UPSTREAM, as `Equations.⊗ᶠ-reassoc`, with `⊗ᶠ'` for
--- the reassociated form: it is a fact about `⊗ᶠ` and not about
--- semimodules -- exactly as `Fibered.agda` argues for `Split` over the
--- equational presentation, and for the same reason.  Applied at `M`
--- below; nothing here needs a local copy.
+-- THE BRIDGE, AND THE ONE LEMMA IT NEEDS. `Val vs₃ = (v : V₃) → carrier
+-- (vs₃ v)` has no η: a valuation reassembled slotwise as `λ { xr → … ; xs
+-- → … ; xm → … }` is only PROPOSITIONALLY the valuation it came from, so a
+-- naive bridge has an equation component sitting over a `funExt`, i.e. a
+-- `PathP`...
 
 -- the payload family, NAMED (an extended lambda would be a different
 -- term in every file that wrote it out)
@@ -440,9 +246,7 @@ Aᵥ₃ R S A xm = A
 Θ₃ : Scl → Scl → Elt → Type₀
 Θ₃ R S A = (v : V₃) → Σ[ c ∈ MCarrier (vs₃ v) ] Aᵥ₃ R S A v c
 
--- ------------------------------------------------------------------
 -- the nested side:  Σ[θ] (rep (θxr) (rep (θxs) (θxm)) ≡ m)  ≅  ActG R (ActG S A)
--- ------------------------------------------------------------------
 
 private
   Nest₃ : (R S : Scl) (A : Elt) (m : String) → Type₀
@@ -486,16 +290,14 @@ nest₃ R S A m .Iso.fun = nest₃Fwd R S A m
 nest₃ R S A m .Iso.inv (mkRep p x , h) = nest₃Inv R S A p x (h true) (h false)
 nest₃ R S A m .Iso.sec (mkRep p x , h) =
   nest₃Sec' R S A p x (h true) (h false) ∙ (λ i → mkRep p x , etaBool h i)
--- HERE is where the missing η is paid, and where the reassociation
--- earns its keep: the funExt is over `Θ₃`, whose type does not mention
--- the valuation, so the equation component below is `refl` and not a
--- `PathP` over a `funExt`.
+-- HERE is where the missing η is paid, and where the reassociation earns
+-- its keep: the funExt is over `Θ₃`, whose type does not mention the
+-- valuation, so the equation component below is `refl` and not a `PathP`
+-- over a `funExt`.
 nest₃ R S A m .Iso.ret (θ , Eq.refl) =
   ΣPathP (funExt (λ { xr → refl ; xs → refl ; xm → refl }) , refl)
 
--- ------------------------------------------------------------------
 -- the multiplied side:  Σ[θ] (rep (θxr · θxs) (θxm) ≡ m)  ≅  ActG (R ·ᵍ S) A
--- ------------------------------------------------------------------
 
 private
   Mul₃ : (R S : Scl) (A : Elt) (m : String) → Type₀
@@ -543,9 +345,7 @@ mul₃ R S A m .Iso.sec (mkRep p w , h) =
 mul₃ R S A m .Iso.ret (θ , Eq.refl) =
   ΣPathP (funExt (λ { xr → refl ; xs → refl ; xm → refl }) , refl)
 
--- ------------------------------------------------------------------
 -- THE BRIDGES, and THE GENERAL COMPOSITION LAW.
--- ------------------------------------------------------------------
 
 flat3Bridge : (R S : Scl) (A : Elt) (m : String)
             → Iso (⟪_⟫ M mulRHS (Aᵥ₃ R S A) m) (ActG R (ActG S A) m)
@@ -565,11 +365,8 @@ flat3Bridge' R S A m =
   compIso (invIso (flat3Bridge R S A m))
     (compIso (mulEqn₃ (Aᵥ₃ R S A) m) (flat3Bridge' R S A m))
 
--- PRIMITIVES (phase 1): the same two maps, written by hand, for
--- comparison with what `eqn→Iso` produced above.  Both of these have
--- to `subst` along `rep-mul` because the index of the result is not
--- syntactically the index they can build at; `·ᵍ-comp` never mentions
--- `rep-mul` at all -- the equation is consumed once, by `mulSat`.
+-- PRIMITIVES (phase 1): the same two maps, written by hand, for comparison
+-- with what `eqn→Iso` produced above.
 private
   actMulGo : {R S : Scl} {A : Elt} (p : ℕ) (w : String)
            → (R ·ᵍ S) p → A w → ActG R (ActG S A) (rep p w)

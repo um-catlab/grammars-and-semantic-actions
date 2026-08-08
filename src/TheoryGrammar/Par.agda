@@ -1,13 +1,6 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 {- The product over decompositions -- AUW's `G` -- and the currying law
-   that lets enumerability be stated internally.
-
-   NOT the linear-logic par.  The LL par is DISJUNCTIVE,
-   `∀ (u,v). uv=w → (A u ⊎ B v)`, and it is not associative
-   intuitionistically, because `⊎` does not commute with `∀`:
-   `(∀i. P i) ⊎ Q` does not follow from `∀i. (P i ⊎ Q)`.  What is
-   defined here is the CONJUNCTIVE product, `∀ (sp). ∏ slots`, which has
-   no `⊎` in it at all. -}
+   that lets enumerability be stated internally. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Par where
@@ -49,35 +42,9 @@ module ParS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
   Allˢ o A m = (sp : Fib .Split o m)
            → ((a : σ .arities o) → A a (Fib .parts o m sp a))
 
-  -- ================================================================
   -- ⊗ˢ AND Allˢ ARE Σ AND Π OVER THE SAME FIBRE.
-  --
-  -- Their bodies are identical; only the quantifier over `Split o m`
-  -- differs.  That is not a coincidence of spelling -- it says the
-  -- promodel's splitting relation is an ACCESSIBILITY STRUCTURE on
-  -- worlds, and these two connectives are its base-change adjoints,
-  -- exactly as `Σact`/`Πact` (TheoryGrammar.Derivative) are for an
-  -- action.  The difference is only that an action is a FUNCTION and a
-  -- splitting is a RELATION, so `δ` -- the middle functor of the triple
-  -- -- exists in the first case and not the second.
-  --
-  -- This also gives `DecReadable`'s `splitProp` a home.  "At most one
-  -- decomposition" is precisely the condition under which the Σ and the
-  -- Π agree, so unique readability is not an ad-hoc decidability
-  -- hypothesis: it is the statement that this accessibility structure
-  -- is a PROPOSITION, and hence that `⊗` already IS its own `All`.
-  -- Compare `Derivative.Σ→Π`, which is the same map for an action.
-  -- ================================================================
 
-  -- ================================================================
   -- ⊗ˢ IS Σᴿ, on the nose up to one singleton contraction.
-  --
-  -- A relation is the graph of the projection out of its total space,
-  -- and the total space here is `Splits o` -- the splittings together
-  -- with what they split.  Base change along that projection IS the
-  -- convolution.  Both round trips are `refl`; the only content is
-  -- contracting `Σ[ m' ] m' ≡ m`.
-  -- ================================================================
 
   Splits : σ .ops → Type (ℓ-max ℓX ℓP)
   Splits o = Σ[ m ∈ Fib .carrier (σ .resultSort o) ] Fib .Split o m
@@ -95,27 +62,9 @@ module ParS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
   ⊗ˢ≅Σᴿ o m .Iso.sec ((_ , sp) , Eq.refl , h)    = refl
   ⊗ˢ≅Σᴿ o m .Iso.ret (sp , h)                    = refl
 
-  -- ================================================================
-  -- THE RESIDUAL IS Πᴿ, AND THE ADJUNCTION IS FREE.
-  --
-  -- `PORTING.md` records `⊗ ⊣ ⊸` as outstanding, needing "the focused
-  -- and unfocused splittings to be definitionally inverse" as a new
-  -- promodel law.  That diagnosis was wrong, and for the same reason
-  -- `Σᴿ-&-conv` was: the apparatus was mis-factored, not incomplete.
-  --
-  -- Decorate the splitting relation with the OTHER slots' payloads:
-  --
-  --   R⊸ A x m = Σ[ sp ] (parts o m sp i ≡ x) × ((a) → A a (parts a))
-  --
-  -- Then `⊸ˢ o i A B` IS `Πᴿ` at `R⊸ A` (`⊸ˢ≅Πᴿ`, pure currying, both
-  -- round trips `refl`), and `Σᴿ` at the same relation is the tensor
-  -- with slot `i` reopened.  So the adjunction is `BaseChange.Σ⊣Π` --
-  -- which holds for EVERY relation with no hypothesis at all.
-  --
-  -- No promodel law is needed.  What `Focus`/`Assembly` supply is a
-  -- CHOSEN presentation of that relation, convenient for computing; it
-  -- was never what made the adjunction hold.
-  -- ================================================================
+  -- THE RESIDUAL IS Πᴿ, AND THE ADJUNCTION IS FREE. `PORTING.md` records
+  -- `⊗ ⊣ ⊸` as outstanding, needing "the focused and unfocused splittings
+  -- to be definitionally inverse" as a new `Fibered` law.
 
   R⊸ : (o : σ .ops) (i : σ .arities o)
        (A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
@@ -144,7 +93,6 @@ module ParS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
   ⊗ˢ→Allˢ o {A = A} m pr (sp , h) sp' =
     subst (λ s → (a : σ .arities o) → A a (Fib .parts o m s a)) (pr sp sp') h
 
-
   module _ (o : σ .ops)
            (A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a)) where
 
@@ -153,15 +101,8 @@ module ParS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
     Miss m = (sp : Fib .Split o m)
            → ((a : σ .arities o) → A a (Fib .parts o m sp a)) → ⊥* {ℓ-zero}
 
-    -- ================================================================
     -- Refuting a tensor is a PRODUCT of refutations, one per
-    -- decomposition.  No hypotheses; both round trips `refl`.
-    --
-    -- This is currying, `(Σ x, B x) → C ≅ (x : _) → B x → C`, NOT the
-    -- classical De Morgan `¬(A ⊗ B) = ¬A ⅋ ¬B` -- that would need the
-    -- disjunctive par and is intuitionistically false.  `Miss` is
-    -- `∀sp. ¬(P × Q)`, never `∀sp. (¬P ⊎ ¬Q)`.
-    -- ================================================================
+    -- decomposition.
 
     ¬⊗-curry : (m : Fib .carrier (σ .resultSort o)) → Iso ((¬G (⊗ˢ o A)) m) (Miss m)
     ¬⊗-curry m .Iso.fun f sp h = f (sp , h)
@@ -169,28 +110,9 @@ module ParS {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
     ¬⊗-curry m .Iso.sec _ = refl
     ¬⊗-curry m .Iso.ret _ = refl
 
-  -- ================================================================
-  -- ENUMERABILITY, STATED INTERNALLY.  Note this does NOT depend on the
-  -- product above being well behaved: the refuting side is
-  -- `∀sp. ¬(∏ slots)`, which is fine whatever happens to associativity.
-  --
-  -- The list-and-completeness formulation is external: a metalanguage
-  -- `List` and a metalanguage membership proof.  But by `deMorgan⊗`,
-  -- what a refutation of `⊗` IS, is a product of refutations -- and THAT
-  -- needs no finiteness.  Finiteness is not what the statement says; it
-  -- is one way to CONSTRUCT the refuting side.
-  --
-  -- So the internal content of "the splittings are enumerable" is
-  -- excluded middle for the multiplicative:
-  --
-  --     ⊤ ⊢ (⊗ˢ o A) ⊕ ¬G (⊗ˢ o A)
-  --          witness      product of refutations
-  --
-  -- i.e. ⊗ and ⅋ are complementary.  A `List` with a completeness proof
-  -- is one witness for this; `splitProp` (unique readability) is
-  -- another; a derivative law is a third.  None of them is the
-  -- statement.
-  -- ================================================================
+  -- ENUMERABILITY, STATED INTERNALLY. Note this does NOT depend on the
+  -- product above being well behaved: the refuting side is `∀sp. ¬(∏
+  -- slots)`, which is fine whatever happens to associativity.
 
   ⊗-EM : (o : σ .ops)
        → ((a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))

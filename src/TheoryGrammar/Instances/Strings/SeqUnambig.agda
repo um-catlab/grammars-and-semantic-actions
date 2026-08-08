@@ -1,21 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- Levi's lemma, and sequential unambiguity on top of it.
-
-   Levi -- equidivisibility -- is the hypothesis `PORTING.md` names as
-   the blocker for `SequentialUnambiguity` and `Greedy`, and the one
-   thing the generic layer cannot supply (it is false for bags).  Over
-   the INDUCTIVE `Split3` it is a three-clause double recursion with no
-   arithmetic, no `split++`, and no length induction.  That is the same
-   payoff the derivative got, in a second place.
-
-   On top of it, `First` and `FollowLast` are recast as DERIVATIVES
-   rather than as subsets of the alphabet:
-
-       c ∉First A       is    δ_c A ⊢ ⊥
-       c ∉FollowLast A  is    δ_c (A ⊗ ⊤ ∩ …) ⊢ ⊥
-
-   which removes the powerset machinery the original needed -- they are
-   grammars, so they are compared with `⊢` like everything else. -}
+{- Levi's lemma, and sequential unambiguity on top of it. -}
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Sum using (_⊎_; inl; inr)
 import Cubical.Data.Equality as Eq
@@ -43,34 +27,16 @@ open import TheoryGrammar.Enumerable using (No)
 
 open import TheoryGrammar.Instances.Strings.RegExp Char decChar public
 
--- ==================================================================
--- LEVI'S LEMMA.
---
--- Two splittings of one word are comparable: one cut is no later than
--- the other, and the middle piece `t` is the difference.
--- ==================================================================
+-- LEVI'S LEMMA now lives in `Strings/Levi.agda`, which takes NO `decChar`:
+-- both splittings are of the SAME word, so the `cons`/`cons` case has no
+-- letters to compare and the disjunction is resolved by the recursion.
 
--- "sp cuts no later than sp'": u₂ = u₁ ++ t and v₁ = t ++ v₂
-Refines : String → String → String → String → Type₀
-Refines u₁ v₁ u₂ v₂ = Σ[ t ∈ String ] (Split3 u₁ t u₂ × Split3 t v₂ v₁)
+open import TheoryGrammar.Instances.Strings.Levi Char
 
-levi : ∀ {u₁ v₁ u₂ v₂ w} → Split3 u₁ v₁ w → Split3 u₂ v₂ w
-     → Refines u₁ v₁ u₂ v₂ ⊎ Refines u₂ v₂ u₁ v₁
-levi nil       sp'        = inl (_ , nil , sp')
-levi (cons sp) nil        = inr (_ , nil , cons sp)
-levi (cons sp) (cons sp') = go (levi sp sp')
-  where go : _ → _
-        go (inl (t , p , q)) = inl (t , cons p , q)
-        go (inr (t , p , q)) = inr (t , cons p , q)
+import TheoryGrammar.Instances.Strings.Recompose as Rcm
+module Rc = Rcm Char
 
--- ==================================================================
 -- FIRST and FOLLOWLAST, as derivatives rather than as subsets.
---
--- The original carried `c ∉First A` as an element of a powerset over
--- the alphabet, with `Powerset.More` and truncation to keep it a
--- proposition.  None of that is needed: "A cannot start with c" IS
--- "δ_c A is empty", and emptiness of a grammar is `⊢ ⊥`.
--- ==================================================================
 
 ∉First : Char → Gr → Type₀
 ∉First c A = Derivᶜ.δ c A ⊢ ⊥G
@@ -86,21 +52,11 @@ infix 10 _⊛_
 
 private
   split3Nil : ∀ {u w} → Split3 u [] w → u Eq.≡ w
-  split3Nil nil     = Eq.refl
-  split3Nil (cons s) = go (split3Nil s)
-    where go : _ → _
-          go Eq.refl = Eq.refl
+  split3Nil = split3-nilʳ                     -- `Base`, not a fifth copy
 
--- ==================================================================
--- THE THEOREM.  Under `A ⊛ B` a word has AT MOST ONE splitting
--- compatible with A and B -- so `A ⊗ B` is read deterministically,
--- and the `length w + 1` cuts collapse to one.
---
--- The proof is Levi plus one case analysis: if the two cuts differ,
--- the middle piece starts with some `c`, and then `c` both follows a
--- complete A-parse and starts a B-parse -- which is exactly what `⊛`
--- forbids.
--- ==================================================================
+-- THE THEOREM. Under `A ⊛ B` a word has AT MOST ONE splitting compatible
+-- with A and B -- so `A ⊗ B` is read deterministically, and the `length w
+-- + 1` cuts collapse to one.
 
 sameSplit : {A B : Gr} → A ⊛ B
           → ∀ {u₁ v₁ u₂ v₂ w} → Split3 u₁ v₁ w → Split3 u₂ v₂ w
@@ -123,16 +79,11 @@ sameSplit {A} {B} su sp sp' a₁ b₁ a₂ b₂ = go (levi sp sp')
             clash (inl nf)  = E.rec (lower (nf a₂ p a₁))
             clash (inr nfi) = E.rec (lower (nfi _ b₂))
 
--- ==================================================================
 -- The cheapest source of `⊛`: a literal can never be followed, since
 -- a one-character parse has no proper extension that is still a
 -- one-character parse.  So `literal a ⊛ B` for EVERY B.
--- ==================================================================
 
--- NOTE: this cannot be done by matching the splitting.  `Char` is not
--- assumed discrete, so unifying `c ∷ w` with `a ∷ []` would need K,
--- which cubical disables.  Counting is the way through -- and the
--- count is the same `Split3`-recursion, so nothing is lost.
+-- NOTE: this cannot be done by matching the splitting.
 split3Len : ∀ {u v w} → Split3 u v w → length u + length v Eq.≡ length w
 split3Len nil      = Eq.refl
 split3Len (cons s) = Eq.ap suc (split3Len s)
@@ -146,23 +97,9 @@ lit⊛ : (a : Char) (B : Gr) → literal a ⊛ B
 lit⊛ a B c = inl (litNoFollow a c)
 
 -- The cut determines the remainder, so `sameSplit` upgrades to both
--- components.  Matching the two splittings against each other does NOT
--- work -- the two `cons`es contribute independent head variables and
--- the unifier is left with a reflexive equation on `Char`, which needs
--- K.  Going through concatenation avoids ever unifying two heads.
-split3App : ∀ {u v w} → Split3 u v w → w Eq.≡ (u ++ v)
-split3App nil      = Eq.refl
-split3App (cons s) = Eq.ap (λ z → _ ∷ z) (split3App s)
-
--- ... and for the same reason `cons` injectivity has to be `ap tail`
--- rather than a match: `ap` never unifies the heads at all.
-tl : String → String
-tl []       = []
-tl (_ ∷ xs) = xs
-
-++cancelL : (u : String) {v v' : String} → (u ++ v) Eq.≡ (u ++ v') → v Eq.≡ v'
-++cancelL []      e = e
-++cancelL (c ∷ u) e = ++cancelL u (Eq.ap tl e)
+-- components.
+split3App = Rc.recompose
+++cancelL = Rc.appCancel
 
 split3Fun : ∀ {u v v' w} → Split3 u v w → Split3 u v' w → v Eq.≡ v'
 split3Fun {u} {v} {v'} s s' = go (split3App s) s'
@@ -177,43 +114,11 @@ sameParts su sp sp' a₁ b₁ a₂ b₂ = go (sameSplit su sp sp' a₁ b₁ a₂
   where go : _ → _
         go Eq.refl = Eq.refl , split3Fun sp sp'
 
--- ==================================================================
--- WHY THIS IS NOT `DecReadable`.
---
--- `Decidable/Rule.fromUnique` consumes `DecReadable`, whose `splitProp`
--- says the PROMODEL has at most one decomposition.  That is flatly
--- false for strings -- `w` has `length w + 1` of them -- and no amount
--- of sequential unambiguity changes it.
---
--- What `⊛` buys is strictly weaker and strictly more useful: at most
--- one decomposition COMPATIBLE WITH A AND B.  Uniqueness is relative to
--- the grammars, not a property of the promodel, and the existing
--- interface has no place to say that.  Recording it here rather than
--- bending `DecReadable` to fit: the honest fix is a grammar-relative
--- unique-readability constructor, which is a change to
--- `Decidable/Tensor.agda` and should be made deliberately.
--- ==================================================================
+-- WHY THIS IS NOT `DecReadable`. `Decidable/Rule.fromUnique` consumes
+-- `DecReadable`, whose `splitProp` says the `Fibered` has at most one
+-- decomposition.
 
--- ==================================================================
 -- `Split3` IS A PROPOSITION -- the parts pin the witness.
---
--- This is `PartsFaithful` (TheoryGrammar.Fibered) for strings, and it
--- was the thing three separate results were waiting on: unambiguity of
--- `A ⊗ B`, `Free` for the string scan, and the K-failures earlier in
--- this file.
---
--- TWO THINGS ABOUT THE SHAPE OF IT.
---
--- First, the hypothesis is an ARGUMENT, not a module parameter.  I had
--- been proposing to thread `isSet Char` through the whole Strings
--- chain; that is unnecessary -- only these lemmas want it, so only
--- these lemmas take it.
---
--- Second, and this is why it works at all: the retraction needs NO set
--- hypothesis.  `Split3 u v w` retracts onto `w ≡ u ++ v` outright.  The
--- set-ness is used only to know the TARGET is a proposition, which is
--- `HLevels.⌈⌉-isProp`'s observation one level down -- a path in a set.
--- ==================================================================
 
 split3Of : ∀ {u v w} → w Eq.≡ (u ++ v) → Split3 u v w
 split3Of {u = u} {v = v} Eq.refl = splitAll u v
@@ -248,38 +153,13 @@ strPartsFaithful ss m (u , v , s) (u' , v' , s') e =
     ev : v ≡ v'
     ev = funExt⁻ e false
 
--- ==================================================================
--- UNAMBIGUITY OF THE TENSOR, INTERNALLY.
---
--- `isProp ((A ⊗ B) w)` is an EXTERNAL statement -- a claim about the
--- semantic type.  The internal content is a TERM:
---
---     ⊗-align : (A ⊗ B) & (A ⊗ B)  ⊢  (A & A) ⊗ (B & B)
---
--- "two parses of a tensor decompose the same way, so they pair up
--- slot-wise".  That is exactly the converse of `BaseChange.Σᴿ-&`,
--- which holds unconditionally in the other direction -- Σ always
--- distributes OUT of a conjunction, and distributing back IN is
--- precisely the statement that the accessibility structure is
--- determined.  So the internal form of "the tensor is unambiguous" is
--- not a proposition at all; it is the missing half of a distributivity.
---
--- Both hypotheses are used, and for different halves: `⊛` (via `levi`
--- and `sameParts`) gives that the PARTS agree, and `split3IsProp` that
--- the WITNESS does.  That is the two-property split `PartsFaithful`
--- names, appearing here as two steps of one proof.
--- ==================================================================
+-- UNAMBIGUITY OF THE TENSOR, INTERNALLY. `isProp ((A ⊗ B) w)` is an
+-- EXTERNAL statement -- a claim about the semantic type.
 
 module _ (ss : isSet String) {A B : Gr} (su : A ⊛ B) where
 
   -- THIS IS `DetPair` (TheoryGrammar.BaseChange) at the splitting
-  -- relation, spelled concretely.  It is the reusable content of `⊛`:
-  -- two splittings that both carry an A on the left and a B on the
-  -- right are equal.  Nothing downstream of it mentions `levi` or
-  -- `First`/`FollowLast` -- those are used only to produce it.
-  --
-  -- Exposed rather than kept private because it, not `⊗-align`, is
-  -- what a client with a different conclusion in mind would want.
+  -- relation, spelled concretely.
   ⊛→detSplit : (w : String) (sp sp' : MonSplit appop w)
          → A (MonParts appop w sp true)  → B (MonParts appop w sp false)
          → A (MonParts appop w sp' true) → B (MonParts appop w sp' false)
@@ -299,11 +179,11 @@ module _ (ss : isSet String) {A B : Gr} (su : A ⊛ B) where
     detAt w sp sp' h h' =
       ⊛→detSplit w sp sp' (h true) (h false) (h' true) (h' false)
 
-  -- DERIVED from `BaseChange.Σ-&-conv`.  The only string-specific input
-  -- is `detAt`; the distribution itself is generic, and `go` is the
-  -- Π/× shuffle that `if` forces (`if a then (A & A) else (B & B)` and
-  -- `(if a then A else B) × (if a then A else B)` agree at each literal
-  -- slot but not at a neutral one).
+  -- DERIVED from `BaseChange.Σ-&-conv`. The only string-specific input is
+  -- `detAt`; the distribution itself is generic, and `go` is the Π/×
+  -- shuffle that `if` forces (`if a then (A & A) else (B & B)` and `(if a
+  -- then A else B) × (if a then A else B)` agree at each literal slot but
+  -- not at a neutral one).
   ⊗-align : ((A ⊗' B) & (A ⊗' B)) ⊢ ((A & A) ⊗' (B & B))
   ⊗-align w x = go (Σ-&-conv (detAt w) x)
     where

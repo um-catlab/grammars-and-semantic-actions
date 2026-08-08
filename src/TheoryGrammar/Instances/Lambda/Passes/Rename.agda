@@ -1,20 +1,6 @@
-{-
-  THE FREE CASE, and how small it is.
-
-  `CarrierMap.Transport`: a carrier map preserving every splitting
-  transports every inductive grammar, owing one obligation per CONSTANT
-  of the description.  So: which passes are split-preserving?
-
-    * renaming is (`rename`, `renCM`, `renPres` -- all `Eq.refl`);
-    * NOTHING ELSE is.  `hom-var`/`hom-app`/`hom-lam` derive the three
-      homomorphism equations FROM split preservation, so such a map is
-      fixed by its action on names (`homId`), i.e. IS a renaming.
-
-  Instantiating the transport at `Scoped` (`scopedTr`, `scopedRename`)
-  exposes the price: `mapμ` holds the nonterminal fixed while moving the
-  carrier, so the binder's `⌈ n ⌉` must transport too, and `nmTr→ρ≡id`
-  shows that forces `ρ n ≡ n`.  THE ONLY FREE PASS IS THE IDENTITY.
--}
+{- THE FREE CASE, and how small it is. `CarrierMap.Transport`: a carrier
+   map preserving every splitting transports every inductive grammar, owing
+   one obligation per CONSTANT of the description. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Passes.Rename where
 
@@ -59,9 +45,7 @@ module Rename (Name : Type₀) where
   renPres ρ lamOp .homParts _ (mkLam m t) true  = Eq.refl
   renPres ρ lamOp .homParts _ (mkLam m t) false = Eq.refl
 
-  -- ================================================================
   -- ... and conversely: split preservation IS the homomorphism law.
-  -- ================================================================
 
   module _ (h : CarrierMap λFib) where
 
@@ -112,11 +96,8 @@ module Rename (Name : Type₀) where
                     (P .homParts (lam k t) (mkLam k t) true)
                     (P .homParts (lam k t) (mkLam k t) false)
 
-    -- PRIMITIVE (induction on `Raw`).  The three equations say a
-    -- split-preserving carrier map is determined by its action on
-    -- names -- i.e. IS a renaming -- so one that fixes names is the
-    -- identity.  With `nmTr→ρ≡id` below this is the whole negative
-    -- result: the only pass whose scope preservation is free is `id`.
+    -- PRIMITIVE (induction on `Raw`). The three equations say a split-
+    -- preserving carrier map is determined by its action on names -- i.e.
     homId : SplitPresAt h varOp → SplitPresAt h appOp → SplitPresAt h lamOp
           → ((k : Name) → h .hom nm k ≡ k)
           → (t : Raw) → h .hom tm t ≡ t
@@ -126,9 +107,7 @@ module Rename (Name : Type₀) where
     homId Pv Pa Pl e (lam k t) =
       hom-lam Pl k t ∙ cong₂ lam (e k) (homId Pv Pa Pl e t)
 
-  -- ================================================================
   -- The free transport, instantiated at `Scoped`.
-  -- ================================================================
 
   module _ (ρ : Name → Name) where
 

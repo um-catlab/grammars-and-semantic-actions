@@ -1,19 +1,5 @@
-{-
-  The two internal decisions every rewriting pass needs.
-
-    scoped? Γ   DENOTES "is this term scoped in Γ?".  It is the existing
-                scope checker at one scope, and it IS the side condition
-                of every pass that moves a subterm out from under a
-                binder: rather than a bespoke "n is not free in t"
-                grammar plus a strengthening lemma, the calculus already
-                decides membership of `Scoped Γ`.
-
-    isVar? n    DENOTES "is this term the variable n?".  It is the
-                generic `dec-⊗` at `varOp` over the representable.
-
-  Neither adds a primitive: both are composites of existing rules, and
-  both produce evidence, which their callers carry rather than re-derive.
--}
+{- The two internal decisions every rewriting pass needs. scoped? Γ DENOTES
+   "is this term scoped in Γ?". -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Passes.Decide where
 

@@ -1,18 +1,8 @@
-{-
-  The adjunction between a tensor and its residual, at the two extreme
-  arities -- the measurement this instance exists to make.
-
-      var-β (arity Unit)   refl        var-η   funExt over `∀ t` only
-      fun-β (arity Bool)   refl        fun-η   funExt over `∀ t` AND
-                                               over the arity
-
-  `⊸ᶠ-β`/`⊸ᶠ-η` are `refl` generically for every focus, including the
-  cross-sorted ones.  So the ARITY costs and the sorts do not.
-
-  β and η are stated SEPARATELY -- `var-β`/`var-η`, `fun-β`/`fun-η` --
-  because that is what the measurement is about; `var-UP`/`fun-UP` are
-  their pairing as an `Iso`.
--}
+{- The adjunction between a tensor and its residual, at the two extreme
+   arities -- the measurement this instance exists to make. var-β (arity
+   Unit) refl var-η funExt over `∀ t` only fun-β (arity Bool) refl fun-η
+   funExt over `∀ t` AND over the arity `⊸ᶠ-β`/`⊸ᶠ-η` are `refl`
+   generically for every... -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Adjunctions where
 

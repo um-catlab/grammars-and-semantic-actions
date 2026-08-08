@@ -1,11 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- The later modality over an arbitrary well-founded order.
-
-   Nothing here mentions a signature, a promodel, or a grading -- only a
-   relation and its well-foundedness.  That is the whole point of the
-   file: `Graded` supplies ONE such order (pull back ℕ's `<` along a
-   degree), `Grammar/Later/Ordered.agda` supplies others (the suffix and
-   infix orders), and a lexicographic instance would be a third. -}
+{- The later modality over an arbitrary well-founded order. -}
 module TheoryGrammar.Later where
 
 open import Cubical.Foundations.Prelude
@@ -13,16 +7,8 @@ open import Cubical.Induction.WellFounded
 
 open import TheoryGrammar.BaseChange
 
--- ==================================================================
--- THE LATER MODALITY, GENERIC IN THE ORDER.
---
--- The header above says "the order can be made abstract later if a
--- lexicographic instance needs it".  Doing it now costs nothing: ▷,
--- `next` and `löb` never mention the degree, only the relation and its
--- well-foundedness.  The graded order below is then one instance, and
--- `Grammar/Later/Ordered.agda` -- which is generic in a `WFOrder` and
--- instantiated at the suffix and infix orders -- is another.
--- ==================================================================
+-- THE LATER MODALITY, GENERIC IN THE ORDER. The header above says "the
+-- order can be made abstract later if a lexicographic instance needs it".
 module WFLater {ℓI ℓR : Level} {I : Type ℓI} (_≺_ : I → I → Type ℓR)
                (≺-wf : WellFounded _≺_) where
 
@@ -42,14 +28,8 @@ module WFLater {ℓI ℓR : Level} {I : Type ℓI} (_≺_ : I → I → Type ℓ
        → ▷ A ≡ Rel.Πᴿ (λ i j → j ≺ i) A
   ▷≡Πᴿ = refl
 
-  -- ================================================================
-  -- löb IS THE UNIQUE FIXED POINT.
-  --
-  -- `löb step` solves `f i = step i (λ j _ → f j)`, and it is the ONLY
-  -- solution.  Both facts are generic in the order -- no signature, no
-  -- theory, no grading -- and together they are what makes anything
-  -- defined by löb canonical rather than merely one choice among many.
-  -- ================================================================
+  -- löb IS THE UNIQUE FIXED POINT. `löb step` solves `f i = step i (λ j _
+  -- → f j)`, and it is the ONLY solution.
 
   löb-unfold : {ℓM : Level} {A : I → Type ℓM} (step : (i : I) → ▷ A i → A i)
              → (i : I) → löb step i ≡ step i (λ j _ → löb step j)
@@ -66,12 +46,46 @@ module WFLater {ℓI ℓR : Level} {I : Type ℓI} (_≺_ : I → I → Type ℓ
               ∙ cong (step i) (funExt λ j → funExt λ q → ih j q)
               ∙ sym (löb-unfold step i)
 
+  -- CHANGING THE CARRIER CANNOT CHANGE THE ANSWER. A recurrence is often
+  -- solved in a DIFFERENT representation from the one it is stated in --
+  -- `A` re-tabulated as `B` so that a memo table can share more of it
+  -- (`Enumerable.tabulate'` is the case that motivates this).
+
+  löb-conj : {ℓM ℓN : Level} {A : I → Type ℓM} {B : I → Type ℓN}
+             (stA : (i : I) → ▷ A i → A i)
+             (stB : (i : I) → ▷ B i → B i)
+             (to  : (i : I) → A i → B i)
+           → ((i : I) (r : ▷ A i) → stB i (λ j q → to j (r j q)) ≡ to i (stA i r))
+           → (i : I) → löb stB i ≡ to i (löb stA i)
+  löb-conj stA stB to conj i =
+    sym (löb-unique stB (λ k → to k (löb stA k)) hf i)
+    where
+      hf : (k : I) → to k (löb stA k) ≡ stB k (λ j _ → to j (löb stA j))
+      hf k = cong (to k) (löb-unfold stA k)
+           ∙ sym (conj k (λ j _ → löb stA j))
+
+  -- THE CASE THAT ACTUALLY ARISES. One does not usually write the second
+  -- step by hand: one CONJUGATES the first, `to ∘ st ∘ ▷ from`, and then
+  -- the intertwining hypothesis is not something to prove but something
+  -- that follows from `from ∘ to ≡ id`.
+  löb-retract : {ℓM ℓN : Level} {A : I → Type ℓM} {B : I → Type ℓN}
+                (stA : (i : I) → ▷ A i → A i)
+                (to  : (i : I) → A i → B i)
+                (from : (i : I) → B i → A i)
+              → ((i : I) (a : A i) → from i (to i a) ≡ a)
+              → (i : I)
+              → löb (λ k s → to k (stA k (λ j q → from j (s j q)))) i
+                ≡ to i (löb stA i)
+  löb-retract {A = A} stA to from retr =
+    löb-conj stA (λ k s → to k (stA k (λ j q → from j (s j q)))) to conj
+    where
+      conj : (i : I) (r : ▷ A i)
+           → to i (stA i (λ j q → from j (to j (r j q)))) ≡ to i (stA i r)
+      conj i r = cong (λ z → to i (stA i z))
+                      (funExt λ j → funExt λ q → retr j (r j q))
+
 -- A FINER order gives a WEAKER modality: fewer `j ≺ i` means fewer
--- assumptions available in the löb step.  So `Later/Infix`'s `▷ⁱ` --
--- the proper-substring order -- is IMPLIED by the graded `▷`, since a
--- proper infix is strictly shorter but not conversely.  That is why
--- `Instances/Strings/CYK.agda` needs no infix modality: the CYK
--- recursion is available already, with a stronger hypothesis.
+-- assumptions available in the löb step.
 ▷-mono : {ℓI ℓR ℓR' ℓM : Level} {I : Type ℓI}
          {_≺_ : I → I → Type ℓR} {_≺'_ : I → I → Type ℓR'}
        → ({i j : I} → i ≺' j → i ≺ j)

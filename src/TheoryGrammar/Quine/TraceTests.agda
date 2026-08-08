@@ -1,36 +1,7 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  THE CONCURRENT QUINE, RUN.
-
-  Every `refl` below is the decision procedure filling its chart at
-  typecheck time and the interpreter running on the parse tree it
-  produced.  Nothing is postulated: if the parse did not evaluate, the
-  file would not compile.
-
-  Four things are pinned, in increasing strength.
-
-    (1) THE SEARCH SPACE, counted.  The quine's four events have 5
-        concatenations, 9 I-shuffles and 16 interleavings.  The middle
-        number is the one this parser searches.
-
-    (2) THE QUINE IS A TRACE.  Its six spellings all parse, all print
-        the SAME PAIR OF STREAMS, and each is a word of the trace that
-        pair denotes.  The last of those is `IsQuine`, and it is a
-        `⊗'` -- not an equation between words.
-
-    (3) THE PROPERTY IS NOT FREE.  Neighbours of the quine, what they
-        print instead, and -- because the error grammar of the printed
-        trace's probe is `¬G _` -- a THEOREM that the source is not a
-        spelling of what it printed.
-
-    (4) THE CONTROLLED EXPERIMENT.  `module Control` runs the identical
-        grammar and the identical decision procedure at `⊤I`, where
-        every pair of events commutes, and finds a QUINE THERE THAT IS
-        NOT EVEN A PROGRAM HERE.  Paired with the refutation at `Ind`,
-        that is a measurement of how much work the independence
-        relation does -- and it does it on the quine predicate itself,
-        not merely on the language.
--}
+{- THE CONCURRENT QUINE, RUN. Every `refl` below is the decision procedure
+   filling its chart at typecheck time and the interpreter running on the
+   parse tree it produced. -}
 module TheoryGrammar.Quine.TraceTests where
 
 open import Cubical.Foundations.Prelude
@@ -49,18 +20,8 @@ open import TheoryGrammar.Quine.Trace
 import TheoryGrammar.Instances.Traces.Protocol   as Pr
 import TheoryGrammar.Instances.Traces.Enumeration as TrE
 
--- ==================================================================
--- §0  THE SOURCE.  Written ONCE, as a PAIR of session texts -- because
---     that is what a concurrent program is.  The six words below are
---     its six spellings, and nothing else in the file writes them.
---
---         session 0 :  a0 hsh        the code, and the hash
---         session 1 :  b0 b0         the quoted code
---
---     Read as the string quine `0#00` with the `#` demoted: it no
---     longer separates the code from the data, because the SESSION
---     does that; it only records that the code came first.
--- ==================================================================
+-- §0 THE SOURCE. Written ONCE, as a PAIR of session texts -- because that
+-- is what a concurrent program is.
 
 quineA quineB : Wd
 quineA = a0 ∷ hsh ∷ []
@@ -81,15 +42,9 @@ w4 = b0 ∷ a0  ∷ hsh ∷ b0  ∷ []
 w5 = b0 ∷ a0  ∷ b0  ∷ hsh ∷ []
 w6 = b0 ∷ b0  ∷ a0  ∷ hsh ∷ []
 
--- ==================================================================
--- §1  THE SEARCH SPACE, COUNTED.
---
--- The two endpoints of the trace family at this alphabet, purely to
--- measure: `⊥I` is concatenation (the free monoid) and `⊤I` is full
--- interleaving (the free commutative monoid).  The concurrent quine
--- sits strictly between them, and the gap on the left is exactly the
--- freedom the data has to drift through the code.
--- ==================================================================
+-- §1 THE SEARCH SPACE, COUNTED. The two endpoints of the trace family at
+-- this alphabet, purely to measure: `⊥I` is concatenation (the free
+-- monoid) and `⊤I` is full interleaving (the free commutative monoid).
 
 ⊥I : Pr.Ev → Pr.Ev → Type₀
 ⊥I _ _ = ⊥
@@ -111,13 +66,7 @@ _ = refl
 _ : length (Full.shuffles w1) ≡ 16
 _ = refl
 
--- ==================================================================
--- §2  IT PARSES, AND IT PRINTS ITSELF -- AT EVERY SPELLING.
---
--- The interpreter never sees the interleaving: the SAME pair of
--- streams comes back from all six words.  That is the fact that makes
--- the trace reading of the output legitimate, and it is one `refl`.
--- ==================================================================
+-- §2 IT PARSES, AND IT PRINTS ITSELF -- AT EVERY SPELLING.
 
 _ : passes (run (derives! ntS) at
              ( w1 ↦ true ∷ w2 ↦ true ∷ w3 ↦ true
@@ -129,18 +78,14 @@ _ : passes (runOut ntS at
              ∷ w4 ↦ just out0 ∷ w5 ↦ just out0 ∷ w6 ↦ just out0 ∷ [] ))
 _ = refl
 
--- READ `w1` AND `w6`.  `w1` spells the code before the data; `w6`
--- spells the whole quoted data before the code.  Over strings those are
--- two different texts and a program can be only one of them -- and the
--- second order is exactly `Quine.Base`'s opcode 1, which has no quine
--- at all.  Here they are the SAME PROGRAM, and `quine1`/`quine6` are
--- two proofs about one trace.
+-- READ `w1` AND `w6`. `w1` spells the code before the data; `w6` spells
+-- the whole quoted data before the code.
 
--- ... and THE QUINE EQUATION, as a term.  `IsQuine w refl` is
--- `Prints (what w printed) w` -- the source is one word of the trace it
--- printed -- and `quineAt` discharges it from the `refl` above, through
--- `witness`, so the shuffle exhibiting it is EXTRACTED FROM THE
--- DECISION and never written by hand.
+-- ... and THE QUINE EQUATION, as a term. `IsQuine w refl` is `Prints (what
+-- w printed) w` -- the source is one word of the trace it printed -- and
+-- `quineAt` discharges it from the `refl` above, through `witness`, so the
+-- shuffle exhibiting it is EXTRACTED FROM THE DECISION and never written
+-- by hand.
 quine1 : IsQuine w1 refl
 quine1 = quineAt w1 refl refl
 
@@ -159,10 +104,7 @@ quine5 = quineAt w5 refl refl
 quine6 : IsQuine w6 refl
 quine6 = quineAt w6 refl refl
 
--- ... and it is a FAMILY, not an accident.  The next member has the
--- two-bit code `01`: session 0 says `a0 a1 hsh` and session 1 says
--- `b0 b0 b1 b1`, seven events with twenty I-shuffles.  (Its trace has
--- `35` spellings; one of them is written here.)
+-- ... and it is a FAMILY, not an accident.
 bigA bigB : Wd
 bigA = a0 ∷ a1 ∷ hsh ∷ []
 bigB = b0 ∷ b0 ∷ b1 ∷ b1 ∷ []
@@ -179,9 +121,7 @@ _ = refl
 quine-big : IsQuine wbig refl
 quine-big = quineAt wbig refl refl
 
--- ==================================================================
 -- §3  THE PROPERTY IS NOT FREE.  Neighbours, and what they print.
--- ==================================================================
 
 -- the OTHER opcode.  `a1` is the opcode `1`, which prints the hash
 -- BEFORE the code -- and the source has it after.  What it prints is
@@ -214,10 +154,8 @@ not-quine-near1 = notQuineAt near1 refl refl
 not-quine-near2 : (¬G Prints (printed near2 refl)) near2
 not-quine-near2 = notQuineAt near2 refl refl
 
--- ==================================================================
 -- §4  AND THE LANGUAGE IS NOT EVERYTHING.  A negative answer here is a
 --     refutation, so these are theorems that no parse tree exists.
--- ==================================================================
 
 _ : passes (run (derives! ntS) at
              ( (a0 ∷ hsh ∷ b0 ∷ [])       ↦ false   -- odd data
@@ -231,25 +169,7 @@ _ = refl
 no-odd : C.Deriv ntS (a0 ∷ hsh ∷ b0 ∷ []) → E.⊥* {ℓ-zero}
 no-odd = noDeriv (a0 ∷ hsh ∷ b0 ∷ []) refl
 
--- ==================================================================
--- §5  THE CONTROL: THE SAME PARSER AT THE ⊤ ENDPOINT.
---
--- `Quine.Trace.Full` is `Over` at `⊤I` -- every pair of events
--- commutes.  Same grammar, same interpreter, same decision procedure;
--- one different `Fibered`.
---
--- THE SOURCE.  Session 0 says `hsh a1` -- the hash BEFORE the code --
--- and session 1 says `b1 b1`.  At `Ind` that is not a program: `S → B R`
--- must take the opcode from session 0 first, and no `right` step may
--- carry the hash past it, because they are the same session.  At `⊤I`
--- it may, the parse reads opcode `1` and data `b1 b1`, and opcode 1
--- prints the hash first -- so it prints ITSELF.
---
--- A QUINE THAT EXISTS ONLY WHEN EVERYTHING COMMUTES.  This is the
--- sharpest statement the file makes: the independence relation is not
--- merely pruning the language, it is deciding which programs are
--- fixed points of their own semantics.
--- ==================================================================
+-- §5 THE CONTROL: THE SAME PARSER AT THE ⊤ ENDPOINT.
 
 topA topB : Wd
 topA = hsh ∷ a1 ∷ []
@@ -290,56 +210,8 @@ module Control where
   quine-at-⊤ : Full.IsQuine v1 refl
   quine-at-⊤ = Full.quineAt v1 refl refl
 
--- ==================================================================
--- THE ACCOUNTING.
---
--- REUSED, NOT ONE TOKEN CHANGED:
---
---   the alphabet        `Protocol`'s `Sid`/`Act`/`Ev`/`Ind`, with its
---                       `decInd`/`isPropInd`/`discreteEv`.
---   the promodel        `Traces/Base`: carrier `Word`, `Split` the
---                       I-shuffle; and `Traces/Enumeration.shuffles`.
---   the parser          `Protocol.Over`'s `trGraded`, `NonTrivial`,
---                       `probe-NT`, `module CYK` and its `Decide`,
---                       `litProbe`, `discreteWord`.  `Quine.Trace`
---                       instantiates `CYK` at a different grammar and
---                       adds NO new CYK.  (`ProtocolTests`' accounting
---                       calls the trace CYK the third copy of the same
---                       forty lines; this file is the first client
---                       that did not have to make a fourth.)
---   the interpreter     `Quine.Base.Interp`'s shape verbatim -- `Val` /
---                       `unitVal` / `binVal` / `alg` / `recA` -- with
---                       `strFib` replaced by `trFib`.
---   the observations    `SemanticAction`: `run`, `okA`, `witness`,
---                       `refute`, `passes`; `Decidable.Enumerated`'s
---                       `dec-⊗-cuts` for the printed-trace probe.
---
--- WRITTEN FRESH:
---
---   the grammar         `QNT`/`qunitR`/`qbinR`/`qallRules`.  Input.
---   `emit`, `enc`       the interpreter's root: seven lines, and the
---                       only place the quine construction appears.
---   `Prints`/`IsQuine`  THE ONE GENUINELY NEW NOTION.  Over strings the
---                       quine equation is `≡` between two words.  Over
---                       traces the output is a pair of concurrent
---                       streams and the equation is a `⊗'` -- so
---                       "prints itself" is a GRAMMAR, decided by the
---                       same enumeration of shuffles the parser uses,
---                       and the shuffle witnessing it is extracted by
---                       `witness` rather than written by hand.
---
--- WHAT THE EXPERIMENT MEASURED.  `Conc` and `Full` share every line of
--- source; `no-hash-first` (a refutation) and `Control.quine-at-⊤` (a
--- quine) are the same call to the same procedure at the same word over
--- two `Fibered`s.  The independence relation is the variable, and it
--- moves the QUINE PREDICATE, not just the language -- which is one
--- level sharper than `ProtocolTests.Control.wrong-at-⊤`, where what
--- moved was membership.
---
--- WHAT IT DID NOT MEASURE.  There is no source that is a quine at `Ind`
--- and not at `⊤I`, and there cannot be: `ITr Ind ⊆ ITr ⊤I`, so parse
--- trees only accumulate.  The asymmetry is not an artefact of these
--- particular programs.  See `Quine.Trace`'s §D for the design that has
--- NO separation at all -- code and data in different sessions, no hash
--- -- and why the self-referential equation is what kills it.
--- ==================================================================
+-- THE ACCOUNTING. REUSED, NOT ONE TOKEN CHANGED: the alphabet `Protocol`'s
+-- `Sid`/`Act`/`Ev`/`Ind`, with its `decInd`/`isPropInd`/`discreteEv`. the
+-- `Fibered` `Traces/Base`: carrier `Word`, `Split` the I-shuffle; and
+-- `Traces/Enumeration.shuffles`. the parser `Protocol.Over`'s
+-- `trGraded`,...

@@ -1,22 +1,7 @@
-{-
-  Contexts, as grammars over names.
-
-  `Lookup Γ A` is "this name is bound to A in Γ", built from `⌈ n ⌉`,
-  `&`, `⊕` and `¬G` -- the later binding carries a REFUTATION of the
-  earlier name, which is what makes shadowing deterministic and is
-  therefore what `lookupUnique` needs.
-
-  `Look Γ = ⊕ᴰ Ty (Lookup Γ)` is the synthesis judgment for names: it is
-  the same `⊕ᴰ`-over-types shape the term judgment will have, one level
-  down, and the same two facts are proved about it -- it is decidable,
-  and its index is unique.
-
-  Both proofs about `Look` -- `dec-Look` and `lookupUnique` -- are
-  point-free composites of the additive rules, and this file never looks
-  at the representation: it does not open `Readable` at all.  `dec-⌈⌉ⁿ`
-  is the only place `Discrete Name` is used, and it is used to BUILD an
-  internal map.
--}
+{- Contexts, as grammars over names. `Lookup Γ A` is "this name is bound to
+   A in Γ", built from `⌈ n ⌉`, `&`, `⊕` and `¬G` -- the later binding
+   carries a REFUTATION of the earlier name, which is what makes shadowing
+   deterministic and is therefore what `lookupUnique` needs. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.SimplyTyped.Context where
 
@@ -55,13 +40,14 @@ module StContext (Name : Type₀) (_≟_ : Discrete Name) where
   kty-refl T _ _ = tyEq-refl T
 
   -- ... and "two types equal to `T` are equal to each other", the form
-  -- `lookupUnique` consumes at a matching binding
+  -- `lookupUnique` consumes at a matching binding Phase 1 is not the
+  -- issue: the carrier is the CONSTANT family, so there is no index for a
+  -- combinator to preserve and the body is a semantic action on the
+  -- metalanguage type -- the case...
   kty-glue : {s : TSort} (A B T : Ty) → (Kty {s} A T & Kty {s} B T) ⊢ Kty A B
   kty-glue A B T _ (e , f) = tyEq-trans A T B e (tyEq-sym B T f)
 
-  -- ================================================================
   -- The two judgments about names.
-  -- ================================================================
 
   -- `Lookup Γ A` denotes "the name I am looking at is bound to `A` in
   -- `Γ`".  A later binding carries a REFUTATION of every earlier name,
@@ -95,9 +81,7 @@ module StContext (Name : Type₀) (_≟_ : Discrete Name) where
         (⊕ᴰ-E (λ A → ⊕ᴰ-I Ty {A = Lookup ((n , T) ∷ Γ)} A ∘g ⊕-I₂)
          ∘g ⊕ᴰ-&-in Ty)
 
-  -- ================================================================
   -- Decidable, by induction on the context.
-  -- ================================================================
 
   -- `dec-Look Γ` denotes "is this name bound in `Γ`?", answered inside
   -- the calculus; a yes carries the type it is bound to.
@@ -111,10 +95,8 @@ module StContext (Name : Type₀) (_≟_ : Discrete Name) where
            (dec-& (¬G Nm n) (Look Γ)
             ∘g &-I (dec-¬ (Nm n) ∘g dec-⌈⌉ⁿ n) (dec-Look Γ))
 
-  -- ================================================================
   -- SUBSINGLETON: the index of `Look Γ` is unique.  This is the
   -- name-level rehearsal of the question the term judgment asks.
-  -- ================================================================
 
   lookupUnique : (Γ : Ctx) (A B : Ty) → (Lookup Γ A & Lookup Γ B) ⊢ Kty A B
   lookupUnique []            A B = ⊥-E ∘g &-E₁

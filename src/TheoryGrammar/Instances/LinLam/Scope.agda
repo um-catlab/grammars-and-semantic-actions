@@ -2,7 +2,7 @@
 {-
   PASS 1.  NAMED → DE BRUIJN, AS A REINDEXING.
 
-  `CarrierMap.Reindex` is a map of promodels over one signature whose
+  `CarrierMap.Reindex` is a map of `Fibered` over one signature whose
   source and target may DIFFER.  That is exactly what an elaboration is,
   and it is the only reason this pass can stay inside the calculus at
   all: `Lambda/Passes/Inline`'s `CarrierMap` is the endo case
@@ -12,9 +12,8 @@
       hom nm  =  ρ₀              : Name → Σ[n] Fin n
       hom tm  =  toDB ρ₀         : Raw  → Σ[n] DBTm n
 
-  and the two are the two components of one map of `λSig`-promodels.
+  and the two are the two components of one map of `λSig`-`Fibered`.
 
-  --------------------------------------------------------------------
   WHY THE ELABORATION IS TOTAL, and why that is not a cheat.
 
   `Lambda/DeBruijn.toDB` is a fold over `Scoped Γ` -- it needs the input
@@ -32,7 +31,6 @@
   at all.  This is the same move `Instances/Heap` makes with `_#_`: the
   side condition goes into the structure rather than into a `Maybe`.
 
-  --------------------------------------------------------------------
   THE ADDITIVE FRAGMENT IS FREE, and what that actually buys.
 
   `Along.pull` reindexes a grammar over the TARGET to one over the
@@ -54,7 +52,6 @@
   elaboration of a named term -- `linear?` at the end of the file is
   that, at `Check.linear?`.
 
-  --------------------------------------------------------------------
   THE MULTIPLICATIVE FRAGMENT, AND WHERE IT BREAKS.  This is the point
   of the file.  Of the three operations,
 
@@ -121,10 +118,8 @@ open import TheoryGrammar.Instances.Lambda.Base
 import TheoryGrammar.Instances.LinLam.DB    as D
 import TheoryGrammar.Instances.LinLam.Check as C
 
--- ==================================================================
 -- The elaboration.  `k` and `ρ₀` are the AMBIENT SCOPE: which index a
 -- free name denotes.  Nothing below depends on either being canonical.
--- ==================================================================
 
 module Elab (Name : Type₀) (_≟_ : Discrete Name)
             (k : ℕ) (ρ₀ : Name → Fin k) where
@@ -143,9 +138,7 @@ module Elab (Name : Type₀) (_≟_ : Discrete Name)
   toDB ρ (app u v) = D.dapp (toDB ρ u) (toDB ρ v)
   toDB ρ (lam n t) = D.dlam (toDB (ext n ρ) t)
 
-  -- ================================================================
   -- THE REINDEXING.  Two sorts, two components, no laws.
-  -- ================================================================
 
   dbCM : Reindex λFib D.dbFib
   dbCM .hom nm n = k , ρ₀ n
@@ -153,9 +146,7 @@ module Elab (Name : Type₀) (_≟_ : Discrete Name)
 
   private module S = Along dbCM
 
-  -- ================================================================
   -- POSITIVE, ADDITIVELY: no hypothesis at all, and nothing to prove.
-  -- ================================================================
 
   -- decidability transports definitionally ...
   pull-Dec : (A : D.TmG) → S.pull D.Dec⟨ A ⟩ ≡ Dec⟨ S.pull A ⟩
@@ -168,17 +159,14 @@ module Elab (Name : Type₀) (_≟_ : Discrete Name)
   pull-and : (A B : D.TmG) → S.pull (A D.& B) ≡ (S.pull A & S.pull B)
   pull-and A B = refl
 
-  -- THE DEMONSTRATION.  `dbAll : ⊤G ⊢ DBAll` is a theorem about de
-  -- Bruijn terms (`DB.agda`); `pullTerm` makes it a theorem about the
-  -- ELABORATION of an arbitrary raw term, with no induction over `Raw`
-  -- and no scope-checking hypothesis.  Well-scopedness of the output is
-  -- free because it was never a property of the input.
+  -- THE DEMONSTRATION. `dbAll : ⊤G ⊢ DBAll` is a theorem about de Bruijn
+  -- terms (`DB.agda`); `pullTerm` makes it a theorem about the ELABORATION
+  -- of an arbitrary raw term, with no induction over `Raw` and no scope-
+  -- checking hypothesis.
   elabScoped : ⊤G ⊢ S.pull D.DBAll
   elabScoped = S.pullTerm D.dbAll
 
-  -- ================================================================
   -- POSITIVE, MULTIPLICATIVELY, AWAY FROM THE BINDER.
-  -- ================================================================
 
   presVar : SplitPresAt dbCM varOp
   presVar .homSplit _ (mkVar n) = D.mkDVar (ρ₀ n)
@@ -198,29 +186,23 @@ module Elab (Name : Type₀) (_≟_ : Discrete Name)
             → ⊗ˢ appOp (λ a → S.pull (Q a)) ⊢ S.pull (D.⊗ˢ appOp Q)
   pushˢ-app {Q} = S.push⊗ appOp presApp {B = Q}
 
-  -- ... and, spelled with each instance's own connective.  The only
-  -- friction is that `Lambda/Base` writes its arity family with
-  -- `if_then_else_` and `DB` writes it with `boolΠ`; `⊗ˢ-map` is the
-  -- coercion, and it is `idg` at both slots.
+  -- ... and, spelled with each instance's own connective.
   pushVar : {P : D.NmG} → VarG (S.pull P) ⊢ S.pull (D.VarG P)
   pushVar {P} = pushˢ-var {Q = λ _ → P}
 
   pushApp : {A B : D.TmG} → AppG (S.pull A) (S.pull B) ⊢ S.pull (D.AppG A B)
   pushApp {A} {B} =
-    pushˢ-app {Q = D.boolΠ {M = λ _ → D.TmG} A B}
+    pushˢ-app {Q = boolΠ {M = λ _ → D.TmG} A B}
     ∘g ⊗ˢ-map appOp {A = λ b → if b then S.pull A else S.pull B}
-                    {B = λ b → S.pull (D.boolΠ {M = λ _ → D.TmG} A B b)}
-                    (D.boolΠ {M = λ b → (if b then S.pull A else S.pull B)
-                                        ⊢ S.pull (D.boolΠ {M = λ _ → D.TmG}
+                    {B = λ b → S.pull (boolΠ {M = λ _ → D.TmG} A B b)}
+                    (boolΠ {M = λ b → (if b then S.pull A else S.pull B)
+                                        ⊢ S.pull (boolΠ {M = λ _ → D.TmG}
                                                           A B b)}
                              idg idg)
 
-  -- ================================================================
-  -- REFLECTION, ALSO POSITIVE THERE.  `toDB` sends each constructor to
-  -- its namesake, so the head symbol of the output determines the head
-  -- symbol of the input.  This is where the pass differs from
-  -- substitution, whose `¬subReflects` is a refutation at `appOp`.
-  -- ================================================================
+  -- REFLECTION, ALSO POSITIVE THERE. `toDB` sends each constructor to its
+  -- namesake, so the head symbol of the output determines the head symbol
+  -- of the input.
 
   reflVar : S.ReflectsSplitAt varOp
   reflVar (var n)   (D.mkDVar _)   = mkVar n , λ _ → Eq.refl
@@ -231,7 +213,7 @@ module Elab (Name : Type₀) (_≟_ : Discrete Name)
   reflApp (var n)   ()
   reflApp (app u v) (D.mkDApp _ _) =
     mkApp u v
-    , D.boolΠ {M = λ a → D.DBParts appOp (k , D.dapp (toDB ρ₀ u) (toDB ρ₀ v))
+    , boolΠ {M = λ a → D.DBParts appOp (k , D.dapp (toDB ρ₀ u) (toDB ρ₀ v))
                               (D.mkDApp (toDB ρ₀ u) (toDB ρ₀ v)) a
                          Eq.≡ dbCM .hom (LSortOf appOp a)
                                  (LParts appOp (app u v) (mkApp u v) a)}
@@ -244,14 +226,7 @@ module Elab (Name : Type₀) (_≟_ : Discrete Name)
             → S.pull (D.⊗ˢ appOp Q) ⊢ ⊗ˢ appOp (λ a → S.pull (Q a))
   pullˢ-app {Q} = S.pull⊗ appOp reflApp {B = Q}
 
-  -- ================================================================
   -- NEGATIVE, AT THE BINDER -- and that is the whole story.
-  --
-  -- `lamFst` is the one fact used: whatever splitting the target
-  -- supplies, its body slot lives at scope `suc j`, because `IsDLam`
-  -- has one constructor.  So `homParts` at the body would force
-  -- `suc k Eq.≡ k`.
-  -- ================================================================
 
   private
     lamFst : {j : ℕ} {t : D.DBTm j} (sp : D.IsDLam t)
@@ -276,16 +251,8 @@ module Elab (Name : Type₀) (_≟_ : Discrete Name)
                                         (D.mkDLam (toDB (ext n ρ₀) t))
                                         .snd false)))
 
-  -- ================================================================
-  -- AND THE PAYOFF, in one line.
-  --
-  -- `Check.linear?` decides linearity of a de Bruijn term INTERNALLY,
-  -- as a map `⊤G ⊢ Dec⟨ Lin ⟩` over `dbFib`.  `pullTerm` turns it into
-  -- an internal decision about the elaboration of a NAMED term, and
-  -- `pull-Dec` says the two spellings of the codomain agree on the
-  -- nose.  Nothing about `Raw`, about scoping, or about `ρ₀` is used --
-  -- this is the additive transport doing the entire job.
-  -- ================================================================
+  -- AND THE PAYOFF, in one line. `Check.linear?` decides linearity of a de
+  -- Bruijn term INTERNALLY, as a map `⊤G ⊢ Dec⟨ Lin ⟩` over `dbFib`.
 
   linear? : ⊤G ⊢ Dec⟨ S.pull C.Lin ⟩
   linear? = S.pullTerm C.linear?

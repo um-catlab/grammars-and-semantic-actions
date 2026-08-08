@@ -1,20 +1,4 @@
-{-
-  PASS 1.  η-contraction:  λn. f (var n)  ↦  f.
-
-  `idAlg` with the `lam` alternative replaced (`etaLam`; `etaAlg`,
-  `etaPass`).  One node is all this file justifies, at two decisions
-  taken in `etaApp` and eliminated with `⊕-E` -- no `Dec`, no `with`:
-
-    * `isVar?`  the argument IS the bound variable.  The SEMANTIC side,
-      which the calculus tracks not at all: `Out Γ` accepts any output
-      term, so `etaApp` DISCARDS this evidence.  That is the one place
-      a pass here validates rather than parses, and `Framework`'s
-      constancy is exactly why it must.
-
-    * `scoped?` the function part survives at the smaller scope.  The
-      SCOPING side, which `Out Γ` will not let through; it enters as
-      `Framework.tryEmit`, which CARRIES what it produces.
--}
+{- PASS 1. η-contraction: λn. f (var n) ↦ f. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Passes.Eta where
 
@@ -45,9 +29,6 @@ module Eta (Name : Type₀) (_≟_ : Discrete Name) where
     outLam Γ n (app f v) (sc-app (n ∷ Γ) (app f v) (app-mk df dv))
 
   -- the argument IS the bound variable; now the scope side condition.
-  -- `df` is a derivation at the LARGER scope and is therefore useless
-  -- for the emit -- `Scoped Γ f` is strictly stronger -- so the decision
-  -- is genuinely doing work, not re-checking something already known.
   tryStrengthen : (Γ : Scope) (n : Name) (f v : Raw)
                 → Scoped (n ∷ Γ) f → Scoped (n ∷ Γ) v → Out Γ v
   tryStrengthen Γ n f v df dv =

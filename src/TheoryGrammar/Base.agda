@@ -1,41 +1,28 @@
-{-
-  LambekD, generic in the input theory.
-
-  A priori distinct from Grammar/: this copies the shape rather than
-  importing it.  The differences:
-
-    Grammar/                       TheoryGrammar/
-    --------                       --------------
-    Grammar ℓ = String → Type ℓ    TheoryTy ℓ s = carrier s → Type ℓ
-    one binary ⊗ (concatenation)   one ⊗[o] per OPERATION of the theory
-    two residuals ⊸ ⟜             one residual per (operation, slot)
-    ε, literal                     representables at each element
-    additives                      IDENTICAL -- they never saw the monoid
-
-  Parameterised by a many-sorted signature and a MODEL of it.  The model,
-  not the signature, is what the types are indexed by; equations of the
-  theory hold in the model and therefore lift to isomorphisms between the
-  composite connectives (TheoryGrammar.Equations).
-
-  `SortedSig` mirrors `Cubical.Algebra.Theory.Sorted` in
-  cubical-categorical-logic field-for-field, so the two can be identified
-  once that development is visible from this library.
--}
+{- LambekD, generic in the input theory. A priori distinct from Grammar/:
+   this copies the shape rather than importing it. -}
 module TheoryGrammar.Base where
 
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.HLevels
 open import Cubical.Data.Sigma
 open import Cubical.Data.Sum
+open import Cubical.Data.Bool using (Bool; true; false)
 open import Cubical.Data.Unit
 open import Cubical.Data.Empty using (⊥*)
 import Cubical.Data.Equality as Eq
 
 private variable ℓS ℓ ℓ' ℓX ℓA ℓB ℓC ℓY : Level
 
--- ==================================================================
+-- THE BINARY ARITY'S ELIMINATOR, once. Every binary operation in this tree
+-- has arity `Bool` -- `monoidSig`'s `appop`, `spanSig`'s `cat`, `λSig`'s
+-- application -- so every slot-indexed family over one is built by Bool's
+-- dependent eliminator.
+
+boolΠ : ∀ {ℓ} {M : Bool → Type ℓ} → M true → M false → (b : Bool) → M b
+boolΠ t f true  = t
+boolΠ t f false = f
+
 -- Signatures and models.
--- ==================================================================
 
 record SortedSig (S : Type ℓS) ℓ ℓ' : Type (ℓ-max ℓS (ℓ-max (ℓ-suc ℓ) (ℓ-suc ℓ'))) where
   field
@@ -56,23 +43,11 @@ record Model {S : Type ℓS} (σ : SortedSig S ℓ ℓ') ℓX
 
 open Model public
 
--- ==================================================================
 -- Types of the calculus: families indexed by the model's carrier.
--- ==================================================================
 
--- ==================================================================
--- THE ADDITIVE LAYER NEEDS ONLY A CARRIER.
---
--- `TheoryTy`, `_⊢_`, every additive, and the representables mention the
--- carrier and NOTHING else -- no operation, no splittings.  Stating that
--- as its own module is not tidiness: it is what lets a PARTIAL algebra
--- use the calculus.  A promodel with no total operation still has a
--- carrier, so it still has the whole additive fragment; only `⊗[ o ]`
--- below needs `op`, and `⊗ˢ` (over a `Fibered`) needs merely `Split`.
---
--- `Notation` is then this module plus the two op-dependent definitions,
--- so every existing `Notation M` user is unaffected.
--- ==================================================================
+-- THE ADDITIVE LAYER NEEDS ONLY A CARRIER. `TheoryTy`, `_⊢_`, every
+-- additive, and the representables mention the carrier and NOTHING else --
+-- no operation, no splittings.
 
 module CarrierNotation {S : Type ℓS} (X : S → Type ℓX) where
 
@@ -92,10 +67,8 @@ module CarrierNotation {S : Type ℓS} (X : S → Type ℓX) where
        → B ⊢ C → A ⊢ B → A ⊢ C
   (g ∘⊢ f) m x = g m (f m x)
 
-  -- ================================================================
   -- ADDITIVES.  Identical to Grammar/: they never mentioned the monoid,
   -- so they port verbatim, only re-indexed.
-  -- ================================================================
 
   ⊤G : ∀ {s} → TheoryTy ℓ-zero s
   ⊤G _ = Unit
@@ -124,12 +97,7 @@ module CarrierNotation {S : Type ℓS} (X : S → Type ℓX) where
   ⌈_⌉ : ∀ {s} → X s → TheoryTy ℓX s
   ⌈ a ⌉ m = m Eq.≡ a
 
--- ==================================================================
--- MULTIPLICATIVES.  One per operation, by convolution along it.  THIS
--- is the fragment that needs a total operation -- and the reason
--- `Fibered`/`⊗ˢ` exists is to get the same connective from `Split`
--- alone, which a partial algebra can supply.
--- ==================================================================
+-- MULTIPLICATIVES. One per operation, by convolution along it.
 
 module Notation {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
 

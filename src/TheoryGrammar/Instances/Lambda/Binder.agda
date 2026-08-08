@@ -1,16 +1,5 @@
-{-
-  Yoneda for the binder: the one connective the generic layer cannot
-  supply, because the body's grammar depends on the name in the slot.
-
-  Guessing the bound name with `⊕ᴰ Name` and pinning it with the
-  representable `⌈ n ⌉` is the same as reading it off the splitting.
-  That is `⌈⌉-UP`, and `lam-collapse` is the only `Eq.refl` match in the
-  whole instance.
-
-  Defines `LamGᵈ`, the iso `lam-collapse`/`lam-collapse⁻` against the
-  guessed form, and its decision `dec-lamᵈ` (with `dec-lamᵈ-at` at a
-  given splitting).
--}
+{- Yoneda for the binder: the one connective the generic layer cannot
+   supply, because the body's grammar depends on the name in the slot. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Binder where
 
@@ -30,17 +19,19 @@ module Binder (Name : Type₀) where
   open LamBase Name
   open Readable Name
 
-  -- the DEPENDENT lam tensor.  `LamGᵈ A t` DENOTES: "`t` is a lambda,
-  -- and its body satisfies `A` AT THE NAME `t` binds" -- so the body's
-  -- grammar sees the bound name.
+  -- the DEPENDENT lam tensor. `LamGᵈ A t` DENOTES: "`t` is a lambda, and
+  -- its body satisfies `A` AT THE NAME `t` binds" -- so the body's grammar
+  -- sees the bound name.
   LamGᵈ : (Name → TmG) → TmG
-  LamGᵈ A t =
-    Σ[ sp ∈ IsLam t ] A (LParts lamOp t sp true) (LParts lamOp t sp false)
+  LamGᵈ A = ⊗ˢᵈ lamOp λ ps → A (ps true) (ps false)
 
   lam-collapse : {A : Name → TmG} → ⊕ᴰ Name (λ n → LamG ⌈ n ⌉ (A n)) ⊢ LamGᵈ A
   lam-collapse _ (n , sp , h) with h true
   ... | Eq.refl = sp , h false
 
+  -- PRIMITIVE (phase 1): the `⊕ᴰ` tag is READ OFF the splitting, so it
+  -- varies with the world; `⊕ᴰ-I` takes a tag fixed in advance and cannot
+  -- express it.
   lam-collapse⁻ : {A : Name → TmG} → LamGᵈ A ⊢ ⊕ᴰ Name (λ n → LamG ⌈ n ⌉ (A n))
   lam-collapse⁻ t (sp , a) =
     LParts lamOp t sp true , sp , λ { true → Eq.refl ; false → a }
@@ -49,11 +40,9 @@ module Binder (Name : Type₀) where
   -- decisions -- of the body, and of there being a splitting at all --
   -- live at a FIXED index, so both go through `dec-elim`.
 
-  -- `dec-lamᵈ-at` decides `LamGᵈ A` GIVEN a splitting: the positive
-  -- branch pairs it with the body's witness, the negative one carries
-  -- any other splitting back to this one along `Split-isProp`.  It is
-  -- not `private`: it is the half of `dec-lamᵈ` that does the work, and
-  -- a caller who already has the splitting should be able to say so.
+  -- `dec-lamᵈ-at` decides `LamGᵈ A` GIVEN a splitting: the positive branch
+  -- pairs it with the body's witness, the negative one carries any other
+  -- splitting back to this one along `Split-isProp`.
   dec-lamᵈ-at : (A : Name → TmG) (t : Raw) (sp : IsLam t)
               → Dec⟨ A (LParts lamOp t sp true) ⟩ (LParts lamOp t sp false)
               → Dec⟨ LamGᵈ A ⟩ t

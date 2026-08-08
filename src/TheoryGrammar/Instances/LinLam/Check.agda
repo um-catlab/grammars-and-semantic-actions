@@ -1,129 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  PASS 2.  THE LINEARITY CHECKER, AS AN INTERNAL DECISION.
-
-  The statement to be proved is
-
-      linear? : ⊤G ⊢ Dec⟨ Lin ⟩          over `dbFib`
-
-  -- a map out of the terminal grammar into a sum, together with the
-  exclusion that `Dec⟨_⟩` carries by construction (`¬G-excludes`, hence
-  `linDecision` below).  There is no metalanguage `Dec` in the
-  interface and no `Bool`: `linearB` exists, but it is the GENERIC `okA`
-  applied afterwards, exactly as `TheoryGrammar.SemanticAction`
-  prescribes -- externalise late.
-
-  --------------------------------------------------------------------
-  WHAT `Lin` SAYS, and why it is the right grammar.
-
-      Lin m  =  Σ[ u ∈ Usage ]  length u ≡ fst m
-                             ×  Σ[ e ∈ Tm u ] (eraseS e ≡ skel (snd m))
-
-  "`m` is, up to scope bookkeeping, the erasure of a linear term."  `Tm`
-  is `LinLam/Syntax`'s linear syntax over the CONTEXT PROMODEL, so a
-  `Tm u` is linearity-correct by construction: `tapp` CARRIES a `Use⊎`,
-  and the absent `(true,true)` constructor is the whole of the
-  no-duplication condition.  Hence the checker never compares multisets
-  of variables -- producing a `Tm u` IS the certificate.  The usage `u`
-  is existential, so a free variable the term does not mention is simply
-  `false` in `u`; a BOUND variable cannot be, because `tlam` consumes a
-  `Tm (true ∷ u)` and the `true` has to be spent.
-
-  --------------------------------------------------------------------
-  WHY THERE IS A `Skel` TYPE, i.e. why the erasure equation is stated on
-  an UNSCOPED shadow.  This is the one design decision in the file and
-  it is forced.
-
-  The obvious statement is `eraseΣ e Eq.≡ m` in `Term• = Σ[n] DBTm n`.
-  It does not work.  A linear term at usage `u` erases at scope
-  `length u`, and `Use⊎ u₁ u₂ w` makes the three lengths equal only
-  PROPOSITIONALLY, so `erase` at an application must coerce its two
-  subtrees into the whole's scope.  Combining two such equations then
-  needs `(m , x) ≡ (n , U)` and `(m , y) ≡ (n , V)` to give
-  `(m , dapp x y) ≡ (n , dapp U V)` -- and that is not provable by
-  matching, because after the first `Eq.refl` the second forces
-  eliminating the reflexive equation `m = m`, which is exactly K.  (Agda
-  says so: `Cannot eliminate reflexive equation m = m ... because K has
-  been disabled`.)  One could route around it through `isSet ℕ`; it is
-  simpler and more honest to remove the index.
-
-  So the erasure lands in `Skel`, de Bruijn syntax with the scope
-  forgotten, and the scope constraint becomes a SEPARATE, purely
-  propositional component `length u Eq.≡ n` that is never transported
-  along.  Every equation in the file is then between two constructor
-  applications of a NON-INDEXED datatype, every inversion is one
-  `Eq.refl` match, and no coercion appears anywhere.
-
-  That is a real lesson about the scoped carrier chosen in `DB.agda`:
-  putting the scope in the index makes `Scoped` trivial (which is what
-  it was for) and makes EQUATIONS BETWEEN TERMS awkward, because the
-  index has to be carried.  Splitting the two -- structure in the index,
-  equality on the skeleton -- costs one 3-constructor datatype.
-
-  --------------------------------------------------------------------
-  THE ARCHITECTURE: ONE COALGEBRA, TWO ALGEBRAS.
-
-  This is `Instances/Bags/Quicksort` transplanted.  There, `bagCase` is a
-  coalgebra out of `⊤` and the SAME coalgebra is run at two algebras --
-  one producing the sorted bag, one producing the bag WITH its
-  permutation proof.  Here the coalgebra is `DB.dbCase`, the
-  decomposition axiom of the de Bruijn theory, and it is not written in
-  this file at all; the algebras are `linAlg` (the decision, carrying its
-  own certificate) and `sizeAlg` (a plain semantic action), and the
-  recursion in both cases is `runAut` -- i.e. `hyloC`, i.e. `löb` -- with
-  `dbGuarded` as the termination certificate.  No recursion is written
-  here, and no de Bruijn constructor is matched here.
-
-  What the algebra does at each node is the typing rule read backwards:
-
-      dvar i     always linear, at the usage `only i`
-      dapp U V   both children linear AND their usages JOIN
-      dlam b     the child linear AND its usage has `true` at the head
-
-  and at `dapp`, "their usages join" is `Join u₁ u₂ = Σ[w] Use⊎ u₁ u₂ w`
-  -- EXHIBITING a splitting of the linear promodel.  That is the design
-  claim of `LinLam/Context`: linear application is `⊗ˢ appop`, so the
-  side condition of the rule IS the splitting relation and there is
-  nothing else to check.  `linApp` is the proof: it inspects neither
-  `e₁` nor `e₂`, it receives a `Use⊎` and applies `tapp`.
-
-  --------------------------------------------------------------------
-  WHERE THE FRAMEWORK DOES NOT REACH.  Two places, both reported because
-  they are more useful than the positive story.
-
-  (1) `join?` is a metalanguage `⊎`, not an internal `Dec⟨_⟩`, and it has
-  to be.  `Use⊎` is a splitting of `linFib`, which lives over
-  `monoidSig`, while everything else here lives over `λSig`.
-  `CarrierMap.Reindex` relates two promodels over ONE signature, so there
-  is NO `Reindex` between the de Bruijn theory and the linear-context
-  theory, and the bridge cannot be a map of promodels at all.
-
-      BELONGS UPSTREAM: `Reindex` along a MAP OF SIGNATURES -- a functor
-      on operations/arities together with a carrier map over the induced
-      sort map.  With it, `join?` would be the image of the linear
-      theory's own decision for `Split appop` (`Decidable.Splittings`),
-      and this file would contain no `⊎` at all.  Without it the two
-      theories can only meet in the metalanguage.  The same fact is why
-      `Syntax` is imported `using` only its DATA below: opening its
-      connectives would shadow every name of `dbFib`'s calculus, and the
-      shadowing is not a naming accident.
-
-  (2) `linUniq` -- "the usage of a linear term is determined by its
-  skeleton and scope" -- is what every REFUTATION branch needs, and it
-  is a fact about `eraseS`, not about the calculus.  It is proved here,
-  in full, by ordinary induction on two linear terms; the framework
-  shortened none of it.  That asymmetry is the honest measure of what
-  working internally bought: the POSITIVE rules are free (`linApp`
-  checks nothing -- it receives a splitting and applies `tapp`), the
-  NEGATIVE ones are ordinary syntax.  See the note at its definition.
-
-  --------------------------------------------------------------------
-  PRIMITIVE (phase 1): `Skel`, `skel`, `soloIxℕ`, `eraseS`, `u⊎L`/`u⊎R`,
-  the three injectivities, `onlyF`/`onlySolo`/`onlyIxℕ`/`lenOnly`,
-  `linVar`, `linApp`/`linApp⁻`, `linLam⁻`/`reLam`, `lamDec`,
-  `noApp`/`noLam`, `join?`.  Everything from `varCase` down is
-  composition.
--}
+{- PASS 2. THE LINEARITY CHECKER, AS AN INTERNAL DECISION. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.LinLam.Check where
@@ -145,19 +21,16 @@ open import TheoryGrammar.Fibered
 -- The DE BRUIJN theory, whose calculus this file is written in.
 open import TheoryGrammar.Instances.LinLam.DB
 
--- The LINEAR theory, taken as DATA ONLY.  Its connectives are NOT
--- opened: they live over `monoidSig` and would shadow every name of the
--- calculus above.  See (1) in the header -- that shadowing is the same
--- fact as the missing `Reindex`.
+-- The LINEAR theory, taken as DATA ONLY. Its connectives are NOT opened:
+-- they live over `monoidSig` and would shadow every name of the calculus
+-- above.
 open import TheoryGrammar.Instances.LinLam.Syntax
   using (Tm; tvar; tapp; tlam; Solo; Usage; Use⊎;
          unil; uleft; uright; uskip; Empty; none)
 
--- ==================================================================
 -- THE SKELETON: de Bruijn syntax with the scope forgotten.  Both the
 -- carrier and the linear syntax map into it, and EVERY equation in this
 -- file is an equation of skeletons.  See the header for why.
--- ==================================================================
 
 data Skel : Type₀ where                          -- PRIMITIVE
   svar : ℕ → Skel
@@ -169,10 +42,7 @@ skel (dvar i)   = svar (toℕ i)
 skel (dapp u v) = sapp (skel u) (skel v)
 skel (dlam b)   = slam (skel b)
 
--- Unique readability of `Skel`, as three one-line inversions.  These
--- are the entire reason the file has no coercions: `Skel` is not
--- indexed, so `Eq.refl` matches without eliminating any equation
--- between indices.
+-- Unique readability of `Skel`, as three one-line inversions.
 sappInj₁ : {x y X Y : Skel} → sapp x y Eq.≡ sapp X Y → x Eq.≡ X
 sappInj₁ Eq.refl = Eq.refl
 
@@ -185,9 +55,7 @@ slamInj Eq.refl = Eq.refl
 sappCong : {x y X Y : Skel} → x Eq.≡ X → y Eq.≡ Y → sapp x y Eq.≡ sapp X Y
 sappCong Eq.refl Eq.refl = Eq.refl
 
--- ==================================================================
 -- ERASURE: linear syntax → skeleton.  No coercion, no index.
--- ==================================================================
 
 -- PRIMITIVE (phase 1): reading the index of the unique live variable.
 soloIxℕ : (u : Usage) → Solo u → ℕ
@@ -218,19 +86,15 @@ u⊎R (uskip s)  = Eq.ap suc (u⊎R s)
 predEq : {m n : ℕ} → suc m Eq.≡ suc n → m Eq.≡ n
 predEq Eq.refl = Eq.refl
 
--- ==================================================================
 -- THE GRAMMAR BEING DECIDED.
--- ==================================================================
 
 Lin : TmG
 Lin m = Σ[ u ∈ Usage ] ((length u Eq.≡ m .fst)
                         × (Σ[ e ∈ Tm u ] (eraseS e Eq.≡ skel (m .snd))))
 
--- ==================================================================
 -- THE VARIABLE RULE.  A de Bruijn variable is linear at the usage that
 -- owns exactly it; the content is that `only` reads back, which is now
 -- a plain equation of NATURAL NUMBERS.
--- ==================================================================
 
 onlyF : {n : ℕ} → Fin n → Usage                  -- PRIMITIVE
 onlyF {suc n} fzero    = true ∷ none n
@@ -262,16 +126,9 @@ linVar : (n : ℕ) (i : Fin n) → Lin (n , dvar i)
 linVar n i =
   onlyF i , lenOnly i , tvar (onlySolo i) , Eq.ap svar (onlyIxℕ i)
 
--- ==================================================================
--- JOINING TWO USAGES.  See (1) in the header: this is the one place
--- where the two theories meet, and it is in the metalanguage because
--- `Reindex` cannot cross a change of signature.
---
--- Read the clauses.  The only negative case that is not a shape
--- mismatch is `(true ∷ u) (true ∷ v)` -- both premises claim the same
--- variable -- and it is refuted by the ABSENT constructor of `Use⊎`,
--- never by counting.
--- ==================================================================
+-- JOINING TWO USAGES. See (1) in the header: this is the one place where
+-- the two theories meet, and it is in the metalanguage because `Reindex`
+-- cannot cross a change of signature.
 
 Join : Usage → Usage → Type₀
 Join u v = Σ[ w ∈ Usage ] Use⊎ u v w
@@ -324,11 +181,9 @@ join? (false ∷ u) (false ∷ v) = goS u v (join? u v)
 joinCoe : {a a' b b' : Usage} → a Eq.≡ a' → b Eq.≡ b' → Join a b → Join a' b'
 joinCoe Eq.refl Eq.refl j = j
 
--- ==================================================================
 -- THE APPLICATION RULE, and its inversion.  Note what `linApp` does
 -- NOT do: it inspects neither subterm.  It receives a `Use⊎` and
 -- applies `tapp`.
--- ==================================================================
 
 -- PRIMITIVE (phase 1)
 linApp : {n : ℕ} {U V : DBTm n} (l₁ : Lin (n , U)) (l₂ : Lin (n , V))
@@ -362,29 +217,9 @@ linLam⁻ (w , pw , tlam e       , p) = w , pw , e , slamInj p
 reLam : {n : ℕ} {b : DBTm (suc n)} → LamData n b → Lin (suc n , b)
 reLam (u , pw , e , p) = (true ∷ u) , Eq.ap suc pw , e , p
 
--- ==================================================================
--- THE ONE FACT THE CALCULUS GIVES NO HELP WITH.
---
--- Every POSITIVE branch is discharged by the syntax: to say "this term
--- is linear" you exhibit a `Tm u`.  Every NEGATIVE branch needs
--- something the syntax does not give -- that the witness the recursive
--- call found is the ONLY one.  Concretely, at `dapp U V` the checker
--- learns that `U` is linear at `u₁`, that `V` is linear at `u₂`, and
--- that `u₁`, `u₂` do not join; to conclude that `dapp U V` is not
--- linear it must know that no OTHER pair of usages would have worked.
---
--- That is `linUniq`: the usage of a linear term is determined by its
--- skeleton and its scope.  It is a fact about `eraseS`, proved below by
--- induction on TWO linear terms with a common skeleton -- nine cases,
--- five of them constructor clashes -- plus three substrate lemmas
--- (`emptyUniq`, `soloUniq`, `joinFun`) that are facts about `Usage` and
--- `Use⊎`, i.e. about the LINEAR promodel and not about this one.
---
--- Recorded plainly: this is the part of the development the framework
--- did not shorten.  The internal layer discharged the positive rules
--- (see `linApp`, which checks nothing); the refutations are exactly the
--- residue, and they are ordinary syntactic induction.
--- ==================================================================
+-- THE ONE FACT THE CALCULUS GIVES NO HELP WITH. Every POSITIVE branch is
+-- discharged by the syntax: to say "this term is linear" you exhibit a `Tm
+-- u`.
 
 private
   svarInj : {a b : ℕ} → svar a Eq.≡ svar b → a Eq.≡ b
@@ -477,11 +312,9 @@ noLam {n} {b} {u} pw e p l =
   trueNotFalse (linUniq (suc n , b) (reLam (linLam⁻ l))
                         ((false ∷ u) , pw , e , p))
 
--- ==================================================================
 -- THE ALGEBRA.  Three cases, one per operation, each an elimination
 -- rule of `DB.agda` followed by `dec-elim`.  No `with`, no `yes`/`no`
 -- pattern, no metalanguage `Dec` in any type.
--- ==================================================================
 
 varCase : VarG ⊤G ⊢ Dec⟨ Lin ⟩
 varCase = dvar-elim λ n i _ → dec-yes Lin (n , dvar i) (linVar n i)
@@ -533,13 +366,7 @@ private
 lamCase : LamG ⊤G Dec⟨ Lin ⟩ ⊢ Dec⟨ Lin ⟩
 lamCase = dlam-elim lamStep
 
--- ==================================================================
--- ... AND THE PROGRAM.  From here down nothing is written but
--- composition: the step is `⊕-E` of the three cases, the algebra is the
--- step after the container/connective respelling, and the recursion is
--- `runAut` -- the generic "⊤ carries a coalgebra AND the description is
--- guarded ⟹ run it" of `TheoryGrammar.Automaton`.
--- ==================================================================
+-- ... AND THE PROGRAM.
 
 LinFam : Fam
 LinFam _ = Dec⟨ Lin ⟩
@@ -564,13 +391,10 @@ linDecision = decDefault Lin linear?
 linearB : ⊤G ⊢ Δ Bool
 linearB = okA Lin (¬G Lin) ∘g linear?
 
--- ==================================================================
--- THE SAME COALGEBRA, RUN AT A SECOND ALGEBRA.  `dbCase` is written
--- once, in `DB.agda`, and is the ONLY thing in the pipeline that ever
--- looks at a de Bruijn constructor; anything else recursive over de
--- Bruijn terms is a new ALGEBRA and nothing more.  Here, the size, as a
--- semantic action -- three lines, no recursion, no termination argument.
--- ==================================================================
+-- THE SAME COALGEBRA, RUN AT A SECOND ALGEBRA. `dbCase` is written once,
+-- in `DB.agda`, and is the ONLY thing in the pipeline that ever looks at a
+-- de Bruijn constructor; anything else recursive over de Bruijn terms is a
+-- new ALGEBRA and nothing more.
 
 ΔN : TmG
 ΔN = Δ {s = tm} ℕ

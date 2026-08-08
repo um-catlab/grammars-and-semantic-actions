@@ -56,20 +56,8 @@ open import TheoryGrammar.Result
 
 private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓB ℓC ℓE ℓY ℓZ ℓW : Level
 
-
--- ==================================================================
--- §0  TEST SUITES.  Independent of any theory: once `run` has produced
---     a metalanguage value, checking a batch of cases is list algebra.
---
---     A CASE is `observed ↦ expected`, a SUITE is a list of them, and
---
---         passes cs  =  map fst cs ≡ map snd cs
---
---     is the statement that every case holds -- proved by ONE `refl`
---     exactly when every case holds definitionally.  Writing a suite
---     rather than N separate `_ : … ≡ …` declarations also keeps the
---     term under test written once.
--- ==================================================================
+-- §0 TEST SUITES. Independent of any theory: once `run` has produced a
+-- metalanguage value, checking a batch of cases is list algebra.
 
 module Suite where
 
@@ -95,11 +83,8 @@ module Suite where
 
 open Suite public
 
-
--- ==================================================================
 -- §1  ADDITIVELY.  Nothing here mentions the operations, so a `Model`
 --     suffices -- exactly as in `Decidable.Additive` and `Result`.
--- ==================================================================
 
 module Act {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Car : S → Type ℓX) where
 
@@ -116,9 +101,7 @@ module Act {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Car : S → Type ℓX) w
     C : TheoryTy ℓC s
     E : TheoryTy ℓE s
 
-  -- ================================================================
   -- The discrete type, and actions into it.
-  -- ================================================================
 
   Δ : {s : S} → Type ℓY → TheoryTy ℓY s
   Δ X = ⊕ᴰ X (λ _ → ⊤G)
@@ -137,25 +120,26 @@ module Act {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Car : S → Type ℓX) w
   Δ-map : {X : Type ℓY} {Z : Type ℓZ} → (X → Z) → Δ {s = s} X ⊢ Δ {s = s} Z
   Δ-map {Z = Z} f = Δ-E λ x → pureA Z (f x)
 
+  -- RETARGETING A CONSTANT CARRIER. PRIMITIVE (phase 1), and the one this
+  -- header's corollary asks for.
+
+  actΔ : {X : Type ℓY} {Z : Type ℓZ} → (X → Z) → (λ _ → X) ⊢ Δ {s = s} Z
+  actΔ f m v = f v , tt
+
+  intoΔ : (X : Type ℓY) → (λ _ → X) ⊢ Δ {s = s} X
+  intoΔ X = actΔ (λ v → v)
+
   -- the identity action: `Δ X` observes itself
   idA : {X : Type ℓY} → Action (Δ {s = s} X) X
   idA = id⊢
 
   -- PRIMITIVE, and the DEFINING property: `Δ X` does not depend on the
-  -- world, so its elements move between worlds for free.  That is
-  -- exactly what makes `Δ` the externalisation, and it is what lets an
-  -- action combine payloads sitting at DIFFERENT worlds -- the slots of
-  -- a splitting -- with no residual.  `Δ-⊗` (§2) is the point-free
-  -- form; this is the form needed wherever the slot family is an
-  -- extended lambda and so cannot be unified against (arities have no
-  -- η) -- see `Lambda.DeBruijn`.
+  -- world, so its elements move between worlds for free.
   Δ-at : {X : Type ℓY} (m m' : Car s) → Δ {s = s} X m → Δ {s = s} X m'
   Δ-at m m' d = d
 
-  -- ================================================================
   -- Functoriality, in both variables.  These are the only two ways to
   -- build an action from another one, and both are `_∘⊢_`.
-  -- ================================================================
 
   mapA : {A : TheoryTy ℓA s} {X : Type ℓY} {Z : Type ℓZ}
        → (X → Z) → Action A X → Action A Z
@@ -166,9 +150,7 @@ module Act {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Car : S → Type ℓX) w
        → A ⊢ B → Action B X → Action A X
   preA f a = a ∘⊢ f
 
-  -- ================================================================
   -- One action per connective.
-  -- ================================================================
 
   -- `&`, both projections and the pairing
   &A₁ : {A : TheoryTy ℓA s} {B : TheoryTy ℓB s} {X : Type ℓY}
@@ -220,9 +202,7 @@ module Act {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Car : S → Type ℓX) w
   ⌈⌉A : {a : Car s} {X : Type ℓY} → X → Action ⌈ a ⌉ X
   ⌈⌉A {X = X} x = pureA X x
 
-  -- ================================================================
   -- EXTERNALISATION.  The only place a term leaves the calculus.
-  -- ================================================================
 
   run : {s : S} {X : Type ℓY} → ⊤G {s} ⊢ Δ {s = s} X → Car s → X
   run f m = f m tt .fst
@@ -232,11 +212,9 @@ module Act {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Car : S → Type ℓX) w
           → ⊤G ⊢ P → Action P X → Car s → X
   observe p a = run (a ∘⊢ p)
 
-  -- ================================================================
   -- OBSERVING A RESULT.  Uniform in the error grammar, so ONE
   -- definition covers `MaybeG A`, `Dec⟨ A ⟩`, a `Decision A A'`, and a
   -- total map -- see `TheoryGrammar.Result`.
-  -- ================================================================
 
   -- did it succeed?  This is every `succeeded`/`isYes`/`closed!`/
   -- `infers!`/`accepts` in the instances, at once.
@@ -257,33 +235,13 @@ module Act {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Car : S → Type ℓX) w
             → ⊤G ⊢ Result E A → Action A X → Car s → Maybe X
   runResult A E p a = observe p (maybeA A E a)
 
-  -- ... and the form that keeps the action INSIDE the term.  A program
-  -- whose semantic action has already been applied is
-  --
-  --     mapR E (Δ X) act ∘⊢ p   :   ⊤G ⊢ Result E (Δ X)
-  --
-  -- which is still a term of the calculus -- the witness sits in `Δ`,
-  -- the failure still carries whatever `E` carries, and nothing has been
-  -- externalised.  `runΔ` is then the SINGLE place it leaves, and it
-  -- belongs at the OBSERVATION, not at the definition of the pipeline:
-  -- a name like `elab : Raw → Maybe (DB 0)` has already left.
+  -- ... and the form that keeps the action INSIDE the term.
   runΔ : (X : Type ℓY) (E : TheoryTy ℓE s)
        → ⊤G ⊢ Result E (Δ {s = s} X) → Car s → Maybe X
   runΔ X E p = runResult (Δ X) E p idA
 
-  -- ================================================================
-  -- A NEGATIVE OBSERVATION IS A REFUTATION.
-  --
-  -- `okA` reads a result as a Bool.  If that Bool is `false` the term
-  -- must have taken its ERROR branch -- so the `≡ false` of a test is
-  -- not merely a statement that the algorithm computes, it hands back
-  -- whatever `E` carries.  Dually for `true` and `A`.
-  --
-  -- This is uniform in `E`, and that is what makes the point: at
-  -- `E = ¬G A` a negative test yields a REFUTATION `A m → ⊥`, a theorem
-  -- about the language; at `E = ⊤G` it yields `tt`, which says nothing.
-  -- The two shapes of test look alike until they are put through this.
-  -- ================================================================
+  -- A NEGATIVE OBSERVATION IS A REFUTATION. `okA` reads a result as a
+  -- Bool.
 
   refute : (A : TheoryTy ℓA s) (E : TheoryTy ℓE s) (p : ⊤G ⊢ Result E A)
            (m : Car s)
@@ -317,11 +275,8 @@ module Act {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Car : S → Type ℓX) w
             → Car s → X ⊎ Z
   runEither A E p a b = observe p (eitherA A E a b)
 
-
--- ==================================================================
 -- §2  MULTIPLICATIVELY.  One primitive -- `Δ` absorbs a tensor -- and
 --     the slotwise action is its composite with the tensor's own map.
--- ==================================================================
 
 module ActFib {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
               (Fib : Fibered σ ℓX ℓP) where
@@ -329,10 +284,9 @@ module ActFib {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   open RulesF Fib
   open Act {σ = σ} (Fib .carrier) public
 
-  -- PRIMITIVE.  A splitting with a discrete payload at every slot is a
+  -- PRIMITIVE. A splitting with a discrete payload at every slot is a
   -- discrete payload at the whole: the splitting itself is discarded,
-  -- which is exactly what "semantic action" means.  Every other
-  -- multiplicative action factors through this one.
+  -- which is exactly what "semantic action" means.
   Δ-⊗ : (o : σ .ops) (X : (a : σ .arities o) → Type ℓY)
       → ⊗ˢ o (λ a → Δ (X a)) ⊢ Δ ((a : σ .arities o) → X a)
   Δ-⊗ o X m (sp , h) = (λ a → h a .fst) , tt
@@ -344,12 +298,9 @@ module ActFib {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
      → Action (⊗ˢ o A) ((a : σ .arities o) → X a)
   ⊗A o {A = A} X f = Δ-⊗ o X ∘g ⊗ˢ-map o {A = A} {B = λ a → Δ (X a)} f
 
-
--- ==================================================================
 -- §3  INDUCTIVELY.  A semantic action out of a generic `μ` is a
 --     `Δ`-valued algebra, and the recursion is `Inductive.foldC`.  This
 --     is `Grammar.SemanticAction.semact-rec`, re-indexed.
--- ==================================================================
 
 module ActInd {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
               (Fib : Fibered σ ℓX ℓP) (ℓA : Level)

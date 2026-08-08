@@ -1,18 +1,6 @@
-{-
-  GLUING TWO PROMODELS ALONG A RELATION.
-
-  A type of the calculus is a family over ONE carrier, so a derivation
-  combining two instances is not a new connective: it is `&` over a NEW
-  CARRIER.  `glue` builds that carrier -- the total space of a relation
-  between the two -- with its splittings, and both projections are
-  `Reindex`es preserving every splitting definitionally.  Combination is
-  then `A ⊛ B = pull₁ A & pull₂ B`, `zip` is its lax multiplicativity, and
-  the two strength conditions are named: `Coherent` inverts `zip`;
-  `Determined` (the right factor is an ATTRIBUTE of the left) makes the
-  left projection fully multiplicative, so every left program lifts.
-  Product, comma/pullback and subobject are three choices of relation.
-  PRIMITIVE: `coeSplit`, `coeParts` -- used only for the pullback case.
--}
+{- GLUING TWO `Fibered` ALONG A RELATION. A type of the calculus is a
+   family over ONE carrier, so a derivation combining two instances is not
+   a new connective: it is `&` over a NEW CARRIER. -}
 module TheoryGrammar.Gluing where
 
 open import Cubical.Foundations.Prelude
@@ -27,23 +15,14 @@ open import TheoryGrammar.CarrierMap
 
 private variable ℓS ℓ ℓ' ℓX ℓX' ℓX₀ ℓP ℓP' ℓP₀ ℓR ℓA ℓA' ℓB ℓB' ℓC : Level
 
--- ==================================================================
 -- A CORRELATION: what the two instances are glued along.
---
--- Sortwise a relation between the carriers, i.e. exactly a `Cmd` of
--- `TheoryGrammar.Hoare` (a profunctor between discrete categories).  No
--- law is asked of it -- the compatibility that gluing normally needs is
--- carried IN THE SPLITTINGS below, which is why `glue` is unconditional.
--- ==================================================================
 
 Corr : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
      → Fibered σ ℓX ℓP → Fibered σ ℓX' ℓP' → (ℓR : Level)
      → Type (ℓ-max ℓS (ℓ-max ℓX (ℓ-max ℓX' (ℓ-suc ℓR))))
 Corr {S = S} Fib Fib' ℓR = (s : S) → Fib .carrier s → Fib' .carrier s → Type ℓR
 
--- ==================================================================
--- THE GLUED PROMODEL.
--- ==================================================================
+-- THE GLUED `Fibered`.
 
 module Glue {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
             (Fib : Fibered σ ℓX ℓP) (Fib' : Fibered σ ℓX' ℓP')
@@ -51,15 +30,7 @@ module Glue {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
 
   -- A splitting of the RIGHT factor DISPLAYED over one of the left: a
   -- right splitting together with the relatedness of the corresponding
-  -- parts.  That datum is what makes `parts` land back in the glued
-  -- carrier, and it is the whole content of the construction.
-  --
-  -- Two things to notice, and they are the reason everything below is
-  -- `refl`.  It is a COMPONENT, never an index constraint, so `parts`
-  -- stays a projection and `⊗-UP-β`/`⊗-UP-η` are inherited from
-  -- `Fibered` -- gluing does not cost definitional η.  And it does not
-  -- mention the witness `R s m m'` that the WHOLES are related, only the
-  -- wholes -- so no splitting ever transports along one.
+  -- parts.
   Splitᴰ : (o : σ .ops) (m : Fib .carrier (σ .resultSort o))
            (m' : Fib' .carrier (σ .resultSort o))
          → Fib .Split o m → Type (ℓ-max ℓP' (ℓ-max ℓ' ℓR))
@@ -80,11 +51,9 @@ module Glue {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
     , Fib' .parts o (g .snd .fst) (sq .snd .fst)  a
     , sq .snd .snd a
 
-  -- ================================================================
   -- The projections, and the fact that they preserve splittings ON THE
   -- NOSE.  `homParts` is `Eq.refl` -- the reason everything below is
   -- transport-free.
-  -- ================================================================
 
   π₁ : Reindex glue Fib
   π₁ .hom _ g = g .fst
@@ -111,11 +80,9 @@ module Glue {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
     (pull to pull₂; pullTerm to pullTerm₂; push⊗ to push⊗₂; pull⊗ to pull⊗₂;
      ReflectsSplitAt to Reflects₂) public
 
-  -- ================================================================
   -- THE COMBINATION.  `A ⊛ B` holds a derivation of `A` over the left
   -- instance and one of `B` over the right, AT RELATED ELEMENTS -- the
   -- relation is what the shared index enforces.
-  -- ================================================================
 
   infixr 6 _⊛_
 
@@ -131,11 +98,9 @@ module Glue {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
       G.&-I (pullTerm₁ f G.∘g G.&-E₁ {A = pull₁ A} {B = pull₂ B})
             (pullTerm₂ g G.∘g G.&-E₂ {A = pull₁ A} {B = pull₂ B})
 
-  -- ================================================================
   -- ⊛ IS LAX MONOIDAL, UNCONDITIONALLY.  A glued splitting already IS a
   -- pair of splittings, so `zip` is `push⊗` at each projection -- no
   -- hypothesis, and no transport, because `homParts` was `Eq.refl`.
-  -- ================================================================
 
   module _ (o : σ .ops)
            (A : (a : σ .arities o) → F₁.TheoryTy ℓA (σ .sortOf o a))
@@ -150,16 +115,8 @@ module Glue {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                G.∘g G.⊗ˢ-map o {A = λ a → A a ⊛ B a} {B = λ a → pull₂ (B a)}
                        (λ a → G.&-E₂ {A = pull₁ (A a)} {B = pull₂ (B a)}))
 
-  -- ================================================================
   -- ... AND STRONG exactly when the relation is SPLIT-AGNOSTIC: any two
-  -- splittings of related wholes have related parts.  Then a pair of
-  -- splittings reassembles into a glued one and `zip` is inverted.
-  --
-  -- This is strong.  It holds for the PRODUCT (relation `⊤`) and fails
-  -- for a pullback along maps that see the splittings differently --
-  -- abelianisation is the standing counterexample, and it fails here for
-  -- the same reason it fails in `ChangeOfTheory`.
-  -- ================================================================
+  -- splittings of related wholes have related parts.
 
   Coherent : Type (ℓ-max ℓ (ℓ-max ℓ' (ℓ-max ℓX (ℓ-max ℓX'
                   (ℓ-max ℓP (ℓ-max ℓP' ℓR))))))
@@ -186,9 +143,6 @@ module Glue {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
 
     -- The other is not, and cannot be: `unzip` REPLACES the relatedness
     -- datum a glued splitting carried with the one `Coherent` supplies.
-    -- They agree only up to `R` being a proposition -- which is the
-    -- honest content of "the glued theory has no more splittings than
-    -- the pair of theories does".
     unzip∘zip : ((s : S) (m : Fib .carrier s) (m' : Fib' .carrier s)
                  → isProp (R s m m'))
               → (unzip G.∘g zip o A B) ≡ G.idg
@@ -200,17 +154,7 @@ module Glue {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                     (x .fst .snd .snd a)) i )
       , x .snd
 
-  -- ================================================================
   -- THE OTHER STRENGTH CONDITION, and the useful one.
-  --
-  -- `Determined`: a splitting on the LEFT already determines a matching
-  -- one on the right.  This is what an attribute, a semantic action, or
-  -- a synchronised second tape looks like, and unlike `Coherent` it is
-  -- routinely true.  It says exactly that π₁ REFLECTS splittings, so
-  -- `Along.pull⊗` applies and the left instance's whole multiplicative
-  -- fragment transports into the glue as an equivalence: EVERY program
-  -- over `Fib` lifts, and lands where it can be paired with `Fib'` data.
-  -- ================================================================
 
   Determined : Type (ℓ-max ℓ (ℓ-max ℓ' (ℓ-max ℓX (ℓ-max ℓX'
                     (ℓ-max ℓP (ℓ-max ℓP' ℓR))))))
@@ -231,11 +175,9 @@ module Glue {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                       → Determined
   coherent→determined c pick o g sp = pick o g , λ a → c o g sp (pick o g) a
 
--- ==================================================================
 -- THE THREE DEGENERATE CORRELATIONS.
--- ==================================================================
 
--- the terminal promodel: one element, one splitting, at every sort
+-- the terminal `Fibered`: one element, one splitting, at every sort
 oneFib : {S : Type ℓS} (σ : SortedSig S ℓ ℓ') → Fibered σ ℓ-zero ℓ-zero
 oneFib σ .carrier _   = Unit
 oneFib σ .Split _ _   = Unit
@@ -264,7 +206,7 @@ module Sub {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
 
   open Glue Fib (oneFib σ) (λ s m _ → P s m) public
 
--- (3) COMMA / PULLBACK: two reindexings into a common promodel, glued
+-- (3) COMMA / PULLBACK: two reindexings into a common `Fibered`, glued
 -- along agreement of their images.
 module Pullback {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                 {Fib₀ : Fibered σ ℓX₀ ℓP₀}
@@ -286,11 +228,9 @@ module Pullback {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
              → Fib₀ .parts o y (coeSplit o e sp) a Eq.≡ Fib₀ .parts o x sp a
     coeParts o Eq.refl sp a = Eq.refl
 
-  -- THE THEOREM.  If `h` PRESERVES splittings and `k` REFLECTS them then
+  -- THE THEOREM. If `h` PRESERVES splittings and `k` REFLECTS them then
   -- the comma object is `Determined`: push the left splitting down to
-  -- `Fib₀`, lift it back up the right leg.  So the glue of a theory with
-  -- an attribute along a discrete Conduché map is one where every
-  -- left-hand program still runs.
+  -- `Fib₀`, lift it back up the right leg.
   pullbackDetermined : ((o : σ .ops) → SplitPresAt h o)
                      → ((o : σ .ops) → Along.ReflectsSplitAt k o)
                      → Determined
@@ -315,17 +255,7 @@ module Pullback {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
       Eq.sym (pres o .homParts (g .fst) sp a)
         Eq.∙ (Eq.sym (coeParts o (g .snd .snd) down a) Eq.∙ up .snd a)
 
--- ==================================================================
 -- WHAT IS *NOT* THE POINT: the pullback of two types over ONE instance.
---
--- Inside a single promodel the category of types over a fixed carrier is
--- a presheaf category, so it has all limits pointwise and the fibre
--- product of `f : A ⊢ C` and `g : B ⊢ C` costs nothing.  Recording it
--- here is the contrast: THIS is the trivial construction, and it is not
--- what "combining two instances" needs, because both sides are already
--- indexed by the same carrier.  The content of `glue` is entirely in
--- moving the INDEX.
--- ==================================================================
 
 module Fibre {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP) where
 

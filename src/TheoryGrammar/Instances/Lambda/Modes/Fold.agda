@@ -1,18 +1,4 @@
-{-
-  THE INDUCTION PRINCIPLE OF THE AST SUBSTRATE'S CARRIER -- DERIVED.
-
-  DENOTES: `indRaw P pv pa pl` is "P holds of every raw term", proved by
-  structural recursion.  It used to recurse on `Raw`.  It no longer
-  does: it is `readback` (the carrier read back into the initial algebra
-  of the shape functor, `Lambda.Initial`) followed by the framework's
-  generic `fold`.  So the recursion in `Modes/` runs through `μ`, and
-  ANY description over the carrier can be folded, not only this shape --
-
-      Uses  = indRaw at a CONSTANT motive (so: the fold)
-      check = indRaw at the motive  ⊤ ⊢ Dec⟨ Uses t ⟩
-
-  -- and no definition in `Modes/` matches on a `Raw` any more.
--}
+{- THE INDUCTION PRINCIPLE OF THE AST SUBSTRATE'S CARRIER -- DERIVED. -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Instances.Lambda.Modes.Fold where
 

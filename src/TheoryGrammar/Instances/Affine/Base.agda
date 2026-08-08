@@ -1,10 +1,10 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 {-
-  THE AFFINE PROMODEL: OWNERSHIP, AND WHAT ONE CONSTRUCTOR COSTS.
+  THE AFFINE `Fibered`: OWNERSHIP, AND WHAT ONE CONSTRUCTOR COSTS.
 
   `Instances/LinLam/Context` presents linear contexts as a partial
   commutative monoid over `Usage = List Bool`, and its header names the
-  load-bearing fact: what makes the promodel LINEAR is a constructor
+  load-bearing fact: what makes the `Fibered` LINEAR is a constructor
   that is ABSENT.
 
       data Use⊎ : Usage → Usage → Usage → Type₀ where
@@ -27,7 +27,6 @@
   the consequence of that one line, and the point of the file is to say
   precisely which of the linear theorems survive it.
 
-  ------------------------------------------------------------------
   THE TABLE.  Each cell names the theorem in this directory that backs
   it, or says honestly that it is not done.
 
@@ -62,7 +61,6 @@
                                           `≥` half is REFUTED
                                           (`Dead.noBudgetGe`)
 
-  ------------------------------------------------------------------
   WHY THE GRADING SURVIVES, AND WHY THAT IS NOT OBVIOUS.
 
   `Context.liveSplit` is an equation:  live u + live v ≡ live w.  It is
@@ -86,7 +84,6 @@
   grading -- not merely `live` -- can have a proper slot there.  The
   three columns are therefore: an equation, an inequality, and nothing.
 
-  ------------------------------------------------------------------
   WEAKENING IS A MONAD, NOT A RULE.
 
   The naive reading of "affine = weakening" would be `A ⊗ 𝟙 ⊢ A` with 𝟙
@@ -121,13 +118,11 @@
   structural rule, and a type that does not implement it (a linear
   resource, a `MutexGuard`-shaped thing) is not weakenable.
 
-  ------------------------------------------------------------------
   WHAT `⊛` LOSES.  The right unit law `A ⊛ 𝟙 ⊢ A` is exactly what fails
   -- that is `⇓ A ⊢ A` again -- so `⊛` is only LAX unital here.  This is
   not a defect of the presentation: it is the same fact as "not every
   type is droppable", seen at the connective instead of at the monad.
 
-  ------------------------------------------------------------------
   PRIMITIVE (matching the representation): `Empty`, `Solo`, `_⊑_`,
   `zeros`, `live`, `Aff⊎`, `AffSplit`, `AffParts`, `boolΠ`, and the
   `⊛`-interface (`⊛-mk`, `⊛-E'`, `⊛-map`, `⊛-dist*`).  Everything after
@@ -149,16 +144,13 @@ import Cubical.Data.Equality as Eq
 
 open import TheoryGrammar.Base
 open import TheoryGrammar.Theories.Monoid public
+open import TheoryGrammar.Theories.MonoidSep
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.RulesFib
 open import TheoryGrammar.Graded
 
--- ==================================================================
--- §0  USAGES.  Verbatim `Context.agda`: position n says whether
--- variable n is still OWNED by this subterm.  Deliberately not
--- imported, so that nothing in §1-§5 depends on a file another agent
--- may be editing; the linear side is quarantined in `Contrast.agda`.
--- ==================================================================
+-- §0 USAGES. Verbatim `Context.agda`: position n says whether variable n
+-- is still OWNED by this subterm.
 
 Usage : Type₀
 Usage = List Bool
@@ -194,18 +186,7 @@ zerosEmpty : (u : Usage) → Empty (zeros u)
 zerosEmpty []      = tt
 zerosEmpty (_ ∷ u) = zerosEmpty u
 
--- ==================================================================
--- §1  THE AFFINE SPLITTING.
---
--- `Use⊎` plus `adrop`.  Read the four inherited constructors as the
--- linear discipline and `adrop` as the ownership one: the whole is
--- responsible for a variable that NEITHER premise claims, so it is
--- dropped at this node.
---
--- Still absent: any clause taking `true` on both sides.  That absence
--- is no-contraction, and it is what makes affine strictly weaker than
--- cartesian (§6).
--- ==================================================================
+-- §1 THE AFFINE SPLITTING. `Use⊎` plus `adrop`.
 
 data Aff⊎ : Usage → Usage → Usage → Type₀ where
   anil   : Aff⊎ [] [] []
@@ -223,9 +204,6 @@ AffSplit appop u = Σ[ u₁ ∈ Usage ] Σ[ u₂ ∈ Usage ] Aff⊎ u₁ u₂ u
 -- the dependent eliminator for the `Bool` arity, as in `Heap/Base` and
 -- `LinLam/Context`: ONE place where `true`/`false` are matched, so no
 -- extended lambda is ever written and nominal mismatch cannot arise.
-boolΠ : ∀ {ℓ} {M : Bool → Type ℓ} → M true → M false → (b : Bool) → M b
-boolΠ t f true  = t
-boolΠ t f false = f
 
 AffParts : (o : MonOp) (u : Usage) → AffSplit o u → MonAr o → Usage
 AffParts nilop u sp ()
@@ -242,44 +220,33 @@ Ctx : Type₁
 Ctx = TheoryTy ℓ-zero tt
 
 -- AFFINE APPLICATION is the tensor; `𝟙` is the (only lax) unit.
+private module S = MonSep affFib
+
 _⊛_ : Ctx → Ctx → Ctx
-A ⊛ B = ⊗ˢ appop (boolΠ A B)
+_⊛_ = S._∗_
 
 infixr 20 _⊛_
 
 𝟙 : Ctx
-𝟙 = ⊗ˢ nilop (λ ())
+𝟙 = S.empS
 
--- ==================================================================
--- §2  NO CONTRACTION.  This is the half of linearity that affine KEEPS,
--- and it is the sharp statement that affine sits strictly BELOW
--- cartesian.  `Context.noDupUse` is the linear version; the second
--- theorem here is strictly stronger than anything stated there.
--- ==================================================================
+-- §2 NO CONTRACTION. This is the half of linearity that affine KEEPS, and
+-- it is the sharp statement that affine sits strictly BELOW cartesian.
 
 -- PRIMITIVE (phase 1): `Context.noDupUse`, verbatim -- the (true,true)
 -- clause is still missing, `adrop` did not add it.
 noDupAff : (u : Usage) → Aff⊎ (true ∷ u) (true ∷ u) (true ∷ u) → ⊥
 noDupAff u ()
 
--- THEOREM (the sharp form).  ONLY A DEAD USAGE SPLITS AS ITSELF.
---
--- `Opt.noSelfSplit` needs the hypothesis `0 < live u`; here the
--- conclusion is `Empty u` for an ARBITRARY whole `w`, which is both
--- stronger and hypothesis-free.  Every constructor with `true` in the
--- first slot has `false` in the second, so the diagonal can only be
--- built from `askip` and `adrop` -- and both of those leave the parts
--- unowned.  Affinity added a way to LOSE a resource, not to copy one.
+-- THEOREM (the sharp form). ONLY A DEAD USAGE SPLITS AS ITSELF.
 affDiag : ∀ {u w} → Aff⊎ u u w → Empty u
 affDiag anil       = tt
 affDiag (askip s)  = affDiag s
 affDiag (adrop s)  = affDiag s
 
--- ==================================================================
 -- §3  THE GRADING.  `deg` still counts owned variables; the additivity
 -- EQUATION of `Context.liveSplit` degrades to an INEQUALITY, and that
 -- is exactly enough.
--- ==================================================================
 
 live : Usage → ℕ
 live []          = 0
@@ -294,12 +261,7 @@ liveEmpty (false ∷ u) e = liveEmpty u e
 noSelfSplitAff : (u : Usage) → 0 < live u → Aff⊎ u u u → ⊥
 noSelfSplitAff u p s = ¬-<-zero (subst (0 <_) (liveEmpty u (affDiag s)) p)
 
--- PRIMITIVE (phase 1):  THE REPLACEMENT FOR `Context.liveSplit`.
---
--- Linearly this is `live u + live v ≡ live w`.  `adrop` is the one
--- clause where the two sides genuinely differ, and it is exactly the
--- clause that turns the equation into an inequality: the whole gained a
--- live variable that no part has.
+-- PRIMITIVE (phase 1): THE REPLACEMENT FOR `Context.liveSplit`.
 liveSplit≤ : ∀ {u v w} → Aff⊎ u v w → live u + live v ≤ live w
 liveSplit≤ anil        = ≤-refl
 liveSplit≤ (aleft s)   = suc-≤-suc (liveSplit≤ s)
@@ -348,14 +310,8 @@ affGrading .deg< appop u (u₁ , u₂ , s) =
 affGraded : GradedFib monoidSig ℓ-zero ℓ-zero
 affGraded = graded affFib affGrading
 
--- ==================================================================
--- §4  THE ⊛-INTERFACE, once.
---
--- `Opt.agda` writes these for the linear promodel and may not be
--- edited, so they are re-derived here.  Writing them ONCE is the point:
--- every extended lambda over `Bool` would otherwise be a fresh nominal
--- function that fails to reduce against the others.
--- ==================================================================
+-- §4 THE ⊛-INTERFACE, once. `Opt.agda` writes these for the linear
+-- `Fibered` and may not be edited, so they are re-derived here.
 
 -- PRIMITIVE (phase 1): intro for `⊛`
 ⊛-mk : (A B : Ctx) (u u₁ u₂ : Usage) → Aff⊎ u₁ u₂ u → A u₁ → B u₂ → (A ⊛ B) u
@@ -401,17 +357,13 @@ affGraded = graded affFib affGrading
 𝟙-Empty : {u : Usage} → 𝟙 u → Empty u
 𝟙-Empty = fst
 
--- ==================================================================
 -- §5  WEAKENING.
 --
 -- What affinity BUYS, in three increasingly internal forms.
--- ==================================================================
 
--- ------------------------------------------------------------------
 -- 5.1  The drop order.  `u ⊑ v` -- "v owns everything u owns, and
 -- possibly more".  Unit/⊥-valued, hence a proposition definitionally,
 -- so a `tdrop` node carries no content and `refl` tests still reduce.
--- ------------------------------------------------------------------
 
 infix 4 _⊑_
 
@@ -452,11 +404,9 @@ _⊑_ : Usage → Usage → Type₀                       -- PRIMITIVE
 ⊑-live {false ∷ u} {true  ∷ v} p = ≤-suc (⊑-live p)
 ⊑-live {false ∷ u} {false ∷ v} p = ⊑-live p
 
--- ------------------------------------------------------------------
 -- 5.2  Splittings with an EMPTY complement are exactly `⊑`.  Both
 -- directions; `split→⊑` is where `adrop` earns its keep and `aright` is
 -- absurd.
--- ------------------------------------------------------------------
 
 -- PRIMITIVE (phase 1)
 split→⊑ : ∀ {u z v} → Aff⊎ u z v → Empty z → u ⊑ v
@@ -490,9 +440,7 @@ affDropAll []          = anil
 affDropAll (true  ∷ u) = adrop (affDropAll u)
 affDropAll (false ∷ u) = askip (affDropAll u)
 
--- ------------------------------------------------------------------
 -- 5.3  ... and internally.  From here everything is a `⊢`-term.
--- ------------------------------------------------------------------
 
 -- THE HEADLINE.  Weakening as a term of the calculus, with no
 -- hypothesis at all on the usage.  This is the internal `⊗ˢ`-level
@@ -501,14 +449,9 @@ wkUnit : ⊤G ⊢ (𝟙 ⊛ 𝟙)
 wkUnit u _ = ⊛-mk 𝟙 𝟙 u (zeros u) (zeros u) (affDropAll u)
                (𝟙-mk (zerosEmpty u)) (𝟙-mk (zerosEmpty u))
 
--- ------------------------------------------------------------------
--- 5.4  THE WEAKENING MONAD.
---
---     ⇓ A w  ≅  Σ[ u ] (u ⊑ w) × A u
---
--- LINEARLY `⇓` is the identity (an `Empty` slot forces the other slot
--- to be the whole); affinely it is not, and `𝟙-not-⇓-alg` proves it.
--- ------------------------------------------------------------------
+-- 5.4 THE WEAKENING MONAD. ⇓ A w ≅ Σ[ u ] (u ⊑ w) × A u LINEARLY `⇓` is
+-- the identity (an `Empty` slot forces the other slot to be the whole);
+-- affinely it is not, and `𝟙-not-⇓-alg` proves it.
 
 ⇓ : Ctx → Ctx
 ⇓ A = A ⊛ 𝟙
@@ -532,9 +475,7 @@ wkUnit u _ = ⊛-mk 𝟙 𝟙 u (zeros u) (zeros u) (affDropAll u)
 ⇓-map f = ⊛-map f idg
 
 -- "A is AFFINE" = A is an algebra for the weakening monad = A's
--- inhabitants may be regarded as owning more than they use.  This is
--- Rust's `Drop`, and it is a PROPERTY of a grammar, not a rule of the
--- logic.
+-- inhabitants may be regarded as owning more than they use.
 Affine : Ctx → Type₀
 Affine A = ⇓ A ⊢ A
 
@@ -543,11 +484,9 @@ affWeaken : {A : Ctx} → Affine A → ∀ {u v} → u ⊑ v → A u → A v
 affWeaken {A} alg {u} {v} p x =
   alg v (⊛-mk A 𝟙 v u (zeros v) (⊑→split p) x (𝟙-mk (zerosEmpty v)))
 
--- ------------------------------------------------------------------
 -- 5.5  NOT EVERY GRAMMAR IS AFFINE.  `𝟙` is the counterexample, and it
 -- is the sharpest one available: the unit of the tensor is not its own
 -- weakening-closure, so `⊛` is only LAX unital.
--- ------------------------------------------------------------------
 
 -- a point of `⇓ 𝟙` at a usage that OWNS something
 ⇓𝟙-pt : (⇓ 𝟙) (true ∷ [])
@@ -563,11 +502,9 @@ affWeaken {A} alg {u} {v} p x =
 no-⊛-unitR : ((A : Ctx) → (A ⊛ 𝟙) ⊢ A) → ⊥
 no-⊛-unitR f = 𝟙-not-⇓-alg (f 𝟙)
 
--- ------------------------------------------------------------------
 -- 5.6  Weakening at the head bit, in the reindexed shape `lamT` uses.
 -- `Own A` is `Opt.BodyOf A`; `Free A` is the same scope with the head
 -- variable NOT owned.
--- ------------------------------------------------------------------
 
 Own : Ctx → Ctx
 Own A u = A (true ∷ u)
@@ -576,24 +513,14 @@ Free : Ctx → Ctx
 Free A u = A (false ∷ u)
 
 -- THE AFFINE RULE, as a `⊢`-term at a reindexed motive: a grammar that
--- does not own the head variable can be made to own it, at the cost of
--- a discarded unit.  For an AFFINE grammar the `⇓` disappears
--- (`Syntax.dropT`).
+-- does not own the head variable can be made to own it, at the cost of a
+-- discarded unit.
 affWk : (A : Ctx) → Free A ⊢ Own (⇓ A)
 affWk A u x =
   ⊛-mk A 𝟙 (true ∷ u) (false ∷ u) (false ∷ zeros u)
     (adrop (affUnitR u)) x (𝟙-mk (zerosEmpty u))
 
--- ==================================================================
--- §6  THE THIRD COLUMN: THE CARTESIAN PROMODEL, AND WHY IT HAS NO
--- GRADING.
---
--- One more constructor -- `cboth`, contraction -- and the whole
--- inductive layer collapses.  This is the `Instances/Group/NoGrading`
--- move localised to a single constructor: not "this particular grading
--- fails" but "no grading has a proper slot at the diagonal", hence no
--- `hyloC`, no `löb`, no structural recursion on an application.
--- ==================================================================
+-- §6 THE THIRD COLUMN: THE CARTESIAN `Fibered`, AND WHY IT HAS NO GRADING.
 
 data Cart⊎ : Usage → Usage → Usage → Type₀ where
   cnil   : Cart⊎ [] [] []
@@ -617,7 +544,7 @@ cartFib .carrier _ = Usage
 cartFib .Split     = CartSplit
 cartFib .parts     = CartParts
 
--- the three promodels, strictly nested.  (`Use⊎ ⊆ Aff⊎` is in
+-- the three `Fibered`, strictly nested.  (`Use⊎ ⊆ Aff⊎` is in
 -- `Contrast.agda`, which is the only file that touches `LinLam`.)
 aff→cart : ∀ {u v w} → Aff⊎ u v w → Cart⊎ u v w
 aff→cart anil       = cnil
@@ -643,16 +570,8 @@ private
              → boolΠ {M = λ _ → X} x x a ≡ x
   boolΠ-diag x = boolΠ {M = λ a → boolΠ {M = λ _ → _} x x a ≡ x} refl refl
 
--- THEOREM.  NO GRADING OF THE CARTESIAN PROMODEL HAS A PROPER SLOT AT
--- THE DIAGONAL.
---
--- Not "`live` is not a grading" -- `deg = const 0`, `Proper = ⊥` is
--- always a legal `Grading`, exactly as `Group/NoGrading`'s header
--- insists.  The statement is a rigidity one: the diagonal splitting
--- makes a slot EQUAL to the whole, so `deg< ` is unsatisfiable there,
--- for every degree whatsoever.  Recursion on a cartesian application
--- cannot descend, and `Guard`/`hyloC` are unavailable, because the
--- premise they need is refuted.
+-- THEOREM. NO GRADING OF THE CARTESIAN `Fibered` HAS A PROPER SLOT AT THE
+-- DIAGONAL.
 cartNoProper : (G : Grading cartFib) (u : Usage) (a : Bool)
              → G .Proper appop u (u , u , cdiag u) a → ⊥
 cartNoProper G u a pr =

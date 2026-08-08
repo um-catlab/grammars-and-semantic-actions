@@ -1,36 +1,4 @@
-{-
-  CHANGE OF THEORY: reinterpreting a derivation at another theory.
-
-  Two separate notions, which it is worth not conflating.
-
-  (1) CHANGE OF MODEL, at a fixed signature.  A homomorphism h : M → N
-      of σ-models.  Types pull back by precomposition, `pull B m = B (h m)`.
-
-  (2) CHANGE OF SIGNATURE.  A signature morphism φ : σ → τ restricts any
-      τ-model to a σ-model.  Since `TheoryTy M ℓ s = carrier s → Type ℓ`
-      and restriction is by composition, σ-types over φ*N are LITERALLY
-      τ-types over N at the translated sort -- so reinterpretation along
-      a signature morphism costs nothing at all.  See `restrict` below.
-
-  The interesting content is in (1), and it is this:
-
-      the ADDITIVE fragment always reinterprets, definitionally;
-      the MULTIPLICATIVE fragment reinterprets only laxly, and is an
-      equivalence exactly when h REFLECTS SPLITTINGS.
-
-  "Reflects splittings" is a discrete Conduché / unique-lifting-of-
-  factorizations condition: every way of decomposing `h m` in N must come
-  from a way of decomposing `m` in M, uniquely.  Existence gives the
-  inverse map; uniqueness makes it an isomorphism.
-
-  The negative example is instructive.  Abelianisation
-  `List Char → Multiset Char` is a monoid homomorphism, so every additive
-  construction transports, but it does NOT reflect splittings -- the
-  multiset {a,b} splits as {a}|{b} AND {b}|{a}, while the string "ab"
-  splits only as "a"|"b".  So string grammars do not reinterpret as
-  multiset grammars multiplicatively, and that failure is exactly the
-  difference between order-sensitive and order-insensitive parsing.
--}
+{- CHANGE OF THEORY: reinterpreting a derivation at another theory. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.ChangeOfTheory where
 
@@ -45,9 +13,7 @@ open import TheoryGrammar.Base
 
 private variable ℓS ℓS' ℓ ℓ' ℓ2 ℓ2' ℓX ℓY ℓA ℓB ℓV : Level
 
--- ==================================================================
 -- (1) CHANGE OF MODEL.
--- ==================================================================
 
 record ModelHom {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                 (M : Model σ ℓX) (N : Model σ ℓY)
@@ -75,9 +41,7 @@ module Reinterpret {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
            → A ℕ.⊢ B → pull A 𝕄.⊢ pull B
   pullTerm f m x = f _ x
 
-  -- ================================================================
   -- The additive fragment is preserved ON THE NOSE.
-  -- ================================================================
 
   pull-⊤ : {s : S} → pull (ℕ.⊤G {s}) ≡ 𝕄.⊤G
   pull-⊤ = refl
@@ -105,21 +69,18 @@ module Reinterpret {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
           → pull (ℕ.&ᴰ Y A) ≡ 𝕄.&ᴰ Y (λ y → pull (A y))
   pull-&ᴰ _ _ = refl
 
-  -- ================================================================
   -- The multiplicative fragment is only LAX.
-  -- ================================================================
 
   module _ (o : σ .ops) {B : (a : σ .arities o) → ℕ.TheoryTy ℓA (σ .sortOf o a)} where
 
     -- the canonical direction always exists, and is transport-free
+    -- PRIMITIVE (phase 1): the construction of the change of model.
     pull⊗ : 𝕄.⊗[ o ] (λ a → pull (B a)) 𝕄.⊢ pull (ℕ.⊗[ o ] B)
     pull⊗ .(M .op o m⃗) (m⃗ , Eq.refl , g) =
       (λ a → h .hom _ (m⃗ a)) , Eq.sym (h .homOp o m⃗) , g
 
-  -- ================================================================
   -- ... and is invertible exactly when h REFLECTS SPLITTINGS.
   -- This is the discrete Conduché condition.
-  -- ================================================================
 
   ReflectsSplit : Type (ℓ-max ℓ (ℓ-max ℓ' (ℓ-max ℓX ℓY)))
   ReflectsSplit =
@@ -137,14 +98,13 @@ module Reinterpret {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
            → x Eq.≡ y → B a y → B a x
       coeB Eq.refl b = b
 
+    -- PRIMITIVE (phase 1): the construction of the change of model.
     pull⊗⁻ : pull (ℕ.⊗[ o ] B) 𝕄.⊢ 𝕄.⊗[ o ] (λ a → pull (B a))
     pull⊗⁻ m (n⃗ , e , g) =
       let (m⃗ , em , ea) = rs o m n⃗ e
       in m⃗ , em , λ a → coeB (ea a) (g a)
 
--- ==================================================================
 -- (2) CHANGE OF SIGNATURE.
--- ==================================================================
 
 record SigMor {S : Type ℓS} {S' : Type ℓS'}
               (σ : SortedSig S ℓ ℓ') (τ : SortedSig S' ℓ2 ℓ2')
@@ -174,10 +134,9 @@ module _ {S : Type ℓS} {S' : Type ℓS'}
     coeN (φ .resEq o)
       (N .op (φ .onOp o) (λ b → coeN (Eq.sym (φ .sortEq o b)) (m⃗ (φ .onAr o b))))
 
-  -- THE POINT.  σ-types over the restricted model are DEFINITIONALLY
+  -- THE POINT. σ-types over the restricted model are DEFINITIONALLY
   -- τ-types over N at the translated sort -- so a derivation written in
-  -- the σ-calculus already IS a derivation in the τ-calculus.  There is
-  -- nothing to translate.
+  -- the σ-calculus already IS a derivation in the τ-calculus.
   reinterpretTy : (s : S)
                 → Notation.TheoryTy restrict ℓA s
                 ≡ Notation.TheoryTy N ℓA (φ .onSort s)

@@ -1,62 +1,5 @@
-{-
-  REEDY STRUCTURE — the definition that `Cubical.Categories.Direct` does
-  NOT contain.
-
-  AUDIT NOTE (why this file exists).  The c-c-l branch `reedy-dialgebra`
-  has a complete, hole-free development of DIRECT categories:
-
-      Cubical/Categories/Direct/Base.agda            -- WFOrder, DirectStr
-      Cubical/Categories/Direct/StrictDownset.agda   -- the sieve ↡c, ▷, löb
-      Cubical/Categories/Direct/StrictUpset.agda     -- the cosieve ↟x, ◁ ⊣ ▷
-                                                       (on `lob-ind`, not on
-                                                        `reedy-dialgebra`)
-      .../LocallyContractive, Product, StrictMax, LaterPresentation, …
-
-  and it contains NO Reedy structure whatsoever: the string "Reedy"
-  occurs once, in a comment in `Direct/Instances/Nat.agda`, and
-  "dialgebra" occurs zero times anywhere in the repository's history.
-  The branch name is aspirational.
-
-  What `DirectStr` records is
-
-      DirectStr C Wo = Functor C (WFOrder→Cat Wo)
-                     ≅ (deg : ob C → D) × (∀ f : x → y → deg x ≤ deg y)
-
-  i.e. deg + ONE class of morphisms (all of them), all non-decreasing.
-  That is precisely the Reedy special case C₋ = {identities}, C₊ = C.
-  There is no second subcategory and no factorisation axiom, so the
-  question "does the Reedy development apply here" cannot be answered by
-  reusing it — the Reedy part has to be written first.  This file writes
-  it, in the same idiom (`WFOrder`, degrees valued in a well-founded
-  order), reusing c-c-l's `WFOrder` and `DirectStr` directly, since the
-  import resolves fine from this repo.
-
-  THE DEFINITION.  A Reedy structure on C is
-    - a degree  deg : ob C → D  into a well-founded order,
-    - two WIDE subcategories C₋ , C₊  (contain all identities, closed
-      under composition),
-    - non-identities of C₋ strictly LOWER degree,
-      non-identities of C₊ strictly RAISE degree,
-    - UNIQUE FACTORISATION: every f : x → y factors as
-
-            x --g--> z --h--> y      g ∈ C₋ , h ∈ C₊
-
-      and the triple (z, g, h) is unique — `isContr (Factorisation f)`.
-
-  The third axiom is the whole content.  Dropping it leaves "a degree
-  plus two marked classes", which is not a useful notion: it is the
-  factorisation that makes latching/matching objects fit together into
-  the Reedy model structure, and it is the factorisation that fails in
-  §b of `TheoryGrammar.Reedy.Polarity`.
-
-  HOW THE DEGREE CONDITION IS PHRASED.  Rather than "non-identities
-  strictly lower", which needs to decide `f = id` and hence a Discrete
-  hom-set, we take the non-strict statement plus a separate strictness
-  witness, mirroring `TheoryGrammar.Grading`'s split into `deg≤` and
-  `deg<` at a `Proper` slot.  This dodges exactly the decidability the
-  rest of this development also dodges, and `noSwing` below recovers the
-  content that matters: nothing can strictly drop and rise at once.
--}
+{- REEDY STRUCTURE — the definition that `Cubical.Categories.Direct` does
+   NOT contain. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Reedy.Base where
 
@@ -75,14 +18,7 @@ open import Cubical.Categories.Direct.Base
 
 private variable ℓC ℓC' ℓD ℓ< ℓM : Level
 
--- ==================================================================
 -- A wide subcategory, as a property of morphisms.
---
--- Kept as a bare predicate rather than a `Categoryᴰ` because both
--- classes must live over the SAME C and be compared, and the displayed
--- presentation makes the comparison (`C₋ ∩ C₊ = id`) unstatable without
--- a fibre-wise equality.
--- ==================================================================
 
 record isWide {C : Category ℓC ℓC'}
               (P : {x y : Category.ob C} → C [ x , y ] → Type ℓM)
@@ -95,9 +31,7 @@ record isWide {C : Category ℓC ℓC'}
 
 open isWide public
 
--- ==================================================================
 -- THE REEDY STRUCTURE.
--- ==================================================================
 
 module _ (C : Category ℓC ℓC') (Wo : WFOrder ℓD ℓ<) (ℓM : Level) where
   private
@@ -131,13 +65,8 @@ module _ (C : Category ℓC ℓC') (Wo : WFOrder ℓD ℓ<) (ℓM : Level) where
       factor  : {x y : C.ob} (f : C [ x , y ])
               → isContr (Factorisation deg C₋ C₊ f)
 
-    -- ----------------------------------------------------------------
     -- The immediate consequence: a morphism in BOTH classes preserves
-    -- degree.  This is the "C₋ ∩ C₊ = identities" axiom in the form that
-    -- survives without deciding equality of morphisms, and it is what
-    -- makes the well-founded recursion work: you may never gain degree
-    -- along a lowering map, nor lose it along a raising one.
-    -- ----------------------------------------------------------------
+    -- degree.
     degFixed : {x y : C.ob} (f : C [ x , y ]) → C₋ f → C₊ f
              → (deg x Wo.≤ deg y) × (deg y Wo.≤ deg x)
     degFixed f m p = raises f p , lowers f m
@@ -149,21 +78,8 @@ module _ (C : Category ℓC ℓC') (Wo : WFOrder ℓD ℓ<) (ℓM : Level) where
 
   open ReedyStr public
 
--- ==================================================================
--- DIRECT IS THE DEGENERATE REEDY STRUCTURE.
---
--- Take C₋ = "f is an identity" and C₊ = everything.  In a THIN category
--- (hom-sets propositional) "f is an identity" is just `x ≡ y`, and the
--- factorisation object is forced to be x, so `Factorisation f` is a
--- based path space and is contractible.  Every direct structure this
--- development actually uses is thin — `Grading`'s order is the pullback
--- of ℕ's `<` along `deg`, and c-c-l's own instances all go through
--- `PosetCat` — so the thin case is the whole case in practice.
---
--- This is the formal statement of the audit's headline: the c-c-l Reedy
--- branch computes with the C₋ = id corner of the square, and nothing it
--- proves constrains a nondegenerate C₋.
--- ==================================================================
+-- DIRECT IS THE DEGENERATE REEDY STRUCTURE. Take C₋ = "f is an identity"
+-- and C₊ = everything.
 
 module DirectIsReedy {C : Category ℓC ℓC'} {Wo : WFOrder ℓD ℓ<}
                      (thin : {x y : Category.ob C} → isProp (C [ x , y ]))
@@ -195,10 +111,9 @@ module DirectIsReedy {C : Category ℓC ℓC'} {Wo : WFOrder ℓD ℓ<}
     ctr : {x y : C.ob} (f : C [ x , y ]) → Fact f
     ctr {x} f = x , C.id , f , refl , tt* , C.⋆IdL f
 
-    -- The factorisation object is forced to be x: the pair (z, p) lives
-    -- in the based path space `singl x`, which is contractible, and
-    -- everything else is propositional because C is thin.  No `isSet ob`
-    -- is needed anywhere.
+    -- The factorisation object is forced to be x: the pair (z, p) lives in
+    -- the based path space `singl x`, which is contractible, and
+    -- everything else is propositional because C is thin.
     isPropFact : {x y : C.ob} (f : C [ x , y ]) → isProp (Fact f)
     isPropFact {x} {y} f (z , g , h , p , _ , e) (z' , g' , h' , p' , _ , e') i =
         sq i .fst

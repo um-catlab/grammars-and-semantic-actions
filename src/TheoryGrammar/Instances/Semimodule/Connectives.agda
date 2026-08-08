@@ -1,37 +1,6 @@
-{-
-  The connectives of the semimodule theory: one tensor per operation,
-  and THE GRADED EXPONENTIAL as the action tensor with a representable
-  in its scalar slot.
-
-      OneG          = ⊗ˢ oneOp ()                the scalar unit
-      R ·ᵍ S        = ⊗ˢ mulOp (R , S)           scalar multiplication
-      A ⊗ᵃ B        = ⊗ˢ catOp (A , B)           the multiplicative of elements
-      ActG R A      = ⊗ˢ actOp (R , A)           the action, R a GRAMMAR of scalars
-      !⟨ r ⟩ A      = ActG ⌈ r ⌉ A               the action at a FIXED scalar
-
-  `!⟨ r ⟩ A` holds of exactly the strings that are `r` copies of a string
-  satisfying `A`.  That is the multiplicity modality: `!⟨ 2 ⟩ A` is "an A,
-  twice, and the two copies are the same".  Note this is strictly finer
-  than `A ⊗ᵃ A`, which allows two DIFFERENT A's -- the whole content of
-  the graded exponential is that its two copies are forced equal, and
-  that is exactly why its laws are non-trivial.
-
-  Two things to note about the spelling.
-
-  ARITIES HAVE NO η.  `⊗ˢ actOp (pairB R A)` cannot be
-  written `⊗ˢ actOp (if_then_else_ ...)`, because the two slots have
-  different SORTS; and `λ a → f a` is not definitionally `f`, so every
-  round-trip below ends in `etaBool`.  This is the tax the many-sorted
-  presentation charges, and it is charged once per Iso, not once per
-  use.
-
-  REPRESENTABLES ARE THE PARAMETERS.  `⌈ r ⌉ n = (n Eq.≡ r)` is
-  subterminal: it pins the scalar slot to a single natural number.  A
-  general `R : Scl` does not.  The difference between the two is what
-  the non-linear laws in `Graded.agda` turn on, so `ActG` is kept
-  primitive and `!⟨_⟩_` is defined from it rather than the other way
-  round.
--}
+{- The connectives of the semimodule theory: one tensor per operation, and
+   THE GRADED EXPONENTIAL as the action tensor with a representable in its
+   scalar slot. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 open import Cubical.Foundations.Prelude
 
@@ -49,9 +18,7 @@ open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.Instances.Semimodule.Base Char public
 
--- ==================================================================
 -- One tensor per operation.
--- ==================================================================
 
 OneG : Scl
 OneG = ⊗ˢ oneOp (λ ())
@@ -77,11 +44,9 @@ infixr 20 _·ᵍ_
 infixr 20 _⊗ᵃ_
 infix  25 !⟨_⟩_
 
--- ==================================================================
 -- PRIMITIVES (phase 1): intro and elim for each tensor.  Everything
 -- downstream is a composite of these together with the combinators of
 -- `RulesF`.
--- ==================================================================
 
 -- PRIMITIVE: intro for the action.
 act-I : {R : Scl} {A : Elt} (r : ℕ) (w : String) → R r → A w → ActG R A (rep r w)
@@ -114,13 +79,8 @@ mul-E f _ (mkFac a b , h) = f a b (h true) (h false)
 one-I : OneG 1
 one-I = mk1 , λ ()
 
--- ==================================================================
 -- The scalar unit IS the representable at 1, and the tensor of two
--- representables IS the representable at the product.  These are
--- statements about the SUBSTRATE (its splittings at `oneOp`/`mulOp`
--- are singletons), not about any equation of the theory, which is why
--- they are proved here rather than in `Graded.agda`.
--- ==================================================================
+-- representables IS the representable at the product.
 
 OneG≅⌈1⌉ : (p : ℕ) → Iso (OneG p) (⌈ 1 ⌉ p)
 OneG≅⌈1⌉ p .Iso.fun (mk1 , _) = Eq.refl
@@ -155,11 +115,9 @@ private
   ∙ ⌈⌉·ret r s a b (h true) (h false)
   ∙ ΣPathP (refl , etaBool h)
 
--- ==================================================================
 -- Congruence of the action in either slot.  An `Iso` at every carrier
 -- point lifts to an `Iso` of the tensors, because `⊗ˢ` is a Σ over the
 -- splittings and a Π over the slots and neither sees the payload.
--- ==================================================================
 
 ActG-congˡ : {R S : Scl} (A : Elt) → ((n : ℕ) → Iso (R n) (S n))
            → (m : String) → Iso (ActG R A m) (ActG S A m)

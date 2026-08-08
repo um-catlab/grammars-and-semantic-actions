@@ -1,39 +1,8 @@
-{-
-  DEFINITIONAL β AND η FOR THE MULTIPLICATIVES.
-
-  In TheoryGrammar.Base the convolution is defined by an equation,
-
-      ⊗[ o ] A m = Σ[ m⃗ ] (op o m⃗ Eq.≡ m) × (∀ a → A a (m⃗ a)),
-
-  and the currying isomorphism gets β definitionally (`sec = refl`) but
-  NOT η: `ret` has to pattern-match `Eq.refl`.  The obstruction is
-  precise and is worth naming, because it is one component:
-
-      Σ has definitional η.  Eq._≡_ is `data`, so it does not.
-
-  So the η-failure is not about ⊗ being a positive connective -- ⊕ᴰ is
-  also a Σ and it DOES get definitional η.  It is caused solely by
-  carrying a proof term that has no η.
-
-  The fix is to stop carrying the proof.  Index the splitting by the
-  OUTPUT and expose the components as projections:
-
-      Split : (o) → carrier (resultSort o) → Type
-      parts : (o) (m) → Split o m → (a : arities o) → carrier (sortOf o a)
-
-  Then
-
-      ⊗[ o ] A m = Σ[ sp ∈ Split o m ] (∀ a → A a (parts o m sp a))
-
-  is a Σ of two components neither of which needs matching to eliminate,
-  and BOTH β and η become `refl`.  Proved below as `⊗-UP-β` / `⊗-UP-η`.
-
-  This is the same change that removes the green slime (an equation whose
-  left side is a defined function applied to a bound variable) -- the two
-  problems have one cause and one fix.  `canonical` shows the equational
-  presentation is the special case where `Split o m` is the type of
-  tuples together with a proof, i.e. it is `Split` chosen freely.
--}
+{- DEFINITIONAL β AND η FOR THE MULTIPLICATIVES. In TheoryGrammar.Base the
+   convolution is defined by an equation, ⊗[ o ] A m = Σ[ m⃗ ] (op o m⃗
+   Eq.≡ m) × (∀ a → A a (m⃗ a)), and the currying isomorphism gets β
+   definitionally (`sec = refl`) but NOT η: `ret` has to pattern-match
+   `Eq.refl`. -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Fibered where
 
@@ -49,10 +18,8 @@ open import TheoryGrammar.Base
 
 private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓB ℓC ℓY : Level
 
--- ==================================================================
--- A promodel: a model presented with its splittings as DATA rather
+-- A `Fibered`: a model presented with its splittings as DATA rather
 -- than as an equation.
--- ==================================================================
 
 record Fibered {S : Type ℓS} (σ : SortedSig S ℓ ℓ') ℓX ℓP
   : Type (ℓ-max ℓS (ℓ-max ℓ (ℓ-max ℓ' (ℓ-max (ℓ-suc ℓX) (ℓ-suc ℓP))))) where
@@ -65,34 +32,8 @@ record Fibered {S : Type ℓS} (σ : SortedSig S ℓ ℓ') ℓX ℓP
 
 open Fibered public
 
--- ==================================================================
--- IS THE SPLITTING A RELATION, OR A STRUCTURE?
---
--- `Split o m` is Type-valued, deliberately: a parse is DATA, not a
--- truth value.  But that leaves a question this development kept
--- answering implicitly, and two properties kept getting conflated.
---
---   isProp (Split o m)   "at most one decomposition".  This is
---                        `DecReadable`'s `splitProp`, and it is FALSE
---                        for strings -- `w` has `length w + 1` cuts.
---
---   PartsFaithful        "a decomposition is determined by its parts".
---                        Weaker, and orthogonal: it allows many cuts,
---                        but says the cut is recoverable from what it
---                        cuts into.
---
--- The second is the one that separates the instances.  For STRINGS it
--- holds -- `Split3 u v w` is "w = u ++ v" witnessed structurally, so
--- the parts pin the witness (this is what an `isSet` alphabet buys, and
--- the K-failures in `SeqUnambig` are all it failing to be provable
--- without one).  For BAGS it does NOT: `Ilv [x] [x] [x,x]` has two
--- distinct proofs, `left (right nil)` and `right (left nil)`, with the
--- same parts.  The interleaving pattern is genuine data.
---
--- So "bags are ambiguous" is really TWO facts, and only naming both
--- makes it precise: bags have many cuts (like strings) AND many
--- witnesses per cut (unlike strings).
--- ==================================================================
+-- IS THE SPLITTING A RELATION, OR A STRUCTURE? `Split o m` is Type-valued,
+-- deliberately: a parse is DATA, not a truth value.
 
 PartsFaithful : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP)
               → σ .ops → Type (ℓ-max ℓ' (ℓ-max ℓX ℓP))
@@ -100,21 +41,8 @@ PartsFaithful {σ = σ} Fib o =
   (m : Fib .carrier (σ .resultSort o)) (sp sp' : Fib .Split o m)
   → Fib .parts o m sp ≡ Fib .parts o m sp' → sp ≡ sp'
 
--- ==================================================================
--- A CHOSEN TOTAL POINT, separately.
---
--- `op`, `split` and `parts-split` used to sit in the record above.  They
--- do not belong there, and the reason is sharp: `⊗ˢ`, `MultiHomˢ`, `⊸ᶠ`
--- -- the whole multiplicative layer -- mention only `Split` and `parts`.
--- The three totality fields are load-bearing for nothing except
--- asserting themselves, while excluding every PARTIAL algebra: separation
--- logic, and anything where combining requires disjoint resources.
---
--- Split out, they are exactly a lax point: an operation together with a
--- proof that the relation CONTAINS its graph.  `Bags` is the instance
--- showing the containment must be allowed to be strict -- `Ilv u v w`
--- does not imply `u ++ v ≡ w` -- so this is never an isomorphism.
--- ==================================================================
+-- A CHOSEN TOTAL POINT, separately. `op`, `split` and `parts-split` used
+-- to sit in the record above.
 
 record LaxPoint {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP)
   : Type (ℓ-max ℓS (ℓ-max ℓ (ℓ-max ℓ' (ℓ-max ℓX ℓP)))) where
@@ -139,11 +67,9 @@ open LaxPoint public
 ⌊_⌋ {Fib = Fib} P .Model.carrier = Fib .carrier
 ⌊_⌋ {Fib = Fib} P .Model.op = P .op
 
--- ==================================================================
--- The connectives over a promodel.  NOTE what this module does NOT
+-- The connectives over a `Fibered`.  NOTE what this module does NOT
 -- take: no `LaxPoint`, so everything below is available to a partial
 -- algebra.
--- ==================================================================
 
 module FibNotation {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP) where
 
@@ -154,6 +80,58 @@ module FibNotation {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ
      → ((a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
      → TheoryTy (ℓ-max ℓP (ℓ-max ℓ' ℓA)) (σ .resultSort o)
   ⊗ˢ o A m = Σ[ sp ∈ Fib .Split o m ] ((a : σ .arities o) → A a (Fib .parts o m sp a))
+
+  -- THE DEPENDENT TENSOR. `⊗ˢ` above takes a payload SLOTWISE: one grammar
+  -- per slot, each reading only its own part.
+
+  Parts : (o : σ .ops) → Type (ℓ-max ℓ' ℓX)
+  Parts o = (a : σ .arities o) → Fib .carrier (σ .sortOf o a)
+
+  ⊗ˢᵈ : (o : σ .ops) → (Parts o → Type ℓA)
+      → TheoryTy (ℓ-max ℓP ℓA) (σ .resultSort o)
+  ⊗ˢᵈ o P m = Σ[ sp ∈ Fib .Split o m ] P (Fib .parts o m sp)
+
+  -- the slotwise tensor IS the dependent one at a slotwise payload
+  ⊗ˢ≡ : (o : σ .ops)
+        (A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
+      → ⊗ˢ o A ≡ ⊗ˢᵈ o (λ ps → (a : σ .arities o) → A a (ps a))
+  ⊗ˢ≡ o A = refl
+
+  -- `P` is EXPLICIT throughout: it is grammar-valued, and CLAUDE.md's
+  -- standing trap is that such arguments cannot be recovered from the
+  -- unfolded type (`⊗ˢᵈ o P m` is a `Σ`, which pins nothing).
+  module _ (o : σ .ops) (P : Parts o → Type ℓA) where
+
+    ⊗ˢᵈ-I : (m : Fib .carrier (σ .resultSort o)) (sp : Fib .Split o m)
+          → P (Fib .parts o m sp) → ⊗ˢᵈ o P m
+    ⊗ˢᵈ-I m sp p = sp , p
+
+    ⊗ˢᵈ-E : {B : TheoryTy ℓB (σ .resultSort o)}
+          → ((m : Fib .carrier (σ .resultSort o)) (sp : Fib .Split o m)
+             → P (Fib .parts o m sp) → B m)
+          → ⊗ˢᵈ o P ⊢ B
+    ⊗ˢᵈ-E f m (sp , p) = f m sp p
+
+  -- ... AND `⊕ᴰ` COMMUTES WITH IT.
+
+  module _ (o : σ .ops) (Y : Type ℓY) (P : Y → Parts o → Type ℓA) where
+
+    ⊕ᴰ-⊗ˢᵈ-out : ⊕ᴰ Y (λ y → ⊗ˢᵈ o (P y)) ⊢ ⊗ˢᵈ o (λ ps → Σ[ y ∈ Y ] P y ps)
+    ⊕ᴰ-⊗ˢᵈ-out m (y , sp , p) = sp , y , p
+
+    ⊕ᴰ-⊗ˢᵈ-in : ⊗ˢᵈ o (λ ps → Σ[ y ∈ Y ] P y ps) ⊢ ⊕ᴰ Y (λ y → ⊗ˢᵈ o (P y))
+    ⊕ᴰ-⊗ˢᵈ-in m (sp , y , p) = y , sp , p
+
+    -- and the round trips, both `refl`
+    ⊕ᴰ-⊗ˢᵈ-β : (m : Fib .carrier (σ .resultSort o))
+               (t : ⊕ᴰ Y (λ y → ⊗ˢᵈ o (P y)) m)
+             → ⊕ᴰ-⊗ˢᵈ-in m (⊕ᴰ-⊗ˢᵈ-out m t) ≡ t
+    ⊕ᴰ-⊗ˢᵈ-β m t = refl
+
+    ⊕ᴰ-⊗ˢᵈ-η : (m : Fib .carrier (σ .resultSort o))
+               (t : ⊗ˢᵈ o (λ ps → Σ[ y ∈ Y ] P y ps) m)
+             → ⊕ᴰ-⊗ˢᵈ-out m (⊕ᴰ-⊗ˢᵈ-in m t) ≡ t
+    ⊕ᴰ-⊗ˢᵈ-η m t = refl
 
   MultiHomˢ : (o : σ .ops)
             → ((a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
@@ -174,10 +152,8 @@ module FibNotation {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ
     uncurryˢ : MultiHomˢ o A B → (⊗ˢ o A ⊢ B)
     uncurryˢ g m (sp , h) = g m sp h
 
-    -- ==============================================================
     -- THEOREM.  Both directions of the multiplicative universal
     -- property hold DEFINITIONALLY.
-    -- ==============================================================
 
     ⊗-UP-β : (g : MultiHomˢ o A B) → curryˢ (uncurryˢ g) ≡ g
     ⊗-UP-β g = refl
@@ -191,10 +167,8 @@ module FibNotation {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ
     ⊗ˢ-UP .Iso.sec = ⊗-UP-β
     ⊗ˢ-UP .Iso.ret = ⊗-UP-η
 
-  -- ================================================================
   -- The residual at a slot, likewise proof-free.  Its elimination rule
   -- needs no pattern match either.
-  -- ================================================================
 
   ⊸ˢ : (o : σ .ops) (i : σ .arities o)
      → ((a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
@@ -214,9 +188,7 @@ module FibNotation {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ
     ⊸ˢ-app : (A i ⊢ ⊸ˢ o i A B) → (⊗ˢ o A ⊢ B)
     ⊸ˢ-app g m (sp , h) = g (Fib .parts o m sp i) (h i) m sp refl h
 
--- ==================================================================
 -- The equational presentation is the FREE choice of Split.
--- ==================================================================
 
 canonical : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} → Model σ ℓX → Fibered σ ℓX (ℓ-max ℓ' ℓX)
 canonical {σ = σ} M .carrier = M .Model.carrier
@@ -224,37 +196,15 @@ canonical {σ = σ} M .Split o m =
   Σ[ m⃗ ∈ ((a : σ .arities o) → M .Model.carrier (σ .sortOf o a)) ] (M .Model.op o m⃗ Eq.≡ m)
 canonical {σ = σ} M .parts o m sp = sp .fst
 
--- ... and a model is exactly what points it.  Splitting the record makes
--- this direction visible: `canonical` needs only the carrier and the
--- operation to build the SPLITTINGS, and the total point is then a
--- separate, automatic consequence.
+-- ... and a model is exactly what points it.
 canonicalPoint : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX)
                → LaxPoint (canonical M)
 canonicalPoint {σ = σ} M .op = M .Model.op
 canonicalPoint {σ = σ} M .split o m⃗ = m⃗ , Eq.refl
 canonicalPoint {σ = σ} M .parts-split o m⃗ = refl
 
--- ==================================================================
--- WHEN ⊗ˢ AND ⊗[ o ] AGREE.
---
--- `⊗ˢ` convolves over the SPLITTINGS; `⊗[ o ]` (Base.agda) convolves
--- over the OPERATION, carrying `op o m⃗ Eq.≡ m`.  Programs are written
--- against the first, `ChangeOfTheory` and `Equations` are stated at the
--- second, and both `Instances/Nat/Length` and `Instances/Semimodule/
--- Graded` had to write the translation by hand.  It belongs here, and
--- the hypothesis it needs is exactly one the record does NOT have:
---
---     HONEST -- every splitting of `m` really does recompose to `m`.
---
--- `parts-split` is the converse (every tuple splits its own composite).
--- Honesty is emphatically NOT derivable, and `Bags` is the counterexample
--- the rest of this development already turns on: `Ilv u v w` does not
--- imply `u ++ v ≡ w`, so an interleaving splitting recomposes to a
--- PERMUTATION of `w`.  That is the whole reason a promodel is allowed to
--- be strictly larger than the graph of its point.  So it stays a
--- hypothesis -- `Representable` already takes it, under the name
--- `unsplit`.
--- ==================================================================
+-- WHEN ⊗ˢ AND ⊗[ o ] AGREE. `⊗ˢ` convolves over the SPLITTINGS; `⊗[ o ]`
+-- (Base.agda) convolves over the OPERATION, carrying `op o m⃗ Eq.≡ m`.
 
 Honest : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {Fib : Fibered σ ℓX ℓP}
        → LaxPoint Fib → Type (ℓ-max ℓ (ℓ-max ℓX ℓP))
@@ -289,17 +239,9 @@ module Bridge {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {Fib : Fibered σ ℓX
         P .split o m⃗
       , λ a → subst (A a) (sym (λ κ → P .parts-split o m⃗ κ a)) (h a)
 
--- ==================================================================
--- DEFINITIONAL β/η FOR THE RESIDUAL.
---
--- `⊸ˢ` above still carries a `parts o m sp i ≡ x` component, so it has
--- the same disease one level down: a Path is not a record, so the
--- residual's η needs a match.  The same cure applies -- have the
--- promodel supply the FOCUSED splittings (the zipper view: a splitting
--- seen from slot i, with slot i's content as the index) rather than
--- reconstructing them with an equation.  Then the residual is a plain Π
--- and BOTH laws are refl.
--- ==================================================================
+-- DEFINITIONAL β/η FOR THE RESIDUAL. `⊸ˢ` above still carries a `parts o m
+-- sp i ≡ x` component, so it has the same disease one level down: a Path
+-- is not a record, so the residual's η needs a match.
 
 record Focus {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
              (Fib : Fibered σ ℓX ℓP) (o : σ .ops) (i : σ .arities o)

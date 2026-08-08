@@ -1,9 +1,7 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 {- Strings satisfy the tensor decision rule, by the enumerable route:
    `cuts` is complete, and the arity is `Bool` so slotwise decisions
-   combine.  Unique readability is unavailable here -- `w` has
-   `length w + 1` decompositions -- so this is the constructor that
-   applies. -}
+   combine. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Strings.Decidable (Char : Type₀) where
@@ -29,9 +27,7 @@ open DecFib  strFib using (Dec⟨_⟩)
 
 -- `DecEnumerable` has FIELDS named `enumSplit` / `enumComplete`, and
 -- `Enumeration` (opened above) has DEFINITIONS of the same names, both
--- unqualified.  The copatterns on the left are projections and resolve
--- on their own; it is the right-hand sides that would be ambiguous, so
--- the field names are qualified there instead.
+-- unqualified.
 strDecEnum : DecEnumerable strFib ℓ-zero
 strDecEnum .DecEnumerable.enumSplit    = enumSplit
 strDecEnum .DecEnumerable.enumComplete = enumComplete

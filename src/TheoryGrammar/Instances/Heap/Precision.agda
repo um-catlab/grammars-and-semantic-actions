@@ -1,36 +1,4 @@
-{-
-  PRECISION OVER HEAPS -- THE INSTANCE.  The notions are `TheoryGrammar.
-  Precision`'s; nothing generic is restated here.
-
-  `Decidable.Tensor.DecReadable.splitProp` says a heap has AT MOST ONE
-  splitting.  A one-cell heap has two, so the module `Decidable.Tensor.
-  UniqueSplit` -- which is parameterised by it -- is unavailable over
-  heaps (`splitProp-fails`).  That module used to be called `Precise`,
-  and this file is why it is not: its hypothesis is unique readability,
-  which heaps refute, while precision over heaps is perfectly good.
-
-  Separation logic's precision RELATIVISES that to a predicate, and the
-  generic file proves `splitProp` is its unrelativised case.  `⊤G` is
-  what separates them: imprecise here, hence `splitProp` false.
-
-  WHAT THIS FILE OWES THE GENERIC ONE: `slotDet` -- under DISJOINTNESS a
-  part determines its complement -- which is exactly the hypothesis
-  `preciseP→preciseI` takes, and the one place the `u # v` conjunct of
-  `HeapSplit` does work.  `ilv-det` is its PRIMITIVE.
-
-  Read beside `Heap/Precise.agda`, which takes the STRONGER, splitting-
-  free `Pins A = A u → A v → u ≡ v` and gets non-duplication from it.
-  Precision constrains only the parts of a COMMON whole, so `Pins`
-  implies it and not conversely -- §6, with `∃v. l ↦ v` separating.
-
-  DEFINES `Precise` (pointwise) and `PreciseI` (internal); the positive
-  cases `precise-rep`/`precise-emp`/`precise-↦` and `preciseI-rep`/
-  `preciseI-emp`/`preciseI-↦`; the refutations `imprecise-⊤`,
-  `imprecise-⊕`, `impreciseI-⊤`, `splitProp-fails`, `decReadable-fails`,
-  `merge-fails`; the PRIMITIVE `ilv-det` with the hypothesis `slotDet`
-  it feeds; and the bridge `pins→precise`/`pins→preciseI` with its
-  converse's refutation `not-pins-∃↦`.
--}
+{- PRECISION OVER HEAPS -- THE INSTANCE. The notions are `TheoryGrammar. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 open import Cubical.Foundations.Prelude
 
@@ -53,7 +21,7 @@ open import TheoryGrammar.Instances.Heap.Emp public
 -- the two files, and it runs in only one direction.
 open import TheoryGrammar.Instances.Heap.Precise using (Pins)
 
--- the generic notions, at this promodel.  `PreciseI` is hidden only
+-- the generic notions, at this `Fibered`.  `PreciseI` is hidden only
 -- because the ∗-spelling below re-earns the name.
 open Prec heapFib public hiding (PreciseI)
 
@@ -61,9 +29,7 @@ open Prec heapFib public hiding (PreciseI)
 -- reading is available and both computation rules are `Eq.refl`.
 open Binary appop true false boolΠ (λ _ _ → Eq.refl) (λ _ _ → Eq.refl) public
 
--- ==================================================================
 -- 1.  POINTWISE PRECISION, and the framework's hypothesis.
--- ==================================================================
 
 Precise : Gr → Type₀
 Precise = PreciseP appop true
@@ -74,11 +40,9 @@ splitProp→precise : SplitPropAt appop → (A : Gr) → Precise A
 splitProp→precise sp A =
   partsPropAt→preciseP appop true A (splitPropAt→partsPropAt appop sp)
 
--- ==================================================================
 -- 2.  THE PRECISE EXAMPLES.  A representable is precise for a trivial
 -- reason: two things equal to `c` are equal.  `emp` and `l ↦ x` are
 -- both representables, so both come from the generic `preciseP-⌈⌉`.
--- ==================================================================
 
 precise-rep : (c : Heap) → Precise ⌈ c ⌉
 precise-rep = preciseP-⌈⌉ appop true
@@ -89,12 +53,7 @@ precise-emp = precise-rep []
 precise-↦ : (l : Loc) (x : Val) → Precise (l ↦ x)
 precise-↦ l x = precise-rep (single l x)
 
--- ==================================================================
--- 3.  THE IMPRECISE ONES.  One cell splits two ways, with left parts
--- `[]` and the cell itself, so any predicate holding at both is
--- imprecise.  `⊤G` is the extreme case, `emp ⊕ (l ↦ x)` the textbook
--- one.
--- ==================================================================
+-- 3. THE IMPRECISE ONES.
 
 nil≢cons : {c : Cell} {h : Heap} → ([] Eq.≡ (c ∷ h)) → ⊥
 nil≢cons ()
@@ -130,21 +89,9 @@ merge-fails : MergeAt ℓ-zero appop → ⊥
 merge-fails mg = imprecise-⊤ (partsPropAt→preciseP appop true ⊤G
                                 (merge→partsProp appop mg))
 
--- ==================================================================
--- 4.  PRECISION, INTERNALLY: `∗` distributes over `&`.
---
--- The generic form is `Binary.PreciseB`, and at `boolΠ` it IS the
--- separation-logic statement -- `refl`, below.  What the instance owes
--- is `slotDet`: without `_#_` it is FALSE (`Ilv [a] v [a,b,a]` has two
--- solutions), so this is a place where the partiality HELPS.
--- ==================================================================
+-- 4. PRECISION, INTERNALLY: `∗` distributes over `&`.
 
--- No-confusion for the cell list, in `Eq`.  Needed because the two
--- interleavings must be matched TOGETHER and `Cell` is a Σ: sharing the
--- whole as an INDEX makes the unifier ask to delete a reflexive
--- equation at Σ, which `--without-K` refuses.  Passing the coincidence
--- of the wholes as an `Eq` argument instead keeps every index flexible,
--- and these three lemmas do by hand what the unifier would have done.
+-- No-confusion for the cell list, in `Eq`.
 cons-inj-head : {c c' : Cell} {w w' : Heap} → (c ∷ w) Eq.≡ (c' ∷ w') → c Eq.≡ c'
 cons-inj-head Eq.refl = Eq.refl
 
@@ -185,12 +132,9 @@ slotDet h (u , v , ilv , d) (u' , v' , ilv' , d') e =
   boolΠ e (ilv-det ilv (coeEq (λ z → Ilv z v' h) (Eq.sym e) ilv') Eq.refl d
                    (#-Eq (Eq.sym e) Eq.refl d'))
 
--- `PreciseI A` DENOTES "A knows which part of the heap it owns": given
--- one whole satisfied two ways with the same A-factor, the SAME
--- splitting carries both complements, so `∗` distributes over `&`.  No
--- splitting is mentioned in the statement -- that is what makes it the
--- internal form.  It is the separation-logic spelling of
--- `Binary.PreciseB`, and it is that module's statement on the nose.
+-- `PreciseI A` DENOTES "A knows which part of the heap it owns": given one
+-- whole satisfied two ways with the same A-factor, the SAME splitting
+-- carries both complements, so `∗` distributes over `&`.
 PreciseI : Gr → Type₁
 PreciseI A = (B C : Gr) → ((A ∗ B) & (A ∗ C)) ⊢ (A ∗ (B & C))
 
@@ -218,11 +162,9 @@ impreciseI-⊤ pr = nil≢cons (Eq.sym (dist .snd false .fst) Eq.∙ dist .snd f
                  ( ((s , [] , ilv-nilR s , #-nil s) , boolΠ tt Eq.refl)
                  , (([] , s , ilv-nilL s , tt)      , boolΠ tt Eq.refl) )
 
--- ==================================================================
 -- 5.  ... AND IT COMPUTES.  The generic merge hands back the FIRST
 -- splitting, so at a one-cell heap owned by `0 ↦ v0` the left part is
 -- that cell.  (`Heap/Tests` runs the two-cell version.)
--- ==================================================================
 
 private
   both : (((0 ↦ v0) ∗ empR) & ((0 ↦ v0) ∗ empR)) s
@@ -231,16 +173,7 @@ private
   _ : heapFib .parts appop s (preciseI-↦ 0 v0 empR empR s both .fst) true Eq.≡ s
   _ = Eq.refl
 
--- ==================================================================
--- 6.  PINNING ⟹ PRECISION, AND NOT CONVERSELY.
---
--- `Heap/Precise.Pins A = A u → A v → u ≡ v` asks `A` to determine its
--- heap OUTRIGHT.  Precision asks much less: only that `A` determine the
--- slot it occupies IN A GIVEN WHOLE -- the two heaps it compares are
--- already the parts of one `m`, at one operation, at one slot.  So the
--- implication is a forgetting of hypotheses and nothing more, and it is
--- the bridge the two files were missing.
--- ==================================================================
+-- 6. PINNING ⟹ PRECISION, AND NOT CONVERSELY.
 
 pins→precise : (A : Gr) → Pins A → Precise A
 pins→precise A pins m p q x y = Eq.pathToEq (pins x y)
@@ -250,17 +183,8 @@ pins→precise A pins m p q x y = Eq.pathToEq (pins x y)
 pins→preciseI : (A : Gr) → Pins A → PreciseI A
 pins→preciseI A pins = preciseP→preciseB A slotDet (pins→precise A pins)
 
--- THE CONVERSE FAILS, and `∃v. l ↦ v` is the separating example: the
--- cell at `l` holds SOMETHING.  It does not pin -- `l ↦ v0` and
--- `l ↦ v1` are different heaps, and that is `not-pins-∃↦` below -- yet
--- it IS precise, because a splitting's left part is a sublist of the
--- whole and `u # v` forbids the whole from carrying `l` twice, so at a
--- fixed `m` there is only one cell it can be.  (Precision is exactly
--- the relativisation that survives this: `Heap/Precise` needs the
--- stronger hypothesis because `precise-no-dup` compares parts of TWO
--- different composites.)
---
--- `⌈ c ⌉ h` is `h Eq.≡ c`, so this is `Σ` over the value.
+-- THE CONVERSE FAILS, and `∃v. l ↦ v` is the separating example: the cell
+-- at `l` holds SOMETHING.
 ∃↦ : Loc → Gr
 ∃↦ l h = Σ[ x ∈ Val ] ⌈ single l x ⌉ h
 

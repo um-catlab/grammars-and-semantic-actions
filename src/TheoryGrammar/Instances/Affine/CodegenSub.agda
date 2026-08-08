@@ -1,118 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  AFFINE CODE GENERATION, REPAIRED: THE PASS INTO THE LEAKY HEAP.
-
-  Three files meet here and none of them is restated.
-
-      LinLam/Codegen      phase 4 at a LINEAR source: `layPres` and
-                          `layRefl` at both operations, so `Lay` is
-                          STRONG monoidal into separation logic
-      Affine/Codegen      the same allocator at an AFFINE source:
-                          `apartLayA` SURVIVES (no-aliasing), and
-                          `noAffPres` REFUTES split preservation, on
-                          coverage rather than on aliasing
-      LeakyHeap/Base      the target with `Ilv` weakened by one
-                          constructor, `leak`, mirroring `adrop`
-
-  What is missing is the arrow between the last two, and this file is
-  that arrow, plus the theorem that says it was not optional.
-
-  ------------------------------------------------------------------
-  §1  THE FAILURE IS NOT ABOUT THE LAYOUT.  `affHeapTrivial`.
-
-  `Affine/Codegen.noAffPres` refutes split preservation for ONE `hom`.
-  Read beside `LinLam/Codegen.noPackPres`, which refutes it for the
-  COMPACTING layout while the identity layout works: there the theorem
-  is a constraint on ALLOCATORS ("the allocator must be injective on
-  variables, uniformly in the context"), and a better pass satisfies it.
-  Affinely there is no such reading, and the sharp form is a rigidity
-  theorem:
-
-      affCellTrivial :  EVERY  Reindex affFib cellFib  preserving
-                        `appop` splittings is CONSTANTLY the empty heap
-      affHeapTrivial :  ... a fortiori into `heapFib`
-
-  Two lines of `Aff⊎` prove it.  (1) At an EMPTY usage the diagonal
-  `Aff⊎ z z z` exists (`affDiagEmpty`, built from `askip` alone), so
-  `Ilv k k k` with `k = hom z`; `Ilv` adds lengths, hence `k = []`.
-  (2) At ANY usage, `Base.affDropAll : Aff⊎ (zeros u) (zeros u) u` --
-  THE AFFINE AXIOM, everything may be dropped -- gives `Ilv [] [] (hom u)`,
-  hence `hom u = []`.
-
-  Step (2) is `Contrast.noWkLin` read backwards: linearly, a splitting
-  with both slots `Empty` FORCES the whole `Empty`, which is exactly why
-  `layout` survives there and why no allocator whatsoever rescues it
-  here.  The repair cannot be a better pass; the TARGET must change.
-
-  ------------------------------------------------------------------
-  §2  AND NOT ALONG `cellFib`'s AXIS.
-
-  `Heap/Base` already carves out one fragment: `cellFib` is `heapFib`
-  with the `_#_` conjunct DELETED (same carrier, same `parts`, same
-  `Ilv`), and it is total -- `Bags` at `Cell`.  Is that the fragment
-  affinity needs?  No, and `affCellTrivial` is deliberately stated AT
-  `cellFib` to say so: the collapse happens with disjointness ALREADY
-  GONE.  Deleting `_#_` buys nothing, because the obstruction is
-  EXACTNESS.  The two axes are orthogonal, which `LeakyHeap/Base`'s
-  header tabulates and `fragmentsDiffer` / `cellNotLeaky` below record
-  at the two levels that matter: `cellFib` has a lax point and
-  `leakyFib` does not, and each has a splitting the other lacks.
-
-  ------------------------------------------------------------------
-  §3  THE PASS.  `affLeakPres`, `affLeakRefl`.
-
-  With `leakyFib` the whole of phase 4 returns, and the translation is
-  again constructor-for-constructor with no arithmetic:
-
-      anil ↦ snil    aleft ↦ sleft    aright ↦ sright
-      askip ↦ (identity)              adrop ↦ leak
-
-  the last line being the new one and the reason the file exists.  The
-  `_#_` component is `Affine/Codegen.apartLayA` USED AS IS -- result 1
-  is not reproved, it is consumed.  Both directions hold at both
-  operations, so `Lay` is STRONG monoidal, i.e. affine context
-  splittings and leaky heap separations correspond BIJECTIVELY, which is
-  the discrete Conduché condition of `ChangeOfTheory` at a promodel.
-
-  `A ∗ B` at `leakyFib` holds of `h` when DISJOINT SUB-heaps of `h`
-  satisfy `A` and `B`: predicates upward closed under heap extension,
-  i.e. INTUITIONISTIC separation logic.  So the phase-4 slogan
-  generalises to
-
-      a linear source compiles into exact separation logic;
-      an affine source compiles into intuitionistic separation logic,
-      and into nothing smaller (§1).
-
-  `noDupAffLay` then comes back by TRANSPORTING `LeakyHeap.apart-self`
-  along the pass -- result 1 exported internally rather than reproved,
-  exactly as `LinLam/Codegen.noDupLay` does it linearly.
-
-  ------------------------------------------------------------------
-  §4  THE OTHER REPAIR IS THIS ONE WITH THE WITNESS KEPT.
-
-  The alternative repair -- emit an explicit `free`, so the dropped cell
-  is accounted for in the CODE rather than in the splitting relation --
-  is not an alternative:
-
-      subIlv→drops / drops→subIlv :
-          SubIlv h₁ h₂ h   ⟺   Σ[ m ] Σ[ d ] (Ilv h₁ h₂ m × Ilv m d h)
-
-  A leaky splitting IS an exact one together with a heap `d` of dropped
-  cells.  `d` is precisely the deallocation the pass would emit, and
-  `leak` is `free` with its argument erased.  Retaining `d` means
-  enlarging the target CARRIER (a heap plus its drop list), which is
-  again a change of target promodel -- so `affHeapTrivial` is not
-  contradicted by it.  The two repairs are one repair, remembered or
-  forgotten.
-
-  ------------------------------------------------------------------
-  PHASE DISCIPLINE.  `leakLay`, `reflSub`, `reflNilAff` are phase 1 --
-  construction of the pass, matching on `Aff⊎`, on `SubIlv` and on the
-  carrier.  From `Lay` down is phase 2: `push⊗`, `pull⊗`, `pullTerm`,
-  `⊗ˢ-map`, `_∘g_` and `boolΠ` with a pinned motive, and nothing else.
-  The rigidity theorems of §1 are METAtheorems about the pass, pointful
-  for the same reason `noPackPres` is.
--}
+{- AFFINE CODE GENERATION, REPAIRED: THE PASS INTO THE LEAKY HEAP. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Affine.CodegenSub where
@@ -148,10 +35,8 @@ import TheoryGrammar.Instances.LinLam.Codegen as CG
 -- RESULT 1 AND RESULT 2 at the affine source, imported, not restated
 import TheoryGrammar.Instances.Affine.Codegen as AC
 
--- ==================================================================
 -- §0  What is inherited.  Nothing here is new; the aliases exist so
 -- that nothing below silently re-derives a twin.
--- ==================================================================
 
 layout : Usage → H.Heap
 layout = CG.layout
@@ -162,13 +47,7 @@ layout = CG.layout
 apartAff : ∀ {u₁ u₂ u} → Aff⊎ u₁ u₂ u → (i : ℕ) → CG.lay i u₁ H.# CG.lay i u₂
 apartAff = AC.apartLayA
 
--- ==================================================================
--- §1  THE FAILURE IS NOT ABOUT THE LAYOUT: A RIGIDITY THEOREM.
---
--- Stated at `cellFib` -- `heapFib` with `_#_` ALREADY DELETED -- which
--- is what makes it a statement about EXACTNESS and not about
--- disjointness.
--- ==================================================================
+-- §1 THE FAILURE IS NOT ABOUT THE LAYOUT: A RIGIDITY THEOREM.
 
 eqTrans : {A : Type₀} {x y z : A} → x Eq.≡ y → y Eq.≡ z → x Eq.≡ z
 eqTrans Eq.refl q = q
@@ -231,11 +110,8 @@ zerosTrivial h P u = nilEq _ (ilvSelf _ (ilv-Eq e₁ e₂ ilv))
   e₂ : P .homSplit z sp .snd .fst Eq.≡ h .hom tt z
   e₂ = P .homParts z sp false
 
--- STEP (2): `affDropAll` -- everything may be dropped -- then forces
--- the WHOLE to be `[]` as well.
---
--- THEOREM.  NO NONTRIVIAL SPLIT-PRESERVING AFFINE CODEGEN EXISTS into
--- an exact-interleaving target, disjointness or no disjointness.
+-- STEP (2): `affDropAll` -- everything may be dropped -- then forces the
+-- WHOLE to be `[]` as well.
 affCellTrivial : (h : Reindex affFib H.cellFib) → SplitPresAt h appop
                → (u : Usage) → h .hom tt u Eq.≡ []
 affCellTrivial h P u = Eq.sym (H.ilv-nilL-inv (ilv-Eq e₁ e₂ ilv))
@@ -262,23 +138,15 @@ affHeapTrivial h P = affCellTrivial (cellOf h) (forgetPres h P)
 noAffPres' : SplitPresAt AC.affLayoutMap appop → ⊥
 noAffPres' P = notNil (affHeapTrivial AC.affLayoutMap P (true ∷ []))
 
--- ==================================================================
--- §2  THE TWO FRAGMENTS OF `heapFib` ARE DIFFERENT PROMODELS.
---
--- `cellFib` deletes the `_#_` conjunct; `leakyFib` weakens `Ilv`.  The
--- sharpest separation is at the point: deleting disjointness BUYS a lax
--- point, weakening exactness does not -- `leakyFib` keeps `_#_` in full,
--- so `noHeapPoint`'s proof survives verbatim.
--- ==================================================================
+-- §2 THE TWO FRAGMENTS OF `heapFib` ARE DIFFERENT `Fibered`.
 
 fragmentsDiffer : LaxPoint H.cellFib × (LaxPoint L.leakyFib → ⊥)
 fragmentsDiffer = H.cellPoint , L.noLeakyPoint
 
--- ... and at the level of splittings, in both directions.
---
--- a `leakyFib` splitting with no `cellFib` counterpart at the same
--- parts: THE DROP (`L.subIlv⊋ilv`, and `AC.noIlvGap` is result 2's
--- obstruction at the same cell).
+-- ... and at the level of splittings, in both directions. a `leakyFib`
+-- splitting with no `cellFib` counterpart at the same parts: THE DROP
+-- (`L.subIlv⊋ilv`, and `AC.noIlvGap` is result 2's obstruction at the same
+-- cell).
 leakyNotCell : L.SubIlv [] [] (H.single 0 H.v1)
              × (H.Ilv [] [] (H.single 0 H.v1) → ⊥)
 leakyNotCell = L.leak L.snil , AC.noIlvGap
@@ -291,12 +159,7 @@ cellNotLeaky =
     (H.single 0 H.v1 , H.single 0 H.v1 , H.left (H.right H.nil))
   , H.#-self 0 H.v1
 
--- ==================================================================
--- §4  A LEAKY SPLITTING IS AN EXACT ONE PLUS A HEAP OF DROPPED CELLS.
---
--- The "emit a free" repair is THIS repair with the witness retained:
--- `d` is the deallocation the pass would emit, and `leak` forgets it.
--- ==================================================================
+-- §4 A LEAKY SPLITTING IS AN EXACT ONE PLUS A HEAP OF DROPPED CELLS.
 
 subIlv→drops : ∀ {h₁ h₂ h} → L.SubIlv h₁ h₂ h
              → Σ[ m ∈ H.Heap ] Σ[ d ∈ H.Heap ]
@@ -316,12 +179,9 @@ drops→subIlv (H.left  i₁) (H.left i₂)  = L.sleft  (drops→subIlv i₁ i�
 drops→subIlv (H.right i₁) (H.left i₂)  = L.sright (drops→subIlv i₁ i₂)
 drops→subIlv i₁           (H.right i₂) = L.leak   (drops→subIlv i₁ i₂)
 
--- ==================================================================
--- §3  SPLIT PRESERVATION AT THE REPAIRED TARGET.  **HOLDS.**
---
+-- §3 SPLIT PRESERVATION AT THE REPAIRED TARGET. **HOLDS.**
 -- `LinLam/Codegen.ilvLay` was a constructor-for-constructor translation
 -- with no arithmetic; so is this, with `adrop ↦ leak` the new line.
--- ==================================================================
 
 leakLay : ∀ {u₁ u₂ u} → Aff⊎ u₁ u₂ u → (i : ℕ)
         → L.SubIlv (CG.lay i u₁) (CG.lay i u₂) (CG.lay i u)
@@ -342,19 +202,13 @@ affLeakPres nilop .homParts u e ()
 affLeakPres appop .homSplit u (u₁ , u₂ , s) =
   layout u₁ , layout u₂ , leakLay s 0 , apartAff s 0
 affLeakPres appop .homParts u (u₁ , u₂ , s) =
-  boolΠ {M = λ a → H.boolΠ {M = λ _ → H.Heap} (layout u₁) (layout u₂) a
+  boolΠ {M = λ a → boolΠ {M = λ _ → H.Heap} (layout u₁) (layout u₂) a
                      Eq.≡ layout (boolΠ {M = λ _ → Usage} u₁ u₂ a)}
         Eq.refl Eq.refl
 
 module A = Along affLeakMap
 
--- ==================================================================
 -- ... AND REFLECTION, the stronger half, which also survives.
---
--- A leaky splitting of `lay i u` reads back as an `Aff⊎`: `leak` at a
--- live position is exactly `adrop`.  Disjointness again does not choose
--- the constructor -- it only feeds the recursion.
--- ==================================================================
 
 reflNilAff : (u : Usage) (i : ℕ) → H.IsNil (CG.lay i u) → Empty u
 reflNilAff []          i n = tt
@@ -384,32 +238,30 @@ affLeakRefl nilop u n = reflNilAff u 0 n , λ ()
 affLeakRefl appop u (h₁ , h₂ , p , d) =
   let (u₁ , u₂ , s , e₁ , e₂) = reflSub u 0 p d
   in (u₁ , u₂ , s)
-   , boolΠ {M = λ a → H.boolΠ {M = λ _ → H.Heap} h₁ h₂ a
+   , boolΠ {M = λ a → boolΠ {M = λ _ → H.Heap} h₁ h₂ a
                         Eq.≡ layout (boolΠ {M = λ _ → Usage} u₁ u₂ a)}
            e₁ e₂
 
--- ==================================================================
 -- §5  PHASE 2 FROM HERE DOWN.  `Lay` reinterprets an intuitionistic
 -- separation predicate as a predicate on affine contexts; the two
 -- directions of strong monoidality are `push⊗` and `pull⊗`.
--- ==================================================================
 
 Lay : L.Gr → Ctx
 Lay B = A.pull {s = tt} B
 
 respellIn : (B C : L.Gr) (a : Bool)
           → boolΠ {M = λ _ → Ctx} (Lay B) (Lay C) a
-          ⊢ Lay (H.boolΠ {M = λ _ → L.Gr} B C a)
+          ⊢ Lay (boolΠ {M = λ _ → L.Gr} B C a)
 respellIn B C =
   boolΠ {M = λ a → boolΠ {M = λ _ → Ctx} (Lay B) (Lay C) a
-                 ⊢ Lay (H.boolΠ {M = λ _ → L.Gr} B C a)}
+                 ⊢ Lay (boolΠ {M = λ _ → L.Gr} B C a)}
         idg idg
 
 respellOut : (B C : L.Gr) (a : Bool)
-           → Lay (H.boolΠ {M = λ _ → L.Gr} B C a)
+           → Lay (boolΠ {M = λ _ → L.Gr} B C a)
            ⊢ boolΠ {M = λ _ → Ctx} (Lay B) (Lay C) a
 respellOut B C =
-  boolΠ {M = λ a → Lay (H.boolΠ {M = λ _ → L.Gr} B C a)
+  boolΠ {M = λ a → Lay (boolΠ {M = λ _ → L.Gr} B C a)
                  ⊢ boolΠ {M = λ _ → Ctx} (Lay B) (Lay C) a}
         idg idg
 
@@ -418,20 +270,20 @@ respellOut B C =
 -- here, it is what `push⊗` consumed.
 layLeak∗ : (B C : L.Gr) → (Lay B ⊛ Lay C) ⊢ Lay (B L.∗ C)
 layLeak∗ B C =
-    A.push⊗ appop (affLeakPres appop) {B = H.boolΠ {M = λ _ → L.Gr} B C}
+    A.push⊗ appop (affLeakPres appop) {B = boolΠ {M = λ _ → L.Gr} B C}
   ∘g ⊗ˢ-map appop
        {A = boolΠ {M = λ _ → Ctx} (Lay B) (Lay C)}
-       {B = λ a → Lay (H.boolΠ {M = λ _ → L.Gr} B C a)}
+       {B = λ a → Lay (boolΠ {M = λ _ → L.Gr} B C a)}
        (respellIn B C)
 
 -- ... and back, by reflection.  Together: `Lay` is STRONG monoidal.
 layLeak∗⁻ : (B C : L.Gr) → Lay (B L.∗ C) ⊢ (Lay B ⊛ Lay C)
 layLeak∗⁻ B C =
     ⊗ˢ-map appop
-      {A = λ a → Lay (H.boolΠ {M = λ _ → L.Gr} B C a)}
+      {A = λ a → Lay (boolΠ {M = λ _ → L.Gr} B C a)}
       {B = boolΠ {M = λ _ → Ctx} (Lay B) (Lay C)}
       (respellOut B C)
-  ∘g A.pull⊗ appop (affLeakRefl appop) {B = H.boolΠ {M = λ _ → L.Gr} B C}
+  ∘g A.pull⊗ appop (affLeakRefl appop) {B = boolΠ {M = λ _ → L.Gr} B C}
 
 -- the unit, both ways: "nothing is owned" ⊣⊢ "the empty heap"
 layEmp : 𝟙 ⊢ Lay L.emp
@@ -440,15 +292,7 @@ layEmp = A.push⊗ nilop (affLeakPres nilop) {B = λ ()}
 layEmp⁻ : Lay L.emp ⊢ 𝟙
 layEmp⁻ = A.pull⊗ nilop (affLeakRefl nilop) {B = λ ()}
 
--- ==================================================================
--- §6  TRANSPORT.  RESULT 1, EXPORTED INTERNALLY.
---
--- The disjointness `apartLayA` established is never restated: it is
--- what `push⊗` consumed, and the affine no-duplication theorem comes
--- back by pulling the heap-side one along the pass.  This is
--- `LinLam/Codegen.noDupLay` at the affine source, and it is the honest
--- statement that half (a) survived.
--- ==================================================================
+-- §6 TRANSPORT. RESULT 1, EXPORTED INTERNALLY.
 
 noDupAffLay : (l : H.Loc) (x : H.Val)
             → (Lay L.⌈ H.single l x ⌉ ⊛ Lay L.⌈ H.single l x ⌉) ⊢ ⊥G
@@ -462,9 +306,7 @@ layFrame : {B B' : L.Gr} (C : L.Gr) → B L.⊢ B'
 layFrame {B} {B'} C f =
   layLeak∗⁻ B' C ∘g A.pullTerm (L.frame C f) ∘g layLeak∗ B C
 
--- ==================================================================
 -- §7  EMITTING CODE, and observation.  `run` only in a `refl` line.
--- ==================================================================
 
 Code : Ctx
 Code = ⊕ᴰ H.Heap (λ h → Lay L.⌈ h ⌉)
@@ -478,11 +320,9 @@ emit u _ = ⊕ᴰ-I H.Heap {A = λ h → Lay L.⌈ h ⌉} (layout u) u
 emitTm : ATmG ⊢ Code
 emitTm = emit
 
--- ------------------------------------------------------------------
 -- Terms.  `dropAff` and `dropApp` are the shapes `LinLam.Tm` cannot
 -- express at all, and they are exactly the ones §1 refutes and §3
 -- recovers.
--- ------------------------------------------------------------------
 
 xAff : ATm (true ∷ [])
 xAff = tvar tt
@@ -519,9 +359,7 @@ _ = refl
 _ : emitTm (true ∷ true ∷ []) dropApp .fst ≡ (0 , H.v1) ∷ (1 , H.v1) ∷ []
 _ = refl
 
--- ==================================================================
 -- §8  THE POINT, as `refl`s.
--- ==================================================================
 
 -- (a) the linear-shaped application still gives two DISJOINT regions;
 -- the `_#_` proof reduces to a nest of `tt`, exactly as in

@@ -1,51 +1,6 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  DIVISORS FOR FREE.
-
-  The point of this file is that almost nothing happens in it.  Once the
-  promodel is in place, the classical arithmetic functions are already
-  present as connectives, and the theorems about them are `refl`.
-
-      δ  =  ⌈1⌉   =  the ⊗-unit
-      ζ  =  ⊤     =  the constant function 1
-      τ  =  ζ ⊗ ζ =  the number of divisors
-      τₖ =  ζ^⊗k  =  the number of ordered k-factorisations
-
-  and the headline computation is that
-
-      τ n  =  Σ[ sp ∈ Split mulop n ] (Bool → Unit)
-
-  DEFINITIONALLY.  `(ζ ⊗ ζ) n` unfolds to the type of factorisations of
-  n paired with a contractible tail, so `divisorsAreFactorisations` below
-  is literally `refl` and `τIso` is an isomorphism all four of whose laws
-  are `refl` (the `Bool → Unit` factor collapses by η for `Unit`).  Write
-  the same thing pointfully and you get
-
-      Σ[ d ∈ ℕ₊ ] (d ∣ n)      with   d ∣ n  =  Σ[ e ] d · e ≡ n
-
-  which is the same set, but it is a DEFINITION you then have to relate
-  to the convolution by hand, and the relation is where all the
-  bookkeeping of "Dirichlet convolution counts pairs of divisors" lives.
-  Here the convolution IS the definition, so the identity
-  τ = ζ * ζ is not a theorem at all.
-
-  The Euler product `⊤ ≅ ⊗ᴰ_p ⌈p⌉*` is the closed form of the same
-  observation, and `Factorization.agda` is its constructive content.
-
-  ------------------------------------------------------------------
-  WHAT IS *NOT* HERE, honestly.
-  ------------------------------------------------------------------
-
-  σ (the sum of divisors) and μ (Möbius) are NOT connectives, and no
-  amount of rearranging makes them so.  A grammar's Dirichlet series has
-  coefficients |A n| -- a CARDINALITY -- so ⊗ can only ever implement
-  convolution of NON-NEGATIVE INTEGER sequences.  σ needs each divisor
-  counted with weight d, and μ needs the weight -1; both are maps out of
-  a grammar into a semiring, i.e. semantic actions, not grammars.  What
-  the calculus gives is the combinatorial skeleton (τ, τₖ, the
-  square-free / k-free grammars); the weights are a separate layer, and
-  it is worth being clear that the layer exists.
--}
+{- DIVISORS FOR FREE. The point of this file is that almost nothing happens
+   in it. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Dirichlet.Divisors where
@@ -66,16 +21,14 @@ open import TheoryGrammar.Fibered
 
 open import TheoryGrammar.Instances.Dirichlet.Connectives public
 
--- ==================================================================
 -- The two constants.
--- ==================================================================
 
 -- ζ: every index, exactly once.  The constant Dirichlet series 1.
 ζ : Gr
 ζ = ⊤'
 
 -- δ is `⊗ˢ oneop`; that it is also the representable at 1 is the
--- promodel's unit law, and both directions are phase 2.
+-- `Fibered`'s unit law, and both directions are phase 2.
 δ→⌈1⌉ : δ ⊢ ⌈ one₊ ⌉
 δ→⌈1⌉ (zero , ())
 δ→⌈1⌉ (suc zero , p) _ = Eq.refl
@@ -84,18 +37,14 @@ open import TheoryGrammar.Instances.Dirichlet.Connectives public
 ⌈1⌉→δ : ⌈ one₊ ⌉ ⊢ δ
 ⌈1⌉→δ = ⌈⌉-E δ-mk                       -- ⌈⌉-UP, i.e. Yoneda
 
--- ==================================================================
 -- THE DIVISOR GRAMMAR.  τ = ζ ⊗ ζ, and this is DEFINITIONALLY the
 -- type of factorisations.
--- ==================================================================
 
 τ : Gr
 τ = ζ ⊗' ζ
 
 -- The same convolution with the arity family written CONSTANTLY rather
--- than by `if`.  The two are pointwise equal but not definitionally so,
--- because arities have no η (CLAUDE.md, "Known traps"): for a variable
--- slot `a`, `if a then ζ else ζ` is stuck, while `(λ _ → ζ) a` is not.
+-- than by `if`.
 τᶜ : Gr
 τᶜ = ⊗ˢ mulop (λ _ → ζ)
 
@@ -131,16 +80,8 @@ _ = ⊗-mk (2 , tt) (3 , tt) (timesAll 2 3) Eq.refl tt
 _ : τ (6 , tt)
 _ = ⊗-mk (2 , tt) (3 , tt) (timesAll 2 3) tt tt
 
--- ==================================================================
--- THE UNIT LAW.
---
--- One primitive, and then the two maps are `⊗ˢ-UP` and `⌈⌉-UP` applied
--- to it.  Compare Instances/Strings/Laws: there the RIGHT unit law
--- needed its own induction (`splitNilR`) because `++` is not
--- commutative and `Split3` recurses on the left factor.  Here the two
--- sides cost exactly the same, which is the first place commutativity
--- of the theory shows up in the metatheory.
--- ==================================================================
+-- THE UNIT LAW. One primitive, and then the two maps are `⊗ˢ-UP` and
+-- `⌈⌉-UP` applied to it.
 
 -- PRIMITIVE (phase 1): a factorisation with a unit on one side has its
 -- other factor equal to the whole.
@@ -165,10 +106,7 @@ unitR {d} t = ℕ₊≡ (sym (·-identityʳ (val d)) ∙ timesPath t)
 isSetℕ₊ : isSet ℕ₊
 isSetℕ₊ = isSetΣ isSetℕ (λ n → isProp→isSet (isPropNonZero n))
 
--- the round trip that Instances/Strings/Laws also proves.  It is not
--- `refl` here (the string version is), because `unitL` goes through a
--- path in ℕ and the substitution has to be squashed -- but ℕ₊ is a set,
--- so the path is `refl` and the transport is the identity.
+-- the round trip that Instances/Strings/Laws also proves.
 ⊗-unit-ll⁻ : {A : Gr} → ∀ n (a : A n) → ⊗-unit-l n (⊗-unit-l⁻ {A = A} n a) ≡ a
 ⊗-unit-ll⁻ {A} n a =
   cong (λ q → subst A q a) (isSetℕ₊ n n (unitL (times1L (val n))) refl)
@@ -179,10 +117,8 @@ isSetℕ₊ = isSetΣ isSetℕ (λ n → isProp→isSet (isPropNonZero n))
   cong (λ q → subst A q a) (isSetℕ₊ n n (unitR (times1R (val n))) refl)
   ∙ substRefl {B = A} a
 
--- ==================================================================
 -- COMMUTATIVITY.  ⊗ is symmetric here, unlike in the string instance.
 -- The proof is `·-comm` transported across `Times`, once.
--- ==================================================================
 
 -- PRIMITIVE (phase 1): factorisations can be reversed.
 timesSwap : {d e n : ℕ} → Times d e n → Times e d n

@@ -4,9 +4,7 @@
 
   Two results, and a controlled experiment relating them.
 
-  ------------------------------------------------------------------
   1.  A POINTS-TO CANNOT BE DUPLICATED.
-  ------------------------------------------------------------------
 
   In a separation logic this is normally a property of the MODEL -- one
   proves the semantics is a PCM and derives non-duplication from
@@ -28,13 +26,11 @@
   consequence rather than a side condition.  The two results are the
   negative and positive halves of one observation.
 
-  ------------------------------------------------------------------
   2.  THE CONTROLLED EXPERIMENT.
-  ------------------------------------------------------------------
 
   `Base` gives `cellFib`: the same carrier, the same `parts`, the same
   `Ilv`, with the `u # v` conjunct deleted -- and it HAS a total point.
-  So the two promodels differ at exactly one conjunct of one operation,
+  So the two `Fibered` differ at exactly one conjunct of one operation,
   and everything else is held fixed.
 
   The sharp statement is that the SAME generic lemma runs in both
@@ -65,12 +61,11 @@ import Cubical.Data.Equality as Eq
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.RulesFib
+open import TheoryGrammar.Theories.MonoidSep
 
 open import TheoryGrammar.Instances.Heap.Connectives public
 
--- ==================================================================
 -- 1.  NON-DUPLICATION.
--- ==================================================================
 
 module _ (l : Loc) (x : Val) where
 
@@ -88,19 +83,16 @@ module _ (l : Loc) (x : Val) where
   no-dup : (⌈ s ⌉ ⊢ (⌈ s ⌉ ∗ ⌈ s ⌉)) → ⊥
   no-dup d = E.rec* (⌈⌉-UP {a = s} {B = ⊥G} .Iso.fun (dup→absurd d))
 
--- ==================================================================
--- 2.  THE CELL FRAGMENT, WHERE DUPLICATION IS FINE.
---
--- `cellFib` is `heapFib` minus disjointness.  Its connectives are
--- qualified, since the unqualified ones are the heap's.
--- ==================================================================
+-- 2. THE CELL FRAGMENT, WHERE DUPLICATION IS FINE.
 
 module C = RulesF cellFib
 
 -- the cell fragment's separating conjunction -- the same former, at the
--- promodel that does not require disjointness
+-- `Fibered` that does not require disjointness.
+private module Sc = MonSep cellFib
+
 _∗c_ : C.TheoryTy ℓ-zero tt → C.TheoryTy ℓ-zero tt → C.TheoryTy ℓ-zero tt
-A ∗c B = C.⊗ˢ appop (boolΠ A B)
+_∗c_ = Sc._∗_
 
 infixr 20 _∗c_
 
@@ -123,13 +115,8 @@ cell-no-apart l x k =
     cellPoint
   where s = single l x
 
--- ==================================================================
--- The experiment, side by side.  Same signature, same carrier, same
--- `parts`, same `Ilv`; one conjunct apart.
---
---     noHeapPoint    : LaxPoint heapFib → ⊥
---     cell-no-apart  : (⌈s⌉ ∗c ⌈s⌉ ⊢ ⊥G) → ⊥
---
--- Adding `u # v` buys the separation theorem and costs the total point;
--- deleting it buys the total point and costs the separation theorem.
--- ==================================================================
+-- The experiment, side by side. Same signature, same carrier, same
+-- `parts`, same `Ilv`; one conjunct apart. noHeapPoint : LaxPoint heapFib
+-- → ⊥ cell-no-apart : (⌈s⌉ ∗c ⌈s⌉ ⊢ ⊥G) → ⊥ Adding `u # v` buys the
+-- separation theorem and costs the total point; deleting it buys the total
+-- point and costs the...

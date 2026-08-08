@@ -1,21 +1,6 @@
 {-# OPTIONS -WnoUnsupportedIndexedMatch #-}
-{-
-  A HEAP ALONGSIDE AN INPUT TAPE: two theories at two DIFFERENT
-  signatures on one carrier.
-
-  This is what `Lifting.bothLift` was for, and `Gluing` could not state:
-  the factors are a free monoid and a partial commutative monoid, so
-  they do not share a signature and no relation between their carriers
-  is involved.  The carrier is `String × Heap`, and each theory splits
-  ITS OWN component and shares the other -- so `⊗ᵒ` cuts the input with
-  the heap untouched, and `∗` splits the heap with the input untouched.
-
-  Both liftings are three trivial lines (`Split↑` is `Unit`, `over` is
-  `Eq.refl`), and the interchange law between the two operations is then
-  FREE -- compare `Shuffle.mixedRefinable`, a three-clause recursion,
-  where the two theories shared the carrier rather than being orthogonal.
-  PRIMITIVE: none.
--}
+{- A HEAP ALONGSIDE AN INPUT TAPE: two theories at two DIFFERENT signatures
+   on one carrier. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Heap.WithInput (Char : Type₀) where
@@ -24,6 +9,7 @@ open import Cubical.Data.Sigma
 open import Cubical.Data.Bool using (Bool; true; false)
 open import Cubical.Data.Sum using (inl; inr)
 open import Cubical.Data.Unit
+open import Cubical.Data.Nat using (zero; suc)
 open import Cubical.Data.List
 open import Cubical.Data.Empty as E using (⊥)
 import Cubical.Data.Equality as Eq
@@ -44,9 +30,7 @@ import TheoryGrammar.Instances.Heap.Base as H
 import TheoryGrammar.Instances.Strings.Recompose as Rec
 module Rc = Rec Char
 
--- ==================================================================
 -- THE CARRIER, and the two liftings.
--- ==================================================================
 
 State : Unit → Type₀
 State _ = S.String × H.Heap
@@ -89,14 +73,9 @@ P ⊗ᵒ Q = M.⊗ˢ (inl appop) (pair P Q)
 _∗_ : Gr → Gr → Gr
 P ∗ Q = M.⊗ˢ (inr appop) (pair P Q)
 
--- ==================================================================
--- THE INTERCHANGE LAW, for free.
---
--- Each `rowSplit` is the heap splitting it was given and each
--- `colSplit` the input splitting -- neither is recomputed, because the
--- two theories touch different components.  Every cell equation is
--- `Eq.refl`.
--- ==================================================================
+-- THE INTERCHANGE LAW, for free. Each `rowSplit` is the heap splitting it
+-- was given and each `colSplit` the input splitting -- neither is
+-- recomputed, because the two theories touch different components.
 
 module R = Refine stateFib
 
@@ -121,10 +100,8 @@ orthogonal y p q = res
   res .R.colSplit _  = p
   res .R.colCell _ _ = Eq.refl
 
--- ==================================================================
 -- TESTS.  The input cut leaves the heap alone at BOTH slots, with the
 -- heap held abstract -- which is the whole content of `inputLift`.
--- ==================================================================
 
 module _ (x y : Char) (h : H.Heap) where
 
@@ -144,19 +121,9 @@ module _ (x y : Char) (h : H.Heap) where
   _ : stateFib .parts (inl appop) st cut false ≡ ((y ∷ []) , h)
   _ = refl
 
--- ==================================================================
--- ONE FRAME RULE, TWO READINGS.
---
--- `Hoare.Frame` is generic in the OPERATION, so over a coproduct theory
--- it instantiates twice: at `inl appop` it frames the unconsumed INPUT,
--- at `inr appop` the untouched HEAP.  Nothing is written twice.
---
--- And the side condition is free in both directions.  `Local` is the
--- work in any frame rule -- a splitting of the input must survive the
--- command -- and here a command touching only one component leaves the
--- OTHER component's splittings alone by construction.  That is
--- `orthogonal` again, now paying at the level of a program logic.
--- ==================================================================
+-- ONE FRAME RULE, TWO READINGS. `Hoare.Frame` is generic in the OPERATION,
+-- so over a coproduct theory it instantiates twice: at `inl appop` it
+-- frames the unconsumed INPUT, at `inr appop` the untouched HEAP.
 
 open Hoare stateFib stateFib
 
@@ -199,23 +166,7 @@ inputFrame : (cs : S.String → S.String → Type₀)
 inputFrame cs = FrameHp.frame-cmd (inputOnly cs) (λ _ → inputOnly cs)
                                   (inputFramesOverHeap cs)
 
--- ==================================================================
 -- THE OTHER DISTRIBUTION MODE: SPLIT, not share.
---
--- `inputLift` hands both halves of a tape cut the SAME heap.  The other
--- reading is that cutting the tape also divides the heap -- "parse this
--- prefix owning this fragment" -- and it is the same `Lifting` record
--- with `Split↑` a heap splitting instead of `Unit`.  Both signatures
--- are `monoidSig`, so the operation index is shared and the heap can
--- split along the very same `o`.
---
--- What does NOT transfer is the free frame rule above.  `Local` was one
--- line because a heap command left the tape's splittings untouched; at
--- `⊗ˡ` a heap command moves the component the splitting constrains, so
--- the uniform slot command `λ _ → c` no longer works and the classical
--- `boolΠ c skip` shape is needed.  That is the frame rule doing real
--- work rather than none -- stated here as the reason, not proved.
--- ==================================================================
 
 splitLift : Lifting (splittingOf S.strFib) State (λ _ → fst) ℓ-zero
 splitLift .Split↑ o y sp     = H.heapFib .Split o (y .snd)
@@ -267,15 +218,7 @@ module _ (x y : Char) (h : H.Heap) where
   _ : linFib .parts (inl appop) st′ linCut false ≡ ((y ∷ []) , h)
   _ = refl
 
--- ==================================================================
 -- ... AND THE REFUTATION, so the paragraph above is a theorem.
---
--- Framing a heap command uniformly across a LINEAR tape cut asks both
--- halves to gain the same new cell.  The two halves must stay disjoint,
--- so they cannot -- and that is `#-self`, the reason separation logic
--- exists, arriving here as the obstruction to a frame rule.  No length
--- argument is needed; disjointness alone does it.
--- ==================================================================
 
 module HoL      = Hoare linFib linFib
 module FrameLin = HoL.Frame (inl appop)
@@ -313,14 +256,8 @@ module _ (l : H.Loc) (v : H.Val) (x y : Char) where
     disj : hs .fst H.# hs .snd .fst
     disj = hs .snd .snd .snd
 
--- ==================================================================
--- PROGRAMS IN `⊗ˡ`.
---
--- Splittings and a refutation are not evidence that a connective is
--- usable.  These are the two terms that eliminate `⊗ˡ` -- one reading
--- only the tape, one only the heap -- and a closed test that the first
--- EVALUATES.  Both are `⊗ˢ-E` at `inl appop` and nothing else.
--- ==================================================================
+-- PROGRAMS IN `⊗ˡ`. Splittings and a refutation are not evidence that a
+-- connective is usable.
 
 Tape : S.String → GrL
 Tape u (w , h) = w Eq.≡ u
@@ -370,3 +307,64 @@ module _ (x y : Char) (h : H.Heap) where
   -- the term evaluates, and to the canonical proof
   _ : tapeCat (x ∷ []) (y ∷ []) st″ (cut″ , pay″) ≡ Eq.refl
   _ = refl
+
+-- THE HEAP-SIDE RECOMPOSITION, and why it is a WEAKER statement.
+
+-- the heap component is exactly `k` ...
+Owns : H.Heap → GrL
+Owns k (w , h) = h Eq.≡ k
+
+-- ... and the heap is SOME interleaving of `k₁` and `k₂`
+Mix : H.Heap → H.Heap → GrL
+Mix k₁ k₂ (w , h) = H.Ilv k₁ k₂ h
+
+-- the heap halves recombine: two coercions, no recursion, no `++h`
+ownsCat : (k₁ k₂ : H.Heap) → (Owns k₁ ⊗ˡ Owns k₂) ML.⊢ Mix k₁ k₂
+ownsCat k₁ k₂ = ML.⊗ˢ-E (inl appop) {A = pairL (Owns k₁) (Owns k₂)}
+                                    {B = Mix k₁ k₂} body
+  where
+  body : ML.MultiHomˢ (inl appop) (pairL (Owns k₁) (Owns k₂)) (Mix k₁ k₂)
+  body (w , h) (sp , u , v , ilv , d) k =
+    coeEq (λ z → H.Ilv z k₂ h) (k true)
+      (coeEq (λ z → H.Ilv u z h) (k false) ilv)
+
+-- ONE DATUM, TWO READINGS: it evaluates, and it refutes.
+
+module _ (x y : Char) where
+
+  private
+    k₁ k₂ h⋆ : H.Heap
+    k₁ = H.single zero H.v0
+    k₂ = H.single (suc zero) H.v0
+    h⋆ = (suc zero , H.v0) ∷ (zero , H.v0) ∷ []      -- the OTHER order
+
+    m⋆ : State tt
+    m⋆ = (x ∷ y ∷ []) , h⋆
+
+    sl⋆ : linFib .Split (inl appop) m⋆
+    sl⋆ = ((x ∷ []) , (y ∷ []) , S.cons S.nil)
+        , k₁ , k₂ , H.right (H.left H.nil) , ((tt , tt) , tt)
+
+    pay⋆ : (a : MonAr appop)
+         → pairL (Owns k₁) (Owns k₂) a (linFib .parts (inl appop) m⋆ sl⋆ a)
+    pay⋆ true  = Eq.refl
+    pay⋆ false = Eq.refl
+
+  -- it evaluates, and to the interleaving the splitting carried
+  _ : ownsCat k₁ k₂ m⋆ (sl⋆ , pay⋆) ≡ H.right (H.left H.nil)
+  _ = refl
+
+  -- PRIMITIVE.  The head location, which separates the two orders.
+  private
+    hd0 : H.Heap → H.Loc
+    hd0 []            = zero
+    hd0 ((l , _) ∷ _) = l
+
+  -- THEOREM.  `Recompose.recompose` has no heap analogue: naming the
+  -- whole by `++h` is false already at two disjoint single cells.
+  noOwnsCat : ((j₁ j₂ : H.Heap) → (Owns j₁ ⊗ˡ Owns j₂) ML.⊢ Owns (j₁ H.++h j₂))
+            → ⊥
+  noOwnsCat f = coeEq (λ n → H.Diff n zero) (Eq.ap hd0 e) tt
+    where
+    e : h⋆ Eq.≡ (k₁ H.++h k₂)
+    e = f k₁ k₂ m⋆ (sl⋆ , pay⋆)

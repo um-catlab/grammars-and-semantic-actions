@@ -1,179 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  A CONCURRENT QUINE -- the quine, in the theory of TRACES.
-
-  `Quine.Base` is a quine over STRINGS: one program, one word, and the
-  output is a word.  Here the program is emitted by TWO CONCURRENT
-  SESSIONS and the log is a TRACE -- an equivalence class of words under
-  commuting independent events -- so both halves of "this text prints
-  itself" have to be re-read, and the re-reading is the content.
-
-  ==================================================================
-  §A  WHAT IS CONCURRENT ABOUT IT.
-
-  The alphabet is `Instances.Traces.Protocol`'s, reused UNCHANGED: an
-  event is a session id and an action, and
-
-      Ind (i , a) (j , b)  =  i ≠ j
-
-  -- different sessions commute, a session with itself does not.  The
-  five letters this file uses are
-
-      a0 = (s₀ , opn)   code bit 0        b0 = (s₁ , opn)   data bit 0
-      a1 = (s₀ , msg)   code bit 1        b1 = (s₁ , msg)   data bit 1
-      hsh= (s₀ , cls)   the hash                (s₁ , cls)  unused
-
-  so SESSION 0 CARRIES THE CODE AND THE HASH and SESSION 1 CARRIES THE
-  DATA.  A program is still `code # data`, but the three pieces are no
-  longer laid end to end: the data is INDEPENDENT of both the code and
-  the hash, so it floats freely through them and
-
-      a0 hsh b0 b0    a0 b0 hsh b0    a0 b0 b0 hsh
-      b0 a0 hsh b0    b0 a0 b0 hsh    b0 b0 a0 hsh
-
-  are SIX SPELLINGS OF ONE TRACE.  What the code and the hash still fix
-  is their own relative order -- they are the same session, hence
-  dependent -- and that is the one ordering constraint the whole
-  construction turns on (§D).
-
-  WHO PRINTS WHAT.  The interpreter's output is not a word.  It is a
-  PAIR of words, one per session:
-
-      session 0 prints   dec(data) ++ "#"     -- the code, and the hash
-      session 1 prints   enc(dec(data))       -- the quoted code
-
-  Each session's text is a function of the OTHER's: session 0's code is
-  read off session 1's data, and session 1's data is the quote of
-  session 0's code.  The fixed point is MUTUAL, which is what makes this
-  a concurrent quine rather than two quines side by side.
-
-  ==================================================================
-  §B  THE QUINE EQUATION IS AN EQUATION OF TRACES.
-
-  A pair of concurrent streams IS a trace, presented by its projections,
-  and the words that trace can be spelled as are exactly
-
-      Prints (u , v)  =  ⌈ u ⌉ ⊗' ⌈ v ⌉
-
-  -- `⊗'` at this promodel is I-shuffling, so `Prints p w` says "w is
-  one interleaving of the two streams".  So
-
-      IsQuine w  =  Prints (what w prints) w
-
-  and this is genuinely weaker than word equality: it is satisfied by
-  every spelling of the printed trace at once.  `TraceTests` exhibits a
-  quine and then checks all SIX of its spellings, with one `refl` each,
-  and checks that the OUTPUT is the same pair for all six -- the
-  interpreter cannot see the interleaving, which is the theorem that
-  makes the trace reading legitimate.
-
-  ==================================================================
-  §C  THE GRAMMAR.  `Quine.Base`'s, with one nonterminal added because
-  the code bits and the data bits are now different letters.
-
-      S → B R            a program: the opcode, then the rest
-      R → B R | H E      more code, or the hash and the data
-      H → 'hsh'
-      B → 'a0' | 'a1'    a CODE bit          (session 0)
-      E → D O            the data: a bit, then …
-      O → 'b0' | 'b1'    … the pair's second bit, ending the data
-        | D E            … or the second bit and more data
-      D → 'b0' | 'b1'    a DATA bit          (session 1)
-
-  ONE `⊗'`, TWO READINGS, decided by the alphabet and not by the
-  grammar.  In `S → B ⊗' R` and `R → B ⊗' R` the left slot is a session-0
-  letter and the right slot still owes session-0 letters, so no `right`
-  step is licensed and `⊗'` is CONCATENATION: the code bits precede the
-  hash.  In `R → H ⊗' E` the left slot is session 0 and the right slot is
-  entirely session 1, so `⊗'` is FULL INTERLEAVING: the data may appear
-  anywhere.  This is exactly `Protocol`'s observation, and §D is the
-  measurement of it.
-
-  THE INTERPRETER.  As in `Quine.Base`, only the DATA is read -- the
-  decoding `dec` is the grammar's own pairing (`E → D O`, `O → D E`),
-  one projection per node, and never a function on words.  The first
-  code bit is the OPCODE, and it chooses the one order still left to
-  choose:
-
-      opcode 0 :  session 0 prints   dec(e) ++ "#"
-      opcode 1 :  session 0 prints   "#" ++ dec(e)
-
-  and session 1 prints `enc(dec(e))` either way.  Over strings the
-  opcode chose between "code then data" and "data then code"; here that
-  choice HAS BEEN TAKEN AWAY BY THE ALPHABET, because the code and the
-  data are concurrent and the two orders are the same trace.  What
-  survives is the code/hash order, which is still recorded because they
-  share a session.
-
-  A source is a quine at opcode 0 exactly when the session-0 word is
-  `dec(data) ++ #` and the session-1 word is `enc(dec(data))`; the
-  shortest is `a0 hsh ∥ b0 b0`, four events.  At opcode 1 it is a quine
-  exactly when the session-0 word is `# ++ dec(data)` -- WHICH THE
-  GRAMMAR FORBIDS AT `Ind`, because the hash and the code bits are the
-  same session.
-
-  ==================================================================
-  §D  THE CONTROLLED EXPERIMENT, and the actual research finding.
-
-  `Over` is parameterised by the independence relation, exactly as
-  `Protocol.Over` is, and is instantiated twice:
-
-      Conc = Over Ind …    events of different sessions commute
-      Full = Over ⊤I  …    EVERYTHING commutes
-
-  Same grammar, same interpreter, same decision procedure; one
-  `Fibered`.  And the answer differs, in the strongest way available:
-
-      hsh a1 b1 b1        IS A QUINE at ⊤I
-                          IS NOT EVEN A PROGRAM at Ind
-
-  At `⊤I` the hash may commute past the code bit, so `S → B ⊗' R` can
-  take the opcode `a1` from the SECOND position; the parse then reads
-  opcode 1 and data `b1 b1`, decodes `[1]`, and prints
-  `("#" ++ "1" , "11")` -- itself.  At `Ind` that commutation is
-  forbidden, `S` has no derivation at all, and `TraceTests` proves it
-  (the error grammar is `¬G _`, so the negative answer is a refutation
-  and not a report).
-
-  So the independence relation is doing real work on the QUINE
-  PREDICATE and not merely on the language.  That is the trace analogue
-  of `ProtocolTests.Control.wrong-at-⊤`, one level up: there the ⊤
-  endpoint certified a log that violates the protocol, here it
-  certifies a SELF-PRINTING PROGRAM that does not exist.
-
-  THE CONVERSE SEPARATION DOES NOT EXIST, and the argument is short
-  enough to state.  `ITr Ind ⊆ ITr ⊤I` -- the side condition on `right`
-  only weakens -- so every `Ind`-parse tree is a `⊤I`-parse tree, with
-  the same value.  Hence if some `Ind`-derivation of `w` prints `w`,
-  some `⊤I`-derivation does too: `⊤I` has strictly MORE quines, never
-  fewer.  (What that argument does not settle is which parse the
-  DECISION PROCEDURE happens to find first at `⊤I`, since `printed`
-  reads the found one; `TraceTests.Control.still-a-quine` exhibits the
-  four-event quine surviving that, by evaluation.)
-
-  A NEGATIVE RESULT WORTH RECORDING, because it was the first design
-  tried and it fails.  Put the code in session 0 and the data in session
-  1 with NO hash -- the session already separates them -- and the quine
-  set does not depend on `I` at all.  The reason: session 1's printed
-  stream is `enc(d)` and the equation forces it to be the source's own
-  session-1 word, so `d` is pinned to the canonical decoding no matter
-  how freely the parse may re-pair the data, and then session 0's word
-  is pinned too.  A self-referential equation is rigid enough to undo
-  the extra freedom.  The hash is what breaks the symmetry: it is a
-  session-0 letter whose POSITION relative to the code is recorded by
-  `Ind` and forgotten by `⊤I`, and the opcode makes the output depend
-  on that position.  So the separation needs BOTH a same-session
-  ordering constraint and an instruction that can print in the
-  constrained order -- neither alone is enough.
-
-  ==================================================================
-  DEFINES the alphabet aliases, the grammar `QNT`/`qunitR`/`qbinR`, the
-  interpreter (`Val`/`unitVal`/`binVal`/`emit`), and -- inside `module
-  Over`, parameterised by the independence relation -- the CYK
-  instantiation, the decision `derives?`, the interpreter as a term
-  `interp`, the printed-trace grammar `Prints` with its probe, and the
-  quine equation `IsQuine` with the two ways to discharge it.
--}
+{- A CONCURRENT QUINE -- the quine, in the theory of TRACES. -}
 module TheoryGrammar.Quine.Trace where
 
 open import Cubical.Foundations.Prelude
@@ -196,15 +22,8 @@ import TheoryGrammar.Instances.Traces.Protocol as Pr
 open Pr using ( Sid; s₀; s₁; Act; opn; msg; cls; Ev; Ind
               ; decInd; isPropInd; ⊤I; dec⊤I; isProp⊤I )
 
--- ==================================================================
--- §0  THE ALPHABET, REUSED.
---
--- `Protocol`'s two sessions and three actions, read as the tiny quine
--- language's letters.  Nothing about the alphabet is new -- the
--- independence relation, its decidability and its propositionality all
--- come from `Protocol` -- which is what makes `Conc`/`Full` below the
--- SAME experiment run at two promodels.
--- ==================================================================
+-- §0 THE ALPHABET, REUSED. `Protocol`'s two sessions and three actions,
+-- read as the tiny quine language's letters.
 
 Wd : Type₀
 Wd = List Ev
@@ -216,21 +35,17 @@ hsh = s₀ , cls        -- the hash,   session 0
 b0  = s₁ , opn        -- data bit 0, session 1
 b1  = s₁ , msg        -- data bit 1, session 1
 
--- ==================================================================
--- §1  THE GRAMMAR.
---
--- `Quine.Base`'s, plus `D` -- over strings the code and the data were
--- the same two letters and `#` told them apart; here the SESSION tells
--- them apart, so the two bit classes are two nonterminals and the hash
--- has become an ordering marker rather than a separator.
--- ==================================================================
+-- §1 THE GRAMMAR. `Quine.Base`'s, plus `D` -- over strings the code and
+-- the data were the same two letters and `#` told them apart; here the
+-- SESSION tells them apart, so the two bit classes are two nonterminals
+-- and the hash has become an ordering marker rather than a separator.
 
 data QNT : Type₀ where ntS ntR ntH ntB ntE ntO ntD : QNT
 
--- The terminal productions.  Stated as `Eq`-equations (`Protocol`'s
--- idiom) rather than as a type family on letters: matching `Eq.refl`
--- determines the letter, which is what makes `qallComplete` twenty
--- lines instead of ninety.
+-- The terminal productions. Stated as `Eq`-equations (`Protocol`'s idiom)
+-- rather than as a type family on letters: matching `Eq.refl` determines
+-- the letter, which is what makes `qallComplete` twenty lines instead of
+-- ninety.
 qunitR : QNT → Ev → Type₀
 qunitR ntS e = ⊥
 qunitR ntR e = ⊥
@@ -240,10 +55,8 @@ qunitR ntB e = (e Eq.≡ a0) ⊎ (e Eq.≡ a1)
 qunitR ntO e = (e Eq.≡ b0) ⊎ (e Eq.≡ b1)
 qunitR ntD e = (e Eq.≡ b0) ⊎ (e Eq.≡ b1)
 
--- The binary productions, indexed: `BinIx P` says HOW MANY a
--- nonterminal has and `blhs`/`brhs` name the two children.  `R` is the
--- only nonterminal with two, so the index is `Bool` there and `Unit`
--- elsewhere.  Again `Protocol`'s idiom, generalised by one bit.
+-- The binary productions, indexed: `BinIx P` says HOW MANY a nonterminal
+-- has and `blhs`/`brhs` name the two children.
 BinIx : QNT → Type₀
 BinIx ntS = Unit
 BinIx ntR = Bool
@@ -276,19 +89,7 @@ brhs ntD ()
 qbinR : QNT → QNT → QNT → Type₀
 qbinR P Q T = Σ[ k ∈ BinIx P ] ((Q Eq.≡ blhs P k) × (T Eq.≡ brhs P k))
 
--- ==================================================================
--- §2  THE INTERPRETER, as a semantic action.
---
--- One meaning per nonterminal, one metalanguage combination per
--- production -- which is what a `Δ`-valued algebra IS.  Nothing here
--- looks at a word: `dec` never appears, because the pairing that
--- realises it is the grammar's own structure.
---
---     B ↦ the code bit            E ↦ dec of the data below it
---     D ↦ the data bit            O ↦ dec of the data below it
---     H ↦ nothing                 R ↦ dec of the data
---                                 S ↦ THE OUTPUT, a pair of streams
--- ==================================================================
+-- §2 THE INTERPRETER, as a semantic action.
 
 Val : QNT → Type₀
 Val ntS = Wd × Wd                 -- THE OUTPUT: what each session prints
@@ -315,11 +116,8 @@ dataW : List Bool → Wd
 dataW []      = []
 dataW (b ∷ d) = (if b then b1 else b0) ∷ dataW d
 
--- THE OPCODE'S MEANING.  `emit b d` is the PAIR of streams a program
--- with opcode `b` and decoded data `d` prints.  Session 1's stream does
--- not depend on the opcode -- and it could not, because the only order
--- an opcode can still choose is one the alphabet still records, and the
--- alphabet no longer records "code before data".
+-- THE OPCODE'S MEANING. `emit b d` is the PAIR of streams a program with
+-- opcode `b` and decoded data `d` prints.
 emit : Bool → List Bool → Wd × Wd
 emit false d = (codeW d ++ hsh ∷ [] , dataW (enc d))   -- code, then hash
 emit true  d = (hsh ∷ codeW d       , dataW (enc d))   -- hash, then code
@@ -345,22 +143,7 @@ binVal ntH Q T (() , _)
 binVal ntB Q T (() , _)
 binVal ntD Q T (() , _)
 
--- ==================================================================
--- §3  EVERYTHING ELSE, OVER AN ARBITRARY INDEPENDENCE RELATION.
---
--- The grammar and the interpreter above mention no splitting, so they
--- are shared.  What follows -- CYK, the decision, the printed-trace
--- grammar, the quine equation -- depends on the alphabet's independence
--- relation only through `Traces/Base`'s `Split`, so it is a module in
--- that relation and the file ends by instantiating it twice.
---
--- `Protocol.Over` is opened wholesale: the trace promodel, the grading
--- `trGraded`, the resource probe `probe-NT`, `module CYK` and its
--- `Decide`, `litProbe` and `discreteWord` are REUSED, not one token
--- changed.  Everything of `Protocol`'s that is about the PROTOCOL
--- (`NT`, `Deriv`, `derives?`, …) is in scope too and simply never
--- named; this file's own CYK lives behind `C`.
--- ==================================================================
+-- §3 EVERYTHING ELSE, OVER AN ARBITRARY INDEPENDENCE RELATION.
 
 module Over (I : Ev → Ev → Type₀)
             (decI : (e f : Ev) → I e f ⊎ No (I e f))
@@ -404,10 +187,8 @@ module Over (I : Ev → Ev → Type₀)
 
   module CD = C.Decide qallRules qallComplete litProbe
 
-  -- ================================================================
   -- The interpreter, as a term.  `Quine.Base.Interp` verbatim, with
   -- `strFib` replaced by `trFib` and the grammar replaced by this one.
-  -- ================================================================
 
   module AI = ActInd trFib ℓ-zero QNT (λ _ → tt)
 
@@ -435,12 +216,9 @@ module Over (I : Ev → Ev → Type₀)
   interp : (P : QNT) → C.Deriv P ⊢ Δ (Val P)
   interp = AI.recA alg
 
-  -- ================================================================
-  -- THE PIPELINE, still a term.  `mapR` applies the interpreter on the
-  -- success branch and leaves the refutation alone, so `outD` is
-  -- `⊤G ⊢ Result (¬G C.Deriv P) (Δ (Val P))` and nothing has been
-  -- externalised.
-  -- ================================================================
+  -- THE PIPELINE, still a term. `mapR` applies the interpreter on the
+  -- success branch and leaves the refutation alone, so `outD` is `⊤G ⊢
+  -- Result (¬G C.Deriv P) (Δ (Val P))` and nothing has been externalised.
 
   outD : (P : QNT) → ⊤G ⊢ Result (¬G C.Deriv P) (Δ (Val P))
   outD P = mapR (¬G C.Deriv P) (Δ (Val P)) (interp P) ∘g CD.derives? P
@@ -452,19 +230,8 @@ module Over (I : Ev → Ev → Type₀)
   runOut : (P : QNT) → Word → Maybe (Val P)
   runOut P = runΔ (Val P) (¬G C.Deriv P) (outD P)
 
-  -- ================================================================
-  -- §4  THE PRINTED TRACE, AS A GRAMMAR.
-  --
-  -- The output is a pair of concurrent streams, which IS a trace given
-  -- by its projections.  `Prints (u , v)` is the grammar of the words
-  -- that trace can be spelled as -- `⊗'` here is I-shuffling, so this
-  -- says "one interleaving of what session 0 printed with what session
-  -- 1 printed", and NOTHING about which one.
-  --
-  -- It is decided by the enumeration of shuffles plus word equality:
-  -- `dec-⊗-cuts` is the same combinator `decBin` uses, at the two
-  -- representables instead of at two chart entries.
-  -- ================================================================
+  -- §4 THE PRINTED TRACE, AS A GRAMMAR. The output is a pair of concurrent
+  -- streams, which IS a trace given by its projections.
 
   Prints : Wd × Wd → Gr
   Prints p = ⌈ p .fst ⌉ ⊗' ⌈ p .snd ⌉
@@ -491,23 +258,7 @@ module Over (I : Ev → Ev → Type₀)
   prints! : (p : Wd × Wd) → ⊤G ⊢ Δ Bool
   prints! p = okA (Prints p) (¬G Prints p) ∘g probe-Prints p
 
-  -- ================================================================
-  -- §5  THE QUINE EQUATION, stated in the calculus.
-  --
-  -- `witness` EXTRACTS the parse tree from the decision -- the tree is a
-  -- theorem, not a report -- and `⌈_⌉` PINS it to the source: `⌈ w ⌉`
-  -- holds at one world and that world IS the source, so
-  --
-  --     ⌈ w ⌉  --selfLit-->  C.Deriv S  --interp-->  Δ (Wd × Wd)
-  --
-  -- is "the log at `w`, parsed and run", and by `⌈⌉-UP` it is just a
-  -- pair of words, read off at the point `⌈⌉-pt w = Eq.refl`.
-  --
-  -- `IsQuine` then says that pair, read as a TRACE, has `w` among its
-  -- spellings.  Over strings the corresponding statement is an equation
-  -- between two words; here it is a `⊗'`, and the difference is exactly
-  -- the six spellings `TraceTests` checks.
-  -- ================================================================
+  -- §5 THE QUINE EQUATION, stated in the calculus.
 
   selfDeriv : (w : Word) → run (derives! ntS) w ≡ true → C.Deriv ntS w
   selfDeriv = witness (C.Deriv ntS) (¬G C.Deriv ntS) (CD.derives? ntS)
@@ -541,11 +292,9 @@ module Over (I : Ev → Ev → Type₀)
   noDeriv : (w : Word) → run (derives! ntS) w ≡ false → (¬G C.Deriv ntS) w
   noDeriv = refute (C.Deriv ntS) (¬G C.Deriv ntS) (CD.derives? ntS)
 
--- ==================================================================
 -- THE TWO INSTANTIATIONS.  `Conc` is THE concurrent quine and is
 -- re-exported unqualified; `Full` is the ⊤-endpoint control, where
 -- every pair of events commutes and the hash may drift past the code.
--- ==================================================================
 
 module Conc = Over Ind decInd isPropInd
 module Full = Over ⊤I  dec⊤I  isProp⊤I

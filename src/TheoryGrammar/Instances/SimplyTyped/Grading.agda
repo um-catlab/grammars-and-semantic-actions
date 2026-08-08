@@ -1,16 +1,5 @@
-{-
-  Every splitting of this promodel is proper -- now at BOTH result
-  sorts at once.
-
-  The grading is genuinely three-sorted: names weigh 0, terms weigh
-  their node count, and TYPES weigh their node count too.  That last is
-  what makes `annOp` (whose slots are a term and a type) proper, and
-  what makes `arrOp` proper inside the `ty` sort, so one statement
-  covers all six operations.
-
-  `recSize` is `TheoryGrammar.Recursion`'s fuel-indexed recursor at
-  `size`; fuel, not `Acc`, is what makes closed terms reduce.
--}
+{- Every splitting of this `Fibered` is proper -- now at BOTH result sorts
+   at once. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.SimplyTyped.Grading where
 
@@ -66,12 +55,8 @@ module Grading (Name : Type₀) where
   proper arrOp  _ (mkArr A B) true  = suc-≤-suc ≤SumLeft
   proper arrOp  _ (mkArr A B) false = suc-≤-suc ≤SumRight
 
-  -- `grade` and `proper`, packaged as the framework's `GradedFib` --
-  -- what `Guard`/`Hylo`/`Decidable.Guarded` take as input.  Without it
-  -- the instance is silently excluded from all three; that was the gap
-  -- the lambda instance had until `λGraded` was added.  `Proper` is
-  -- `Unit` because every slot here is strictly smaller, with no side
-  -- condition.
+  -- `grade` and `proper`, packaged as the framework's `GradedFib` -- what
+  -- `Guard`/`Hylo`/`Decidable.Guarded` take as input.
   stGraded : GradedFib stlcSig ℓ-zero ℓ-zero
   stGraded .fib             = stlcFib
   stGraded .deg             = grade
@@ -80,10 +65,7 @@ module Grading (Name : Type₀) where
   stGraded .deg< o t sp a _ = proper o t sp a
 
   -- Structural recursion on the grade, with the term never matched:
-  -- `TheoryGrammar.Recursion.recSize` at `size`.  The grade taken there
-  -- is a bare `Raw → ℕ`, not the `GradedFib` above, because the
-  -- recursion `typecheck` needs runs at the `tm` sort alone.  Fuel, not
-  -- `Acc`, is what makes closed terms reduce.
+  -- `TheoryGrammar.Recursion.recSize` at `size`.
   recSize : {M : Raw → Type₀}
           → ((t : Raw) → ((s : Raw) → size s < size t → M s) → M t)
           → (t : Raw) → M t

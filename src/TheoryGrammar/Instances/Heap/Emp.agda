@@ -1,22 +1,4 @@
-{-
-  `emp` IS THE REPRESENTABLE AT THE EMPTY HEAP.
-
-  `Connectives` defines `emp` as the NULLARY tensor `⊗ˢ nilop`, which is
-  the theory's own unit.  Separation logic writes it as the predicate
-  "the heap is empty", i.e. `⌈ [] ⌉`.  The two agree -- `emp⊢empR` and
-  `empR⊢emp`, one lemma each way -- so nothing has to choose.
-
-  Then the unit laws for `∗`, both sides both directions, and
-  commutativity -- which is `Ilv`'s constructor swap plus symmetry of
-  `_#_`, and needs nothing else.  ASSOCIATIVITY is not attempted: it
-  wants a rotation lemma for `Ilv` with disjointness bookkeeping, and
-  nothing downstream uses it.
-
-  DEFINES `empR`, `emp⊢empR`/`empR⊢emp`, the points-to `_↦_`, the four
-  unit laws `emp-∗`/`emp-∗-I`/`∗-emp`/`∗-emp-I`, the symmetries
-  `diff-sym`/`#-sym`/`ilv-sym` (with their helpers `#-tail`/`#-head`),
-  and `∗-comm`.
--}
+{- `emp` IS THE REPRESENTABLE AT THE EMPTY HEAP. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 open import Cubical.Foundations.Prelude
 
@@ -36,9 +18,7 @@ open import TheoryGrammar.Precision using (coeEq)
 
 open import TheoryGrammar.Instances.Heap.Connectives public
 
--- ==================================================================
 -- The two spellings of `emp`.
--- ==================================================================
 
 -- `empR` DENOTES "I own nothing": the representable at the empty heap.
 empR : Gr
@@ -60,23 +40,11 @@ infix 9 _↦_
 _↦_ : Loc → Val → Gr
 l ↦ x = ⌈ single l x ⌉
 
--- ==================================================================
--- `emp` IS A UNIT FOR `∗`.
---
--- Four lemmas, not two: each side is an identity law and each law has a
--- direction.  NAMING, LEFT AS IS ON PURPOSE: stdlib would spell these
--- `∗-identityˡ-E`/`∗-identityˡ-I`/`∗-identityʳ-E`/`∗-identityʳ-I`, which
--- says the PROPERTY rather than the shape and is the better name.  But
--- `∗-emp` is cross-referenced from `LeakyHeap/Base` and
--- `LeakyHeap/Intuitionistic`, outside this pass's allowlist, so the
--- rename is a proposal and not an edit.
---
--- Each transport below is the generic `Precision.coeEq` at a different
--- family; this instance owns no `Eq`-transport of its own.  `coeEq`
--- moves along a STRICT equality, so it reduces on `Eq.refl` and no
--- `refl` test downstream goes inert.
--- ==================================================================
+-- `emp` IS A UNIT FOR `∗`. Four lemmas, not two: each side is an identity
+-- law and each law has a direction.
 
+-- PRIMITIVE (phase 1): an INVERSION of the substrate's splitting relation,
+-- moved along a strict equality.
 emp-∗ : (P : Gr) → (empR ∗ P) ⊢ P
 emp-∗ P h ((u , v , ilv , apt) , k) =
   coeEq P (ilv-nilL-inv (coeEq (λ z → Ilv z v h) (k true) ilv)) (k false)
@@ -91,11 +59,9 @@ emp-∗-I P h p = ([] , h , ilv-nilL h , tt) , boolΠ Eq.refl p
 ∗-emp-I : (P : Gr) → P ⊢ (P ∗ empR)
 ∗-emp-I P h p = (h , [] , ilv-nilR h , #-nil h) , boolΠ p Eq.refl
 
--- ==================================================================
 -- Commutativity.  `Ilv` swaps by exchanging two constructors; `_#_` is
 -- symmetric because `Diff` is.  Both are structural recursions on the
 -- representation, hence PRIMITIVE.
--- ==================================================================
 
 diff-sym : (l k : Loc) → Diff l k → Diff k l          -- PRIMITIVE
 diff-sym zero    zero    d = d

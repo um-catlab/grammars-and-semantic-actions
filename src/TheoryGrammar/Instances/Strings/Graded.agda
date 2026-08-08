@@ -39,14 +39,12 @@ split3LenR< nil      pr = E.rec (¬-<-zero pr)
 split3LenR< (cons s) pr = suc-≤-suc (split3LenR s)
 
 -- THE RESOURCE PREDICATE, internally: `w` is non-trivial when it
--- decomposes with an ATOM on the left.  Nothing about length appears;
--- this is `⌈_⌉`, `⊗`, `⊕ᴰ` and `⊤` only, so it makes sense at any
--- promodel that has atoms.
+-- decomposes with an ATOM on the left.
 NonTrivial : Gr
 NonTrivial = ⊕ᴰ Char (λ c → ⌈ c ∷ [] ⌉ ⊗' ⊤G)
 
 -- PRIMITIVE (phase 1).  The ONE bridge from the internal predicate to
--- the grading, confined to the promodel where the grading is defined.
+-- the grading, confined to the `Fibered` where the grading is defined.
 ntLen : {v : String} → NonTrivial v → 0 < length v
 ntLen {v} (c , (u' , v' , s) , h) = go (h true) s
   where go : u' Eq.≡ c ∷ [] → Split3 u' v' v → 0 < length v
@@ -69,11 +67,9 @@ strGraded .deg< appop m (u , v , s) false pr = split3LenR< s (ntLen pr)
 
 open Guard strGraded ℓ-zero Unit (λ _ → tt) public
 
--- THE RESOURCE LAW.  "If every slot of a cut is non-trivial then every
--- slot is a proper part" -- one line, because properness of a slot IS
--- non-triviality of its complement.  A fact about the grading, of the
--- same kind as `deg<`, and what `Decidable.Guarded.resourceOf` needs in
--- order to derive a cut's resource test from terms.
+-- THE RESOURCE LAW. "If every slot of a cut is non-trivial then every slot
+-- is a proper part" -- one line, because properness of a slot IS non-
+-- triviality of its complement.
 ntProper : (w : String) (sp : MonSplit appop w)
          → ((a : Bool) → NonTrivial (MonParts appop w sp a))
          → (a : Bool) → StrProper appop w sp a

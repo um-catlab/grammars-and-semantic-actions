@@ -4,7 +4,6 @@
   Short answer: the PRESENTATION is literally identical; the CATEGORY it
   is taken over is not.  Both halves of that sentence are proved below.
 
-  ------------------------------------------------------------------
   PART A.  The presentation is the same, on the nose.
 
   `Cubical/Categories/Direct/LaterPresentation.agda` (ccl, branch `lob`)
@@ -30,7 +29,6 @@
   later modality that happens to look like ccl's.  It has ccl's, at the
   downset presentation, at the order `deg i < deg j`.
 
-  ------------------------------------------------------------------
   PART B.  Which category, though?
 
   `Direct/StrictDownset.agda` builds `▷` from the sieve
@@ -51,7 +49,7 @@
   and precisely why `Instances/Strings/CYK.agda` needs no infix modality:
   the graded `▷` already dominates it.
 
-  The separation is not hypothetical.  PART C exhibits a promodel with NO
+  The separation is not hypothetical.  PART C exhibits a `Fibered` with NO
   splittings at all: `Div` is discrete, `↡` is empty at every object, so
   `▷ᵈ` is TERMINAL and its löb proves nothing -- while `▷ᵍ`, over the same
   data, is ordinary strong induction on ℕ and is visibly not terminal.
@@ -62,10 +60,9 @@
   `WFOrder→Cat Wo` collapses to `y < x`, because there the hom `y ≤ x` is
   a proposition implied by `y < x` and carries nothing.  That is the
   instance `Grammar/Later/Ordered.agda` already uses (`PosetDirect`), and
-  `DegPoset` below is that instance for a graded promodel: there the two
+  `DegPoset` below is that instance for a graded `Fibered`: there the two
   modalities are interderivable, in BOTH directions (`▷ᵈ→▷ᵍ`, `▷ᵍ→▷ᵈ`).
 
-  ------------------------------------------------------------------
   VERDICT.
 
     * Our ▷ = ccl's ▷ at the DOWNSET PRESENTATION -- same definition,
@@ -83,7 +80,6 @@
   number), while `▷ᵍ` is the one that is cheap to satisfy.  The
   development currently uses `▷ᵍ`.
 
-  ------------------------------------------------------------------
   ccl NOTE.  `Direct/Base` and `Direct/StrictDownset` are imported for
   real and used.  `Direct/LaterPresentation.agda` is NOT on the branch
   checked out at `~/cubical-categorical-logic` (it lives on `lob` and
@@ -127,12 +123,7 @@ open import TheoryGrammar.Direct.Divisibility
 
 private variable ℓS ℓ ℓ' ℓD ℓ< ℓM ℓX ℓP : Level
 
--- ==================================================================
--- PART A.  ccl's `LaterPres`, and the identification.
---
--- Copied from Cubical/Categories/Direct/LaterPresentation.agda on ccl's
--- `lob` branch; see the ccl NOTE.
--- ==================================================================
+-- PART A. ccl's `LaterPres`, and the identification.
 
 record LaterPres {ℓD ℓ<} {D : Type ℓD} (_<_ : D → D → Type ℓ<) : Typeω where
   field
@@ -169,12 +160,7 @@ downsetPres {ℓD = ℓD} {ℓ< = ℓ<} _<_ = record
   ; ▷    = λ A x → ∀ y → y < x → A y
   ; ⇑    = λ x rec → rec }
 
--- ==================================================================
--- THEOREM.  `TheoryGrammar.Later`'s `WFLater` IS `downsetPres`.
---
--- Every equation below is `refl`.  There is no content here and that is
--- the content: the two developments wrote the same definition.
--- ==================================================================
+-- THEOREM. `TheoryGrammar.Later`'s `WFLater` IS `downsetPres`.
 
 module Agreement {ℓI ℓR : Level} {I : Type ℓI}
                  (_≺_ : I → I → Type ℓR) (≺-wf : WellFounded _≺_) where
@@ -204,18 +190,7 @@ module Agreement {ℓI ℓR : Level} {I : Type ℓI}
                → löb-unique step f hf i ≡ C.löb-uniq step f hf i
   unique-agree step f hf i = refl
 
--- ==================================================================
--- PART B.i  THE SIEVE FIBRE OVER A THIN DEGREE ORDER COLLAPSES.
---
--- `↡Psh dir x` at `y` is `Σ[ f ∈ C [ y , x ] ] (y ≺ x)`.  When `C` is
--- the thin category on the order itself, the hom is a PROPOSITION
--- IMPLIED BY `y ≺ x`, so the Σ is redundant and the fibre is just the
--- strict relation: ccl's ▷ and ours agree here.
---
--- (Level side condition: `StrictDownset` demands the order's `<` live at
--- C's hom level, and `WFOrder→Cat Wo : Category ℓD (ℓ-max ℓD ℓ<)`, so
--- `ℓ< ≡ ℓD` is forced.  `ℕWFOrder↑` exists to arrange it.)
--- ==================================================================
+-- PART B.i THE SIEVE FIBRE OVER A THIN DEGREE ORDER COLLAPSES.
 
 module PosetCollapse {ℓD : Level} (Wo : WFOrder ℓD ℓD) where
 
@@ -239,13 +214,7 @@ module PosetCollapse {ℓD : Level} (Wo : WFOrder ℓD ℓD) where
   ↡fib≅ x y .Iso.sec q          = refl
   ↡fib≅ x y .Iso.ret (f , q) i  = Wo.isProp≤ (inl q) f i , q
 
--- ==================================================================
--- PART B.ii  ... AND OVER THE DIVISIBILITY CATEGORY IT DOES NOT.
---
--- Here the hom `∥ y ≼ x ∥₁` is a proposition too, but it is NOT implied
--- by `y ≺ x`, so it is genuine extra hypothesis: the sieve remembers
--- that `y` is a FACTOR of `x`, and the degree alone cannot know that.
--- ==================================================================
+-- PART B.ii ... AND OVER THE DIVISIBILITY CATEGORY IT DOES NOT.
 
 module DivCompare {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                   (Fib : Fibered σ ℓX ℓP) (G : Grading Fib) where
@@ -281,23 +250,9 @@ module DivCompare {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   -- The converse would need `y ≺ x → ∥ y ≼ x ∥₁`: "smaller implies a
   -- factor".  PART C refutes it.
 
--- ==================================================================
--- PART B.iii  WHERE THEY DO AGREE.
---
--- Instantiate `PosetCollapse` at the degree order of a graded promodel:
--- the thin category whose objects are carrier elements and whose maps
--- are "no bigger in degree".  That is a direct category, ccl's ▷ over it
--- is the sieve modality, and `▷ᵈ↔▷ᵍ` below shows the sieve modality and
--- ours are interderivable there.
---
--- So OUR ▷ IS ccl's DIRECT-CATEGORY ▷ -- for this category.  What
--- `Direct/Divisibility.agda` builds is a DIFFERENT direct category over
--- the same objects and the same degree, and the difference is exactly
--- the one PART C exhibits.
---
--- (`isSet Elt` is required only because `WFOrder` carries `isSetD`; it
--- holds for every instance in the development.)
--- ==================================================================
+-- PART B.iii WHERE THEY DO AGREE. Instantiate `PosetCollapse` at the
+-- degree order of a graded `Fibered`: the thin category whose objects are
+-- carrier elements and whose maps are "no bigger in degree".
 
 module DegPoset {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                 (Fib : Fibered σ ℓX ℓP) (G : Grading Fib)
@@ -335,21 +290,7 @@ module DegPoset {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
         → ((y : Elt) → y ≺ x → A y) → ((y : Elt) → ↡fib x y → A y)
   ▷ᵍ→▷ᵈ x r y h = r y (fibIso x y .Iso.fun h)
 
--- ==================================================================
--- PART C.  THE SEPARATION.
---
--- The promodel with NO splittings.  It is a perfectly good `Fibered`
--- (nothing in the record forces a splitting to exist), it carries the
--- best possible grading (`deg = id` on ℕ), and its divisibility category
--- is DISCRETE.  So:
---
---     ↡ is empty at every object  ⟹  ▷ᵈ A x is terminal
---     ▷ᵍ A x = ∀ k. k < x → A k    is strong induction on ℕ
---
--- Two modalities over the same graded promodel, one of which proves
--- everything and the other of which does not.  Whatever else is true,
--- they are not the same construction.
--- ==================================================================
+-- PART C. THE SEPARATION.
 
 emptySig : SortedSig Unit ℓ-zero ℓ-zero
 emptySig .ops          = Unit

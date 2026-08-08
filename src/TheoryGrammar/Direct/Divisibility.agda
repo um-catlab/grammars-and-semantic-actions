@@ -1,5 +1,5 @@
 {-
-  THE DIVISIBILITY PREORDER OF A PROMODEL IS A DIRECT CATEGORY.
+  THE DIVISIBILITY PREORDER OF A `Fibered` IS A DIRECT CATEGORY.
 
   `Instances/Group/NoGrading.agda` closes with a criterion rather than a
   theorem:
@@ -12,7 +12,6 @@
   structure `Grading` puts on it with the DIRECT-CATEGORY structure of
   `Cubical.Categories.Direct.Base`.
 
-  ------------------------------------------------------------------
   What a direct category is.
 
   ccl's `DirectStr C Wo` is a functor `C → (D,≤)` into (the thin category
@@ -25,7 +24,6 @@
   under which "strict" and "non-identity" coincide -- is called
   `Reflecting`, and it is an assumption, not a consequence.
 
-  ------------------------------------------------------------------
   The divisibility preorder, and why the closure is real work.
 
   `Fibered` gives a RELATION, not a category:
@@ -55,7 +53,6 @@
   identities, no `LaxPoint`.  The chains carry the bookkeeping, and the
   degree bound composes along them because `≤` is transitive.
 
-  ------------------------------------------------------------------
   The theorem.
 
       deg≤  is  "every map of Div is non-decreasing"      (⟹ DirectStr)
@@ -65,7 +62,6 @@
   `Div` is DEFINITIONALLY the relation `Grading`'s `Grade` module pulls
   back from ℕ to build `▷` (`≺≡≺Grade` below is `refl`).
 
-  ------------------------------------------------------------------
   Orientation.  `Div [ n , m ]` is "n divides m", so maps point from
   divisor to multiple and the degree RISES: that is ccl's `DirectStr`
   on the nose, and `Div ^op` is the inverse category.  The recursion of
@@ -73,7 +69,6 @@
   falling -- so the parser lives over `Div ^op`, which is the sense in
   which the reader will want to call this "inverse".
 
-  ------------------------------------------------------------------
   ccl NOTE.  `Cubical.Categories.Direct.Base` and
   `Cubical.Categories.Direct.StrictDownset` resolve from this repo and
   are imported for real.  `Direct/Instances/Nat.agda` and
@@ -119,9 +114,7 @@ wfSub {I = I} {_R_ = _R_} {_Q_ = _Q_} sub wq i = go i (wq i)
     go : (x : I) → Acc _Q_ x → Acc _R_ x
     go x (acc h) = acc λ y r → go y (h y (sub r))
 
--- ==================================================================
 -- ℕ AS A WELL-FOUNDED ORDER.  (Local copy; see the ccl NOTE above.)
--- ==================================================================
 
 ℕWFOrder : WFOrder ℓ-zero ℓ-zero
 ℕWFOrder = record
@@ -142,12 +135,6 @@ wfSub {I = I} {_R_ = _R_} {_Q_ = _Q_} sub wq i = go i (wq i)
 ... | inr q = inr (Eq.pathToEq q)
 
 -- LEVEL BUREAUCRACY, isolated here so it does not pollute the theorems.
---
--- `Direct/StrictDownset.agda` -- the file that actually builds ↡ and ▷
--- -- is stated for `{C : Category ℓ ℓ'} {Wo : WFOrder ℓD ℓ'}`: the
--- order's `<` must live at C's HOM level.  Our hom-sets are truncated
--- chains, so they sit at the signature's level, while ℕ's `<` sits at
--- ℓ-zero.  `Lift` is the whole of the mismatch.
 ℕWFOrder↑ : (ℓ : Level) → WFOrder ℓ-zero ℓ
 ℕWFOrder↑ ℓ = record
   { D       = ℕ
@@ -163,17 +150,7 @@ wfSub {I = I} {_R_ = _R_} {_Q_ = _Q_} sub wq i = go i (wq i)
 ... | inl q = inl (lift q)
 ... | inr q = inr (Eq.pathToEq q)
 
--- ==================================================================
--- PART A.  THE DIVISIBILITY RELATION AND ITS CLOSURE.
---
--- Objects live in the TOTAL SPACE of the carrier: a slot of an
--- o-splitting sits at `sortOf o a`, the whole sits at `resultSort o`,
--- and in a genuinely many-sorted theory those differ.  So the preorder
--- cannot be fibrewise -- it is on `Σ S carrier`, and its very existence
--- is a statement about the total space.  (For `S = Unit` this is a
--- distinction without a difference, and every instance in the
--- development that has a grading is single-sorted or nearly so.)
--- ==================================================================
+-- PART A. THE DIVISIBILITY RELATION AND ITS CLOSURE.
 
 module Div {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP) where
 
@@ -208,16 +185,9 @@ module Div {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
   ≼-trans nil      q = q
   ≼-trans (s ∷ p)  q = s ∷ ≼-trans p q
 
-  -- ================================================================
-  -- THE CATEGORY.
-  --
-  -- The chains are NOT a set (nothing makes them one), so the hom-sets
-  -- are the propositional truncations: `Div` is the preorder REFLECTION
-  -- of the parse-step graph.  Keeping the chains untruncated would be a
-  -- different, larger category -- the free category on `◃₁` -- and
-  -- nothing below distinguishes them, because every statement made about
-  -- `Div` is about degrees and degrees are proof-irrelevant.
-  -- ================================================================
+  -- THE CATEGORY. The chains are NOT a set (nothing makes them one), so
+  -- the hom-sets are the propositional truncations: `Div` is the preorder
+  -- REFLECTION of the parse-step graph.
 
   Div : Category (ℓ-max ℓS ℓX) ℓ≼
   Div .Category.ob            = Elt
@@ -229,9 +199,7 @@ module Div {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
   Div .Category.⋆Assoc _ _ _  = squash₁ _ _
   Div .Category.isSetHom      = isProp→isSet squash₁
 
-  -- ==================================================================
   -- PART B.  A GRADING IS A DIRECT STRUCTURE.
-  -- ==================================================================
 
   module Graded (G : Grading Fib) where
 
@@ -251,10 +219,8 @@ module Div {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
     monoT : {n m : Elt} → ∥ n ≼ m ∥₁ → degE n ≤ degE m
     monoT = PT.rec isProp≤ mono
 
-    -- ================================================================
-    -- THEOREM.  The divisibility preorder of a graded promodel is a
+    -- THEOREM.  The divisibility preorder of a graded `Fibered` is a
     -- direct category, with `deg` as its degree functor.
-    -- ================================================================
 
     DivDirect : DirectStr Div ℕWFOrder
     DivDirect = mkDirectStr Div ℕWFOrder degE (λ f → ≤→Wo≤ (monoT f))
@@ -262,9 +228,7 @@ module Div {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
     open DirectNotation DivDirect public using (_≺_ ; isProp≺ ; wf≺ ; ≺-precomp ; ≺-postcomp)
 
     -- `_≺_` unfolds to `degE x < degE y` -- which is, on the nose, the
-    -- relation `Grading`'s `Grade` module pulls back from ℕ.  So the two
-    -- developments are not merely analogous here; they are the same
-    -- definition, and the identification is `refl`.
+    -- relation `Grading`'s `Grade` module pulls back from ℕ.
     ≺≡deg< : (x y : Elt) → (x ≺ y) ≡ (degE x < degE y)
     ≺≡deg< x y = refl
 
@@ -274,9 +238,7 @@ module Div {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
     DivDirect↑ : DirectStr Div (ℕWFOrder↑ ℓ≼)
     DivDirect↑ = mkDirectStr Div (ℕWFOrder↑ ℓ≼) degE (λ f → ≤→Wo≤↑ (monoT f))
 
-    -- ================================================================
     -- PROPER DIVISIBILITY: the part of the relation that lands in ↡.
-    -- ================================================================
 
     data _◃ᵖ_ : Elt → Elt → Type ℓ◃ where
       pslot : (o : σ .ops) (m : Fib .carrier (σ .resultSort o))
@@ -304,13 +266,7 @@ module Div {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
     ≺ᵈ-one : {n m : Elt} → n ◃ᵖ m → n ≺ᵈ m
     ≺ᵈ-one {n} {m} s = n , m , nil , s , nil
 
-    -- ================================================================
-    -- THEOREM.  Proper divisibility is well-founded.
-    --
-    -- This is the criterion `Group/NoGrading` names, discharged: the
-    -- grading IS the proof that the divisibility preorder is
-    -- well-founded, because well-foundedness transfers along the degree.
-    -- ================================================================
+    -- THEOREM. Proper divisibility is well-founded.
 
     wf≺ᵈ : WellFounded _≺ᵈ_
     wf≺ᵈ = wfSub strict wf≺
@@ -318,14 +274,9 @@ module Div {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
     wf◃ᵖ : WellFounded _◃ᵖ_
     wf◃ᵖ = wfSub ≺ᵈ-one wf≺ᵈ
 
-    -- ================================================================
-    -- ... and the identity is never proper.  In ccl this is
+    -- ... and the identity is never proper. In ccl this is
     -- `StrictDownset.↡-proper` ("↡c omits the identity"); here it says
-    -- `Proper` never holds of a slot equal to its own whole.  Note the
-    -- proof goes entirely through the DEGREE -- which is why it is
-    -- generic in the sorts, and why `Proper` can be compared to
-    -- "non-identity" at all.  See `Direct/Proper.agda`.
-    -- ================================================================
+    -- `Proper` never holds of a slot equal to its own whole.
 
     ≺-irrefl : {x : Elt} → ¬ (x ≺ x)
     ≺-irrefl = ¬m<m
@@ -333,17 +284,4 @@ module Div {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
     proper→≢ : {n m : Elt} → n ◃ᵖ m → ¬ (n ≡ m)
     proper→≢ {n} {m} s e = ≺-irrefl (subst (λ z → z ≺ m) e (strict₁ s))
 
--- ==================================================================
--- PART C.  THE OBSTRUCTION, RE-READ.
---
--- `Instances/Group/NoGrading.agda` is imported and cited, not reproved,
--- in `Direct/Group.agda`.  The one-line summary: group-likeness makes
--- `_◃₁_` TOTAL (every element is a slot of every element), so `Div` is
--- the indiscrete category on the carrier -- one connected component,
--- every hom present, no object below any other.  A degree functor out of
--- it must be constant (that is `GroupObstruction.deg-const`), hence `↡`
--- is empty at every object, hence `▷` is terminal and `löb` is the
--- identity: it proves `∀ x. A x` from `∀ x. A x`.  "The divisibility
--- preorder collapses to a point" and "there is no induction" are the
--- same sentence.
--- ==================================================================
+-- PART C. THE OBSTRUCTION, RE-READ.

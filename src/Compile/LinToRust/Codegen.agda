@@ -185,12 +185,39 @@ open LA using (Δ)
 -- binders.  Indices below `d` are binders and become LEVELS; the rest
 -- reach past every binder and are free variables of the initial
 -- context.  Three clauses, no subtraction, no comparison.
+--
+-- WRITTEN POINT-FREE IN THE DEPTH.  `nameOf (suc d)` reduces to
+-- `ext d (nameOf d)` with NO argument supplied, which is what makes
+-- `Compile.Relational.Base`'s section lemma go through by `refl`
+-- instead of by `funExt` + `subst` at a family over a variable name
+-- assignment -- the documented trap.  On canonical arguments this
+-- computes exactly as the three pointful clauses did.
 -- ==================================================================
 
-nameOf : ℕ → ℕ → Ident
-nameOf zero    p       = fre p
-nameOf (suc d) zero    = bnd d
-nameOf (suc d) (suc p) = nameOf d p
+-- a NAME ASSIGNMENT: the identifier each source position is compiled to
+NameF : Type₀
+NameF = ℕ → Ident
+
+-- PRIMITIVE (phase 1): a new innermost position, called `x`, shifting
+-- every existing position up by one.  Taken at an arbitrary `Ident`
+-- and not just a `bnd`, because `Relational.Base.del` re-extends by
+-- whatever name the deleted position happened to carry.
+extI : Ident → NameF → NameF
+extI x ν zero    = x
+extI x ν (suc p) = ν p
+
+-- the case that occurs in the compiler: the new position is a BINDER
+ext : ℕ → NameF → NameF
+ext n = extI (bnd n)
+
+-- ... and its left inverse, which is why `tl (ext n ν)` is `ν` on the
+-- nose (η for functions), with no equation to carry
+tl : NameF → NameF
+tl ν p = ν (suc p)
+
+nameOf : ℕ → NameF
+nameOf zero    = fre
+nameOf (suc d) = ext d (nameOf d)
 
 -- PRIMITIVE (phase 1): the position of the unique live variable of a
 -- `Solo` usage, counted from `p`.
@@ -401,6 +428,32 @@ compileVal b d = ⇓clos d (compileE (suc d) b)
 -- everything that follows from the square once it holds.  See the
 -- header for the exact shape assumed: closed terms (S1), call by value
 -- in Rust's order (S2), values are λs (S3).
+--
+-- ------------------------------------------------------------------
+-- READ THIS BEFORE TRYING TO DISCHARGE `Simulates`.
+-- ------------------------------------------------------------------
+--
+-- `Simulates` IS FALSE at `_⇓ₛ_ = Compile.Semantics.CBV._⇓_`, and
+-- `Compile.Relational.Refutation.noNoseSquare` proves it.  The witness
+-- is `(λf. λx. f x) (λy. y)`: `compileE` names a binder by its
+-- absolute DEPTH, source substitution moves the residual body one
+-- binder shallower, and `substE` plants the argument verbatim, so the
+-- two answers are α-equivalent and syntactically distinct.
+--
+-- Nothing above is wrong -- not the translation, not `usesCompile`,
+-- not `⇓-det`, not the strategy.  What is too strong is the `≡` in the
+-- conclusion.  The repaired statement, PROVED, is
+--
+--     Compile.Relational.Square.square
+--       :  t ⇓ₛ v  →  Rel ν t e  →  Σ[ w ] (e ⇓ w) × Rel ν v w
+--
+-- with `Rel` the relation of `Compile.Relational.Base`, of which
+-- `compileRust` is one section.  `squareDet` there is `evalAgrees`
+-- below with `Rel` in place of the `Eq.≡`.
+--
+-- This module is kept because everything in it is a correct
+-- CONSEQUENCE of its hypothesis; it is the hypothesis that has no
+-- inhabitant.
 -- ==================================================================
 
 module Simulation (_⇓ₛ_ : L.Tm [] → L.Tm [] → Type₀) where

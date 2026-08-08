@@ -1,36 +1,4 @@
-{-
-  SUBGRAMMARS: comprehension, and nothing else.
-
-  A subgrammar is the comprehension of a predicate on parses,
-
-      Compr p w  =  Σ[ x ∈ A w ] ⟨ p w x ⟩
-
-  and it needs NO signature -- no `Fibered`, no operations, no
-  splittings.  It lives at `CarrierNotation`, the same level as `&` and
-  `⊕`, because it is pointwise in the index like every additive
-  connective.  That is worth saying explicitly: `Grammar/Subgrammar/`
-  imports the whole of `Grammar`, but nothing multiplicative is used.
-
-  THE ONE DESIGN CHANGE.  The original states the side condition as an
-  equation between maps into Ω,
-
-      p ∘g f ≡ true ∘g ⊤-intro
-
-  and then pays for it: `insert-pf` builds that equation out of the
-  predicate via `hPropExt`, `extract-pf` transports back out of it, and
-  both are `opaque` with an `unfolding` discipline to keep the
-  elaborator from diverging.  Stating the condition as what it is --
-
-      Holds f = ∀ w x → ⟨ p w (f w x) ⟩
-
-  -- deletes all of that.  The universal property becomes an `Iso` whose
-  BOTH round trips are `refl`, with no `Σ≡Prop`, no `hPropExt`, no
-  `transport`, and no `opaque`.  β was already `refl` upstream; η is the
-  one that was not, and it is `refl` here by Σ's η.
-
-  The two statements are equivalent (`toEqn`/`ofEqn` below, which need
-  `hPropExt` exactly once, in one place, rather than at every use site).
--}
+{- SUBGRAMMARS: comprehension, and nothing else. -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Subgrammar where
 
@@ -75,9 +43,7 @@ module SubG {S : Type ℓS} (X : S → Type ℓX) where
     intro : {B : TheoryTy ℓB s} (f : B ⊢ A) → Holds f → B ⊢ Compr
     intro f h w x = f w x , h w x
 
-    -- ================================================================
     -- THEOREM.  The universal property, with both round trips `refl`.
-    -- ================================================================
 
     β : {B : TheoryTy ℓB s} (f : B ⊢ A) (h : Holds f)
       → (π ∘⊢ intro f h) ≡ f
@@ -94,9 +60,7 @@ module SubG {S : Type ℓS} (X : S → Type ℓX) where
     Compr-UP .Iso.sec _       = refl
     Compr-UP .Iso.ret _       = refl
 
-    -- ================================================================
     -- ... and the bridge to the equational phrasing, needed ONCE.
-    -- ================================================================
 
     trueΩ : {B : TheoryTy ℓB s} → B ⊢ Ω {ℓ = ℓ}
     trueΩ _ _ = Unit* , isPropUnit*
@@ -111,11 +75,9 @@ module SubG {S : Type ℓS} (X : S → Type ℓX) where
           → (λ w x → p w (f w x)) ≡ trueΩ {B = B} → Holds f
     ofEqn f e w x = transport (sym (cong fst (funExt⁻ (funExt⁻ e w) x))) tt*
 
--- ==================================================================
 -- The canonical source of subgrammars: an equalizer.  `Rules.agda`
 -- already has equalizers; this says they are comprehensions, which is
 -- the content of `Grammar/Subgrammar/Equalizer.agda`.
--- ==================================================================
 module EqualizerSub {S : Type ℓS} (X : S → Type ℓX) where
 
   open CarrierNotation X

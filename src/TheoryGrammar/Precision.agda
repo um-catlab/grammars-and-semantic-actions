@@ -1,31 +1,5 @@
-{-
-  PRECISION -- separation logic's, internalised -- AND THE UNIQUENESS
-  HYPOTHESES IT IS NOT.
-
-      PreciseI o i A  =  (B C) → (A ⊗ B) & (A ⊗ C) ⊢ A ⊗ (B & C)
-
-  mentions `⊗`, `&` and `⊢` only, so it needs nothing but a `Fibered`.
-  `PreciseP` is its pointwise form.  `⊗at o i A B` does the n-ary
-  bookkeeping by putting `B` at EVERY slot, so "the other slots" is never
-  computed and no `Discrete (arities o)` appears; `Binary` recovers the
-  two-slot reading from the arity's own eliminator.
-
-  The uniqueness hypotheses precision gets confused with are named here
-  too, because the comparison is the subject: `SplitProp` ⟹ `PartsProp`
-  ⟺ every grammar is precise ⟺ `⊤` is precise, with the converse ⟸
-  needing `PartsFaithful`.  So unique readability -- `SplitProp`, which
-  is `Decidable.Tensor.UniqueSplit`'s parameter (that module was called
-  `Precise`, which is exactly the confusion this file exists to settle;
-  the old name survives there only as a deprecated abbreviation) -- is
-  strictly stronger than precision over any substrate whose splittings
-  carry extra data.
-
-  MAIN: `PreciseP`/`PreciseI` and the bridge `preciseP→preciseI`;
-  `SplitProp`/`PartsProp`/`SlotDet`/`PartsFaithful` and the implications
-  between them; `MergeAt` with `merge→partsProp` its converse.
-
-  PRIMITIVE: `coeEq`, the single `Eq.refl` match.
--}
+{- PRECISION -- separation logic's, internalised -- AND THE UNIQUENESS
+   HYPOTHESES IT IS NOT. -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Precision where
 
@@ -49,9 +23,7 @@ module Prec {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
 
   open FibNotation Fib
 
-  -- ================================================================
   -- 1.  THE TWO FORMS OF PRECISION.
-  -- ================================================================
 
   -- POINTWISE: among the splittings whose slot `i` satisfies `A`, that
   -- slot is unique.  This is `splitProp` with `A` inserted.
@@ -82,9 +54,7 @@ module Prec {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
     (B C : (a : σ .arities o) → TheoryTy ℓB (σ .sortOf o a))
     → ((⊗at o i A B) & (⊗at o i A C)) ⊢ ⊗at o i A (λ a → B a & C a)
 
-  -- ================================================================
   -- 2.  THE HYPOTHESES ON THE SUBSTRATE, in decreasing strength.
-  -- ================================================================
 
   -- at most one splitting: unique readability, `Decidable.Tensor`'s
   -- `UniqueSplit` hypothesis
@@ -111,18 +81,13 @@ module Prec {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
                     → ((a : σ .arities o) → Fib .parts o m p a Eq.≡ Fib .parts o m q a)
                     → p ≡ q
 
-  -- RELATIVISED: slot `i` determines every slot.  This is what a
-  -- partial substrate has and `PartsProp` does not: for heaps, the
-  -- left part of a DISJOINT split determines the right one, while two
-  -- splits of one heap have quite different parts.
+  -- RELATIVISED: slot `i` determines every slot.
   SlotDet : (o : σ .ops) (i : σ .arities o) → Type (ℓ-max ℓX (ℓ-max ℓP ℓ'))
   SlotDet o i = (m : Fib .carrier (σ .resultSort o)) (p q : Fib .Split o m)
               → Fib .parts o m p i Eq.≡ Fib .parts o m q i
               → (a : σ .arities o) → Fib .parts o m p a Eq.≡ Fib .parts o m q a
 
-  -- ================================================================
   -- 3.  THE DEGENERATE CASE: `splitProp` makes EVERYTHING precise.
-  -- ================================================================
 
   -- one operation at a time -- an instance whose partiality sits at one
   -- operation needs exactly these
@@ -149,13 +114,7 @@ module Prec {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
                        (A : TheoryTy ℓA (σ .sortOf o i)) → PreciseP o i A
   partsProp→preciseP pp o i A = partsPropAt→preciseP o i A (pp o)
 
-  -- ================================================================
-  -- 4.  POINTWISE ⟹ INTERNAL, given `SlotDet`.
-  --
-  -- This is the bridge, and `SlotDet` is exactly what it costs: the
-  -- pointwise statement pins ONE slot, the internal one has to move a
-  -- payload at EVERY slot onto the surviving splitting.
-  -- ================================================================
+  -- 4. POINTWISE ⟹ INTERNAL, given `SlotDet`.
 
   preciseP→preciseI : (ℓB : Level) (o : σ .ops) (i : σ .arities o)
                       (A : TheoryTy ℓA (σ .sortOf o i))
@@ -178,25 +137,15 @@ module Prec {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
                        (A : TheoryTy ℓA (σ .sortOf o i)) → PreciseI ℓB o i A
   splitProp→preciseI sp = partsProp→preciseI (splitProp→partsProp sp)
 
-  -- ================================================================
-  -- 5.  A REPRESENTABLE IS POINTWISE PRECISE, always.
-  --
-  -- Two things equal to `c` are equal -- the Yoneda fact, at `Eq`.  So
-  -- with `SlotDet` (§4) every representable is internally precise too,
-  -- which is where `l ↦ x` and `emp` come from.
-  -- ================================================================
+  -- 5. A REPRESENTABLE IS POINTWISE PRECISE, always.
 
   preciseP-⌈⌉ : (o : σ .ops) (i : σ .arities o)
                 (c : Fib .carrier (σ .sortOf o i)) → PreciseP o i ⌈ c ⌉
   preciseP-⌈⌉ o i c m p q x y = x Eq.∙ Eq.sym y
 
-  -- ================================================================
-  -- 6.  IS `splitProp` "⊤ IS PRECISE"?
-  --
-  -- `PreciseI` at `⊤G` has a trivial focused component, so it is the
-  -- MERGE rule: two views of one composite merge slotwise.  Both
-  -- translations are re-bracketings.
-  -- ================================================================
+  -- 6. IS `splitProp` "⊤ IS PRECISE"? `PreciseI` at `⊤G` has a trivial
+  -- focused component, so it is the MERGE rule: two views of one composite
+  -- merge slotwise.
 
   MergeAt : (ℓB : Level) (o : σ .ops)
           → Type (ℓ-max ℓX (ℓ-max ℓP (ℓ-max ℓ' (ℓ-suc ℓB))))
@@ -214,10 +163,7 @@ module Prec {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
     r .fst , tt , r .snd
     where r = mg B C m ((p , h) , (q , k))
 
-  -- ... and the merge rule IS `PartsPropAt`, in both directions.  The
-  -- forward one is the only place a representable is needed: `⌈ ⌉` at
-  -- the parts of the two splittings turns the internal statement back
-  -- into an equation between them.
+  -- ... and the merge rule IS `PartsPropAt`, in both directions.
   merge→partsProp : (o : σ .ops) → MergeAt ℓX o → PartsPropAt o
   merge→partsProp o mg m p q a = Eq.sym (r .snd a .fst) Eq.∙ r .snd a .snd
     where r = mg (λ b → ⌈ Fib .parts o m p b ⌉) (λ b → ⌈ Fib .parts o m q b ⌉) m
@@ -244,14 +190,7 @@ module Prec {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
                       → PartsPropAt o → SplitPropAt o
   partsProp→splitProp o pf pp m p q = pf m p q (pp m p q)
 
-  -- ================================================================
-  -- 7.  THE BINARY READING.
-  --
-  -- ASSUMED, and this is the whole of it: the arity of `o` is exhausted
-  -- by two slots `i`, `j`, supplied as its dependent ELIMINATOR with
-  -- the two computation rules.  For `MonAr appop = Bool` that is
-  -- `boolΠ`, and both rules are `Eq.refl`.
-  -- ================================================================
+  -- 7. THE BINARY READING.
 
   module Binary (o : σ .ops) (i j : σ .arities o)
                 (slotΠ : ∀ {ℓM} {M : σ .arities o → Type ℓM}
@@ -278,9 +217,7 @@ module Prec {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
     PreciseB {ℓA} A = (B C : TheoryTy ℓA (σ .sortOf o j))
                     → ((A ⊛ B) & (A ⊛ C)) ⊢ (A ⊛ (B & C))
 
-    -- ... and it is the n-ary statement, read at this arity.  The two
-    -- coercions below are the slot bookkeeping in full: `into` reads the
-    -- focused payload off the family, `out` puts it back.
+    -- ... and it is the n-ary statement, read at this arity.
     into : {ℓA : Level} (A : TheoryTy ℓA (σ .sortOf o i)) (B : TheoryTy ℓA (σ .sortOf o j))
          → (A ⊛ B) ⊢ ⊗at o i A (slotΠ {M = TyM ℓA} A B)
     into {ℓA} A B m (sp , h) =

@@ -1,44 +1,4 @@
-{-
-  TWO CONVOLUTIONS ON ONE CARRIER: THE CAUCHY AND DIRICHLET PRODUCTS.
-
-  The semiring ℕ, presented as a SINGLE promodel carrying FOUR
-  operations -- `zeroOp`/`addOp` and `oneOp`/`mulOp`.  That is the point
-  of the file: distributivity is a statement relating two operations of
-  the SAME signature, so the two monoid structures must be splittings of
-  one promodel, not two promodels that happen to share a carrier.  (It
-  is also why this file imports nothing from the Nat or Dirichlet
-  instances elsewhere in `Instances/`: those are at different
-  signatures.)
-
-  The two convolutions are then the two multiplicatives of one calculus:
-
-      (A ⊗₊ B) n  =  Σ (i,j) with i + j = n.  A i × B j    -- CAUCHY
-      (A ⊗× B) n  =  Σ (i,j) with i · j = n.  A i × B j    -- DIRICHLET
-
-  and `ε₊ = ⌈0⌉`-ish, `ε× = ⌈1⌉`-ish arise as `⊗ˢ` at the nullary
-  operations.  Grammars over ⊗₊ are generating functions; grammars over
-  ⊗× are Dirichlet series.  They are the same connective former at two
-  operations of one theory -- which is exactly what
-  `TheoryGrammar.Base`'s "one ⊗[o] per OPERATION" buys.
-
-  ------------------------------------------------------------------
-  SPLITTINGS.
-
-  Additive splittings are an INDUCTIVE FAMILY, in the style of `Split3`
-  in `Instances/Strings/Base` -- `SplitAdd i j n` is "n counts down from
-  i while j stays put".  This keeps `parts` a projection, so `⊗-UP-β`
-  and `⊗-UP-η` remain `refl` and no green slime appears.
-
-  Multiplicative splittings carry an `Eq`-proof, `i · j Eq.≡ n`.  This
-  is the one place the file departs from CLAUDE.md's third trap ("do not
-  carry proofs in a `Split`"), and the departure is deliberate and
-  harmless: `parts` never INSPECTS the proof (it is `fst`/`fst ∘ snd`),
-  so both universal properties stay definitional.  What is lost is only
-  that `Split mulOp` does not itself compute -- an inductive family for
-  "i divides n with cofactor j" would recover that, at the cost of an
-  encoding of multiplication as repeated addition, which buys nothing
-  for the results in `Grading` and `Distributivity`.
--}
+{- TWO CONVOLUTIONS ON ONE CARRIER: THE CAUCHY AND DIRICHLET PRODUCTS. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Ring.Base where
 
@@ -55,9 +15,7 @@ open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.RulesFib
 
--- ==================================================================
 -- The signature of a semiring: one sort, four operations.
--- ==================================================================
 
 data RingOp : Type₀ where
   zeroOp addOp oneOp mulOp : RingOp
@@ -74,9 +32,7 @@ ringSig .arities      = RingAr
 ringSig .sortOf _ _   = tt
 ringSig .resultSort _ = tt
 
--- ==================================================================
 -- Splittings.
--- ==================================================================
 
 -- `SplitAdd i j n` : n is i followed by j.  Compare `Split3` for
 -- strings -- this is its image under `length`.
@@ -143,9 +99,7 @@ open RulesF natFib public
 Gr : Type₁
 Gr = TheoryTy ℓ-zero tt
 
--- ==================================================================
 -- The two convolutions, and their units.
--- ==================================================================
 
 -- CAUCHY product: coefficientwise, (A⊗₊B)_n = Σ_{i+j=n} A_i B_j
 _⊗₊_ : Gr → Gr → Gr
@@ -164,9 +118,7 @@ infixr 19 _⊗₊_
 ε× : Gr
 ε× = ⊗ˢ oneOp (λ ())
 
--- ==================================================================
 -- Intro and elim (phase-1 primitives: they name the splitting).
--- ==================================================================
 
 ⊗₊-mk : {A B : Gr} {i j n : ℕ} → SplitAdd i j n → A i → B j → (A ⊗₊ B) n
 ⊗₊-mk {i = i} {j} s a b = (i , j , s) , λ { true → a ; false → b }

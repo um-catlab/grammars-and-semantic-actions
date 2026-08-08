@@ -1,18 +1,4 @@
-{-
-  What this instance owes `TheoryGrammar.Decidable`: a `DecReadable`.
-
-  Three promodel facts -- at most one splitting, decidably so, and
-  slotwise decisions combine -- and the generic `dec-⊗` follows.  Nothing
-  about decisions is defined here; it is all in `Decidable`.
-
-  `λ-decSlots` must carry a decision sitting at a SLOT to one at the
-  WHOLE; the index-preserving `⊕-E` cannot, so it hands its slots to
-  `UniqueSplit`'s `decSlots¹`/`decSlots²` and never matches `inl`/`inr`.
-
-  Two primitives -- `Split-isProp` and `opCover`.  Everything else is
-  derived: `opOf`, `opCase`, `cmpLOp`, `⊗-decSplit`, `λ-decSlots`, and
-  the record `λDR` they assemble into (whence `dec-⊗`).
--}
+{- What this instance owes `TheoryGrammar.Decidable`: a `DecReadable`. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Readable where
 
@@ -48,19 +34,14 @@ module Readable (Name : Type₀) where
   -- `UniqueSplit`: its hypothesis is unique readability, not precision.
   open UniqueSplit Split-isProp public
 
-  -- PRIMITIVE.  `opCover` DENOTES: "every raw term is an o-composite
-  -- for SOME `o`" -- and it is this instance's one look at a term.
-  -- `Cover P = ⊤G ⊢ P`, so the tag is CARRIED alongside the splitting
-  -- rather than being something a caller has to recompute.
+  -- PRIMITIVE. `opCover` DENOTES: "every raw term is an o-composite for
+  -- SOME `o`" -- and it is this instance's one look at a term.
   opCover : Cover (⊕ᴰ LOp (λ o → ⊗ˢ o (λ _ → ⊤G)))
   opCover (var n)   _ = varOp , (mkVar n   , λ _ → tt)
   opCover (app u v) _ = appOp , (mkApp u v , λ _ → tt)
   opCover (lam n t) _ = lamOp , (mkLam n t , λ _ → tt)
 
-  -- DERIVED.  `opOf t` DENOTES: "the operation `t` is built by".  It is
-  -- the tag `opCover` already found, READ OFF -- not a second match on
-  -- the term.  Each clause of `opOf-split` is still `refl` because the
-  -- split constructor pins the term and `opCover` then reduces.
+  -- DERIVED. `opOf t` DENOTES: "the operation `t` is built by".
   opOf : Raw → LOp
   opOf t = opCover t tt .fst
 
@@ -72,23 +53,15 @@ module Readable (Name : Type₀) where
   opOf-split appOp .(app _ _) (mkApp _ _) = refl
   opOf-split lamOp .(lam _ _) (mkLam _ _) = refl
 
-  -- THE OPERATIONS PARTITION THE TERMS: every raw term is an
-  -- o-composite for EXACTLY ONE `o`.  Totality is `opCover`; exclusivity
-  -- is the emptiness of the other operations' splittings, which is
-  -- unique readability in its positive form.  Deciding each operation
-  -- separately (`⊗-decSplit`, below) is already complete; what it does
-  -- not say is that the three rejections are the SAME fact -- that a
-  -- term which is not an application is a variable or a lambda,
-  -- POSITIVELY.
+  -- THE OPERATIONS PARTITION THE TERMS: every raw term is an o-composite
+  -- for EXACTLY ONE `o`.
   opCase : Complete LOp (λ o → ⊗ˢ o (λ _ → ⊤G))
   opCase = fromUnique opCover
              (λ y z t py pz →
                 opOf-split y t (py .fst) ∙ sym (opOf-split z t (pz .fst)))
 
   -- The operations are pairwise distinct, and one numeral apiece is the
-  -- whole proof.  `opTag` is a NUMBERING of the three operations; it is
-  -- exported because `opTag-≢` is the only route to a disequality of
-  -- operations, and `Lambda/Tests` needs one.
+  -- whole proof.
   opTag : LOp → ℕ
   opTag varOp = 0
   opTag appOp = 1
@@ -113,28 +86,14 @@ module Readable (Name : Type₀) where
   cmpLOp lamOp varOp = inr (opTag-≢ snotz)
   cmpLOp lamOp appOp = inr (opTag-≢ λ p → snotz (injSuc p))
 
-  -- DERIVED, not primitive.  `opCase` says the operations PARTITION the
-  -- terms; `View.decBranch` decides each branch of a partition.  So the
-  -- nine clauses this used to have -- one per (operation, shape) pair,
-  -- six of them absurd, each building its own witness or refutation --
-  -- were nine consequences of one fact, written out.
-  --
-  -- The dependency now runs the right way: the positive statement is
-  -- primitive and the negative ones follow.  It still COMPUTES, which
-  -- is why `decBranch` takes `cmpLOp` rather than `Discrete LOp` -- see
-  -- the note there.
+  -- DERIVED, not primitive. `opCase` says the operations PARTITION the
+  -- terms; `View.decBranch` decides each branch of a partition.
   ⊗-decSplit : (o : LOp) → ⊤G ⊢ Dec⟨ ⊗ˢ o (λ _ → ⊤G) ⟩
   ⊗-decSplit = decBranch cmpLOp opCase
 
-  -- Slotwise decisions combine.  Matches on the OPERATION, never on a
-  -- term and never on a sum: each alternative just names its slots and
-  -- hands them to `UniqueSplit`'s `decSlots¹`/`decSlots²`.  This is
-  -- where finiteness of the arity is used, and for an infinite arity
-  -- the statement is false.
-  --
-  -- The two-slot family is `Decidable.Tensor.decSlotsBool` -- `Bool`'s
-  -- own dependent eliminator, which every arity-`Bool` instance was
-  -- writing out for itself.
+  -- Slotwise decisions combine. Matches on the OPERATION, never on a term
+  -- and never on a sum: each alternative just names its slots and hands
+  -- them to `UniqueSplit`'s `decSlots¹`/`decSlots²`.
   λ-decSlots : (o : LOp) (A : (a : LAr o) → TheoryTy ℓ-zero (LSortOf o a))
                (t : Raw) (sp : LSplit o t)
              → ((a : LAr o) → Dec⟨ A a ⟩ (LParts o t sp a))

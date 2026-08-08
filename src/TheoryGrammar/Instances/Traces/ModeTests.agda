@@ -1,20 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  THE PARTIALLY COMMUTATIVE MODE SEPARATES ordered from linear.
-
-  Names 0 and 1 are independent; 2 commutes with nothing.  So the term
-  that needs exchange is accepted at names {0,1} and REJECTED at names
-  {0,2} -- the same term, the same grammar, one substrate, two answers.
-  That is the substructural reading of the interpolation.
-
-                        ordered  TRACE  linear
-      λx.x                 T       T      T
-      λx.λy.x              F       F      F     -- no weakening
-      λx.x x               F       F      F     -- no contraction
-      λ0.λ1. x1 x0         F       T      T     -- 0 ⌣ 1
-      λ0.λ2. x2 x0         F       F      T     -- 0 not ⌣ 2
-      λ0.λ1. x0 x1         T       T      T
--}
+{- THE PARTIALLY COMMUTATIVE MODE SEPARATES ordered from linear. -}
 module TheoryGrammar.Instances.Traces.ModeTests where
 
 open import Cubical.Foundations.Prelude
@@ -74,16 +59,8 @@ _ : passes ((λ t → Trace.run (Trace.accepts t) []) at
              ∷ [] ))
 _ = refl
 
--- ==================================================================
--- THE `F` COLUMN, AS THEOREMS.
---
--- The batch above reports what the checker RETURNS.  The header table
--- claims something stronger: that no use-derivation exists.  `refute`
--- (TheoryGrammar.SemanticAction) turns each negative observation into
--- the refutation the decision was carrying all along, from the same
--- `refl` -- see `Instances/Lambda/Modes/Tests` for the four-mode
--- version of this block.
--- ==================================================================
+-- THE `F` COLUMN, AS THEOREMS. The batch above reports what the checker
+-- RETURNS.
 
 refuteTr : (t : Raw) → Trace.run (Trace.accepts t) [] ≡ false
          → (Trace.¬G (Trace.Uses t)) []

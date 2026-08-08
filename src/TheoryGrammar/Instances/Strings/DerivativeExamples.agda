@@ -1,13 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- The derivative stack, end to end, at `Char := Bool`.
-
-   Both `decδ⊗` and `decRE` decide a grammar rather than returning a
-   `Bool` to be verified, so their types already force correctness.  The
-   check that matters is that they REDUCE: everything below is `refl`.
-
-   One import, not two: `RegExp` re-exports `Derivative`, and reaching
-   `Strings.Base Bool` down two different chains would make every shared
-   name ambiguous. -}
+{- The derivative stack, end to end, at `Char := Bool`. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Strings.DerivativeExamples where
@@ -34,10 +26,8 @@ isYes : {X : Type₀} → X ⊎ No X → Bool
 isYes (inl _) = true
 isYes (inr _) = false
 
--- ==================================================================
 -- 1.  `decδ⊗` -- deciding a tensor by differentiating, no enumeration.
 --     The grammar is "starts with `true`" : ⌈ true ⌉ ⊗ ⊤.
--- ==================================================================
 
 decLit : (w : List Bool) → (w Eq.≡ (true ∷ [])) ⊎ No (w Eq.≡ (true ∷ []))
 decLit []             = inr λ ()
@@ -60,11 +50,9 @@ _ : passes ((λ w → isYes (decδ⊗ Alit dlit w)) at
              ∷ [] ))
 _ = refl
 
--- ==================================================================
 -- 2.  `decRE` -- Brzozowski matching.  `a ⋆ · b` with a = `true`,
 --     b = `false`; note the star's body is `RegExp false`, so the
 --     nullability index accepts it with nothing to check.
--- ==================================================================
 
 a b : RegExp false
 a = ⟨ true ⟩
@@ -92,11 +80,9 @@ _ : passes ((λ w → isYes (decRE allBits w)) at
              ∷ [] ))
 _ = refl
 
--- ==================================================================
 -- 3.  AUTOMATA AS ALGEBRAS.  An automaton is an `AlgC (starF char) B`,
 --     ⊤ carries the coalgebra, and running one is `hyloC`.  No
 --     recursion is written in either example below.
--- ==================================================================
 
 -- (a) a DFA: even number of `true`s.  The state is the parity so far.
 module Parity = DFA Bool (λ q c → if c then not q else q) (λ q → q)
@@ -126,7 +112,7 @@ countAlg tt =
 
 -- named at `Δ ℕ` for the same reason `evens` is named at `Δ Bool`
 countA : ⊤G ⊢ Δ ℕ
-countA m x = runAut scanLC scanCoalg countAlg tt m x , x
+countA = intoΔ ℕ ∘g runAut scanLC scanCoalg countAlg tt
 
 _ : passes (run countA at
              ( (true ∷ false ∷ true ∷ []) ↦ 3

@@ -1,16 +1,4 @@
-{-
-  The signature of lambda ASTs: two sorts, three operations.
-
-  `lamOp` is the point of the exercise -- its two slots have DIFFERENT
-  sorts, so `sortOf` is non-constant and the sort machinery is actually
-  exercised.  A single-sorted presentation has to index the OPERATIONS
-  by names (`varOp n`, `lamOp n`, so `ops` is as big as `Name`); here
-  names are a sort instead, so there are exactly three operations and
-  `⌈ n ⌉ : Name → Type` is what pins a binder.
-
-  Defines the sorts `LSort`, the operations `LOp`, their arities `LAr`,
-  the slot sorting `LSortOf`, and the signature `λSig` they assemble.
--}
+{- The signature of lambda ASTs: two sorts, three operations. -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Instances.Lambda.Signature where
 

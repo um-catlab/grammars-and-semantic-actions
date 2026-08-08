@@ -1,20 +1,4 @@
-{-
-  LINEAR (and AFFINE) CONTEXTS: the free COMMUTATIVE monoid.  `Split` is
-  interleaving -- exchange, but no weakening and no contraction.
-
-  DENOTES: `Ilv u v Γ` is "Γ is u and v shuffled", so a context of
-  length n splits in 2ⁿ ways.  `Bags.Base` supplies the relation
-  unchanged and `Modes.Substrate` everything not specific to it --
-
-    ilvNilJ  only `nil` lands at the empty context
-    decTen   PRIMITIVE (1 of 1): the tensor, by induction on Γ, one
-             recursive call per constructor of `Ilv`
-    dec      those two, packaged as `DecSplittings`
-
-  Affine reuses this promodel untouched -- it differs only in the leaf.
-  Splittings are NOT unique, so `Precise` (hence `⊗-refute` and
-  `decSlots¹/²`) does not apply: refuting needs the whole enumeration.
--}
+{- LINEAR (and AFFINE) CONTEXTS: the free COMMUTATIVE monoid. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Modes.Interleave where
 
@@ -42,7 +26,7 @@ module Interleave (Name : Type₀) where
 
   open Substrate Name Ilv nil ilvApp ilvNilJ public
 
-  -- PRIMITIVE (1 of 1 for this promodel).  Each name of Γ goes left or
+  -- PRIMITIVE (1 of 1 for this `Fibered`). Each name of Γ goes left or
   -- right; the two `chain`s are the two constructors of `Ilv`, and only
   -- the innermost branch -- where both were refuted -- enumerates them
   -- again.

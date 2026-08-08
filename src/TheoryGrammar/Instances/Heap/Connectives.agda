@@ -1,29 +1,6 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  SEPARATION LOGIC AS THE GENERIC CONNECTIVES, AND PARTIALITY AS A
-  THEOREM OF THE CALCULUS.
-
-  `∗` is `⊗ˢ appop`, `emp` is `⊗ˢ nilop`, `─∗` is `⊸ᶠ`, and the FRAME
-  RULE is `⊗ˢ-map`.  None of that is new machinery: it is what the
-  dependent Lambek calculus already is, read at a promodel whose
-  operation is partial.
-
-  THE WAND USES `⊸ᶠ`, NOT `⊸ˢ`, and the difference is exactly why
-  `Focus` exists.  `⊸ˢ o i A B` demands a payload at EVERY slot including
-  the focused one, so a wand built on it has to supply a vacuous `tt`
-  there and needs a pointful weakening step.  `Focus` names the
-  COMPLEMENT of the focused slot (`Rest`), so `⊸ᶠ` demands payloads only
-  at the other slots -- which for a binary operation is precisely "given
-  a heap disjoint from me".  With it the adjunction is `⊸ᶠ-UP`, whose β
-  and η are `refl`.
-
-  PHASE.  Building `heapFocus` is phase 1 -- it is language construction,
-  like the promodel itself.  `split-#` is the ONE new primitive, and it
-  is the honest interface to the representation: a splitting entails
-  disjointness of its parts.  Everything after that is phase 2:
-  `apart-self`, `no-tuple-point` and `noHeapPoint` are composites of
-  `⊗ˢ-E`, `⌈⌉`-elimination and the primitives Base already marks.
--}
+{- SEPARATION LOGIC AS THE GENERIC CONNECTIVES, AND PARTIALITY AS A THEOREM
+   OF THE CALCULUS. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Heap.Connectives where
@@ -38,22 +15,11 @@ import Cubical.Data.Equality as Eq
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.RulesFib
+open import TheoryGrammar.Theories.MonoidSep
 
 open import TheoryGrammar.Instances.Heap.Base public
 
--- ==================================================================
 -- GENERIC: a partiality located at a TUPLE refutes every total point.
---
--- BELONGS UPSTREAM, beside `Domain.no-point`.  That one handles
--- partiality located at a SLOT -- a single bad element, as for a field's
--- inverse.  This one handles partiality located at a TUPLE, which is the
--- shape every partial commutative monoid has: no element is bad, only
--- certain PAIRS are.  Both take an internal refutation and hand back a
--- metatheorem, so the mathematical content stays in the calculus.
---
--- Placed here, before `RulesF` is opened, so that `FibNotation Fib` for
--- an abstract `Fib` does not collide with the heap's own connectives.
--- ==================================================================
 
 module Generic {S : Type₀} {σ : SortedSig S ℓ-zero ℓ-zero}
                (Fib : Fibered σ ℓ-zero ℓ-zero) where
@@ -74,47 +40,23 @@ open RulesF heapFib public
 Gr : Type₁
 Gr = TheoryTy ℓ-zero tt
 
--- ==================================================================
 -- The separating conjunction and the empty heap.
--- ==================================================================
 
 emp : Gr
 emp = ⊗ˢ nilop (λ ())
 
--- `⊗ˢ` at the partial operation.  `(A ∗ B) h` is inhabited only when `h`
--- actually splits DISJOINTLY -- the `u # v` conjunct of `HeapSplit` --
--- so the whole content of separation is in the promodel, not here.
-_∗_ : Gr → Gr → Gr
-A ∗ B = ⊗ˢ appop (boolΠ A B)
+-- `⊗ˢ` at the partial operation. `(A ∗ B) h` is inhabited only when `h`
+-- actually splits DISJOINTLY -- the `u # v` conjunct of `HeapSplit` -- so
+-- the whole content of separation is in the `Fibered`, not here.
 
-infixr 20 _∗_
+-- THE FRAME RULE is the functorial action of `∗`.
 
--- ==================================================================
--- THE FRAME RULE is the functorial action of `∗`.  Phase 2: `⊗ˢ-map`
--- and `boolΠ`, nothing else.  Note `boolΠ` is what keeps this honest --
--- an extended lambda here would be a NEW term each time it is written,
--- and nominally distinct from the one `_∗_` used.
--- ==================================================================
+-- `∗-map`, `frame` and `frameL` come from `Theories.MonoidSep` now: not
+-- one line of them mentioned heaps, only `appop` and `⊗ˢ-map`.
+open MonSep heapFib public using (_∗_; ∗-map; frame; frameL)
 
-frame : {A B : Gr} (C : Gr) → A ⊢ B → (A ∗ C) ⊢ (B ∗ C)
-frame {A} {B} C f =
-  ⊗ˢ-map appop {A = boolΠ A C} {B = boolΠ B C} (boolΠ f idg)
-
-frameL : {A B : Gr} (C : Gr) → A ⊢ B → (C ∗ A) ⊢ (C ∗ B)
-frameL {A} {B} C f =
-  ⊗ˢ-map appop {A = boolΠ C A} {B = boolΠ C B} (boolΠ idg f)
-
--- ==================================================================
--- THE MAGIC WAND, via `Focus`.
---
--- Focused at slot `false`: the index is the heap we hold, `Rest` is the
--- single other slot, and `whole` is the join.  Reading `⊸ᶠ` at this
--- focus gives, at a heap `v`,
---
---     (u , h with Ilv u v h and u # v)  →  A u  →  B h
---
--- which is the magic wand with nothing left over.
--- ==================================================================
+-- THE MAGIC WAND, via `Focus`. Focused at slot `false`: the index is the
+-- heap we hold, `Rest` is the single other slot, and `whole` is the join.
 
 heapFocus : Focus heapFib appop false
 heapFocus .SplitAt v = Σ[ u ∈ Heap ] Σ[ h ∈ Heap ] (Ilv u v h × (u # v))
@@ -136,20 +78,11 @@ infixr 19 _─∗_
 wand-UP : {A B : Gr} → _
 wand-UP {A} {B} = ⊸ᶠ-UP {A = boolΠ A ⊤G} {B = B}
 
--- ==================================================================
--- PARTIALITY, AS A THEOREM OF THE CALCULUS.
---
--- The separation-logic statement of "a location cannot be owned twice"
--- is not a side condition but an internal refutation:
---
---     ⌈ single l x ⌉ ∗ ⌈ single l x ⌉  ⊢  ⊥G
---
--- Compare `Field/Partial`, where "inv is undefined at 0" is
--- `Domˢ invOp ⊣⊢ ¬G ⌈ f0 ⌉`.  The shapes differ because the field's
--- partiality is UNARY (one bad element) while a PCM's is BINARY (one bad
--- pair), and that difference is what makes `Domain.no-point` inapplicable
--- here -- every heap fills either slot, paired with the empty heap.
--- ==================================================================
+-- PARTIALITY, AS A THEOREM OF THE CALCULUS. The separation-logic statement
+-- of "a location cannot be owned twice" is not a side condition but an
+-- internal refutation: ⌈ single l x ⌉ ∗ ⌈ single l x ⌉ ⊢ ⊥G Compare
+-- `Field/Partial`, where "inv is undefined at 0" is `Domˢ invOp ⊣⊢ ¬G ⌈ f0
+-- ⌉`.
 
 -- PRIMITIVE (phase 1): the only new one.  A splitting entails
 -- disjointness of its parts; this is the interface to `HeapSplit`'s
@@ -167,21 +100,10 @@ apart-self l x =
   ⊗ˢ-E appop {A = boolΠ ⌈ single l x ⌉ ⌈ single l x ⌉}
        (λ h sp k → E.rec (#-self l x (#-Eq (k true) (k false) (split-# h sp))))
 
--- ==================================================================
 -- ... and the refutation of every total point, from that theorem alone.
---
--- BELONGS UPSTREAM, beside `Domain.no-point`.  That one handles a
--- partiality located at a SLOT; this one handles a partiality located at
--- a TUPLE, which is the shape every partial commutative monoid has.
--- Both take an internal refutation and return a metatheorem.
--- ==================================================================
 
--- Pure coercion between two spellings of one family -- compare `intoQ`
--- in Bags/Quicksort.  `⌈ boolΠ u v a ⌉` and `boolΠ ⌈ u ⌉ ⌈ v ⌉ a` are the
--- same grammar at each of `true` and `false`, but `boolΠ` is stuck at a
--- variable `a`, so they are distinct terms.  `boolΠ idg idg` splits on
--- the constructor, where both sides reduce -- the same escape `funExt`
--- provides for paths.
+-- Pure coercion between two spellings of one family -- compare `intoQ` in
+-- Bags/Quicksort.
 respell : {u v : Heap} (a : Bool) → ⌈ boolΠ u v a ⌉ ⊢ boolΠ ⌈ u ⌉ ⌈ v ⌉ a
 respell {u} {v} = boolΠ {M = λ a → ⌈ boolΠ u v a ⌉ ⊢ boolΠ ⌈ u ⌉ ⌈ v ⌉ a} idg idg
 

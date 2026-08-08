@@ -1,18 +1,7 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  ENDPOINT 2.  At `I = ⊤` -- everything commutes -- the shuffle IS
-  interleaving: `ITr ⊤I u v w ≅ Ilv u v w`, with `Ilv` imported from
-  `Instances.Bags.Base` unchanged.
-
-  Here the two presentations are constructor-for-constructor; the only
-  difference is that `right` carries a side condition, which at `I = ⊤`
-  is a nested `Unit` and so contractible.  `allTtUnique` is that fact,
-  and it is all the round trips need.
-
-  DEFINES `⊤I`, `allTt`/`allTtUnique`, the translations `toIlv`/
-  `fromIlv`, and the two theorems `commutative≅` (on shuffles) and
-  `commutativeSplit≅` (on the `appop` splittings of a word).
--}
+{- ENDPOINT 2. At `I = ⊤` -- everything commutes -- the shuffle IS
+   interleaving: `ITr ⊤I u v w ≅ Ilv u v w`, with `Ilv` imported from
+   `Instances.Bags.Base` unchanged. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Traces.Commutative (Letter : Type₀) where

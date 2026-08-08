@@ -1,24 +1,5 @@
-{-
-  HEAPS: THE PARTIAL COMMUTATIVE MONOID.
-
-  A heap is a list of cells; `h₁ ∗ h₂` is defined only when the domains
-  are DISJOINT.  As at `Field`, partiality is not a side condition: it is
-
-      Split appop h = Σ u, Σ v, Ilv u v h × (u # v),
-
-  and the `u # v` conjunct is the whole of it.  Dropping exactly that
-  conjunct gives `cellFib` -- same carrier, same `parts` -- which DOES
-  have a total point (it is `Bags` at `Cell`).  So the obstruction is
-  located at one conjunct of one operation.
-
-  Representation: an association LIST, not `Loc → Maybe V`.  A function
-  carrier would make heap equality `funExt` and every `refl` test inert;
-  a list of cells keeps `⌈ h ⌉` structural and `Diff`/`Fresh`/`_#_`
-  Unit/⊥-valued, hence definitionally propositional.
-
-  PRIMITIVE (matching the representation): `Diff`, `Fresh`, `_#_`,
-  `IsNil`, `Ilv`, `HeapSplit`, `HeapParts`, `boolΠ`.
--}
+{- HEAPS: THE PARTIAL COMMUTATIVE MONOID. A heap is a list of cells; `h₁ ∗
+   h₂` is defined only when the domains are DISJOINT. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Heap.Base where
 
@@ -35,12 +16,8 @@ open import TheoryGrammar.Base
 open import TheoryGrammar.Theories.Monoid public
 open import TheoryGrammar.Fibered
 
--- ==================================================================
--- Locations, values, cells, heaps.
---
--- Three values, as `Field` takes 𝔽₃: every table reduces, so the tests
--- are `refl`.  Locations are ℕ, which reduces on numerals.
--- ==================================================================
+-- Locations, values, cells, heaps. Three values, as `Field` takes 𝔽₃:
+-- every table reduces, so the tests are `refl`.
 
 Loc : Type₀
 Loc = ℕ
@@ -57,11 +34,9 @@ Heap = List Cell
 single : Loc → Val → Heap
 single l x = (l , x) ∷ []
 
--- ==================================================================
 -- Apartness.  Every one of these is Unit/⊥-valued, so a proof is a
 -- nest of `tt` and any two are definitionally equal -- which is what
 -- keeps a splitting's disjointness component from blocking `refl`.
--- ==================================================================
 
 Diff : Loc → Loc → Type₀                          -- PRIMITIVE
 Diff zero    zero    = ⊥
@@ -100,10 +75,8 @@ _#_ : Heap → Heap → Type₀                         -- PRIMITIVE
 #-self : (l : Loc) (x : Val) → single l x # single l x → ⊥
 #-self l x ((d , _) , _) = diff-irrefl l d
 
--- ==================================================================
 -- Splittings.  `Ilv` is the interleaving relation, indexed by the
 -- WHOLE; `_#_` restricts it to disjoint decompositions.
--- ==================================================================
 
 IsNil : Heap → Type₀                              -- PRIMITIVE
 IsNil []      = Unit
@@ -131,16 +104,11 @@ ilv-nilR-inv : {u w : Heap} → Ilv u [] w → u Eq.≡ w
 ilv-nilR-inv nil      = Eq.refl
 ilv-nilR-inv (left p) = Eq.ap (_ ∷_) (ilv-nilR-inv p)
 
--- the dependent eliminator for the arity.  `MonAr appop` is `Bool`, so
--- a slot family is a Bool-family; this is its induction principle and
--- the only place `true`/`false` are matched.
-boolΠ : ∀ {ℓ} {M : Bool → Type ℓ} → M true → M false → (b : Bool) → M b
-boolΠ t f true  = t                               -- PRIMITIVE
-boolΠ t f false = f
+-- the dependent eliminator for the arity. `MonAr appop` is `Bool`, so a
+-- slot family is a Bool-family; this is its induction principle and the
+-- only place `true`/`false` are matched.
 
--- ==================================================================
--- The promodel.
--- ==================================================================
+-- The `Fibered`.
 
 HeapSplit : (o : MonOp) → Heap → Type₀            -- PRIMITIVE
 HeapSplit nilop h = IsNil h
@@ -155,14 +123,8 @@ heapFib .carrier _ = Heap
 heapFib .Split     = HeapSplit
 heapFib .parts     = HeapParts
 
--- ==================================================================
--- THE FRAGMENT THAT IS TOTAL: the same carrier, the same `parts`, the
--- same `Ilv` -- with the `u # v` conjunct deleted.  This is `Bags` at
--- `Cell`, and it has a lax point (bag union).  Compare `Field`, where
--- the fragment is the same promodel with one OPERATION deleted; here it
--- is one CONJUNCT of one splitting, which is as sharp as the
--- localisation gets.
--- ==================================================================
+-- THE FRAGMENT THAT IS TOTAL: the same carrier, the same `parts`, the same
+-- `Ilv` -- with the `u # v` conjunct deleted.
 
 CellSplit : (o : MonOp) → Heap → Type₀
 CellSplit nilop h = IsNil h

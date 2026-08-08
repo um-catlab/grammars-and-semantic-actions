@@ -1,42 +1,4 @@
-{-
-  BASE CHANGE ALONG A RELATION -- and the modalities it generates.
-
-  Every modality in this development has been built by hand and then
-  recognised, afterwards, as Σ or Π over some fibre:
-
-      Σact / Πact   (Derivative)  -- over the fibre of an action
-      ⊗ˢ   / Allˢ   (Par)         -- over `Split o m`
-      ▷            (Later)        -- over `j ≺ i`
-
-  They are all one construction.  A relation `R : I → J → Type` -- an
-  ACCESSIBILITY STRUCTURE on worlds -- induces
-
-      Σᴿ A j = Σ[ i ] R i j × A i      "some R-predecessor of j is an A"
-      Πᴿ B i = (j) → R i j → B j       "every R-successor of i is a B"
-
-  and `Σᴿ ⊣ Πᴿ`.  The adjunction is CURRYING: both round trips are
-  `refl`, and no hypothesis on `R` is used.  So the modalities are not
-  chosen, they are the (co)monads this adjunction generates, exactly as
-  they should be.
-
-  THE THREE INSTANCES.
-
-  * `R` = the graph of a function `act`.  Then `Πᴿ` is precomposition,
-    i.e. `δ` -- which is why the derivative has a THREE-fold adjunction
-    where the others have two.  A function is a relation with a middle
-    functor.
-
-  * `R m⃗ m` = "m splits as m⃗".  Then `Σᴿ` is `⊗ˢ` and `Πᴿ` is `Allˢ`,
-    modulo the external product turning a slot-family into a
-    tuple-family.
-
-  * `R j i` = `j ≺ i`.  Then `Πᴿ` is `▷`, and `löb` is its fixed point.
-
-  What this buys beyond tidiness: the (co)monads below are defined once,
-  so `◇`/`□` at an action, "the ambiguity of a splitting", and the
-  guarded modality are the same object at three relations -- and a fact
-  proved here holds for all of them.
--}
+{- BASE CHANGE ALONG A RELATION -- and the modalities it generates. -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.BaseChange where
 
@@ -47,22 +9,7 @@ open import Cubical.Data.Sum using (_⊎_; inl; inr)
 
 private variable ℓI ℓJ ℓR ℓA ℓB : Level
 
--- ==================================================================
 -- THE PRINCIPLE, at its actual level of generality.
---
--- Deriving `⊗-align` from `Rel.Σᴿ-&-conv` showed that the latter is
--- not the general form -- it is already an instance.  What is going on
--- has nothing to do with base change, or relations, or fibres: it is
--- that a Σ over a COMMON INDEX distributes into a product exactly when
--- the index is pinned by the two payloads.
---
---   Σ F P × Σ F Q  →  Σ F (λ f → P f × Q f)     given `Σ-det P Q`
---
--- Two lines, and both `Σᴿ-&-conv` (at `F = FibreR j`) and the tensor
--- alignment (at `F = Split o m`) are it at different `F`.  Stating it
--- here rather than at either instance is what stops them being two
--- parallel developments that merely look alike.
--- ==================================================================
 
 Σ-det : {F : Type ℓI} (P : F → Type ℓA) (Q : F → Type ℓB) → Type _
 Σ-det {F = F} P Q = (f f' : F) → P f → Q f' → f ≡ f'
@@ -72,7 +19,6 @@ private variable ℓI ℓJ ℓR ℓA ℓB : Level
 Σ-&-conv {Q = Q} det ((f , p) , (f' , q)) =
   f , p , subst Q (sym (det f f' p q)) q
 
-
 module Rel {I : Type ℓI} {J : Type ℓJ} (R : I → J → Type ℓR) where
 
   Σᴿ : (I → Type ℓA) → (J → Type (ℓ-max ℓI (ℓ-max ℓR ℓA)))
@@ -81,10 +27,8 @@ module Rel {I : Type ℓI} {J : Type ℓJ} (R : I → J → Type ℓR) where
   Πᴿ : (J → Type ℓB) → (I → Type (ℓ-max ℓJ (ℓ-max ℓR ℓB)))
   Πᴿ B i = (j : J) → R i j → B j
 
-  -- ================================================================
   -- THE ADJUNCTION.  `Σᴿ ⊣ Πᴿ`, and it is currying -- both round trips
   -- are `refl`, with no hypothesis on `R` whatsoever.
-  -- ================================================================
 
   Σ⊣Π : {A : I → Type ℓA} {B : J → Type ℓB}
        → Iso ((j : J) → Σᴿ A j → B j) ((i : I) → A i → Πᴿ B i)
@@ -93,9 +37,7 @@ module Rel {I : Type ℓI} {J : Type ℓJ} (R : I → J → Type ℓR) where
   Σ⊣Π .Iso.sec _ = refl
   Σ⊣Π .Iso.ret _ = refl
 
-  -- ================================================================
   -- ... and hence the modalities, generated rather than posited.
-  -- ================================================================
 
   -- the COMONAD on J-families
   ◇ᴿ : (J → Type ℓB) → (J → Type _)
@@ -117,17 +59,8 @@ module Rel {I : Type ℓI} {J : Type ℓJ} (R : I → J → Type ℓR) where
   □-mult : {A : I → Type ℓA} (i : I) → □ᴿ (□ᴿ A) i → □ᴿ A i
   □-mult i h j r = h j r .snd .snd j (h j r .snd .fst)
 
-  -- ================================================================
-  -- PRESERVATION.  A left adjoint preserves coproducts; a right adjoint
-  -- preserves products.  Proved ONCE here, they hold for every instance
-  -- -- the guarded modality, the derivative's adjoints, and the
-  -- convolution -- which is the point of having the general form.
-  --
-  -- Neither preserves the other side, and the asymmetry is real:
-  -- `Σᴿ (A & B)` is strictly stronger than `Σᴿ A & Σᴿ B` once `R i j`
-  -- has more than one inhabitant, because the left says ONE witness
-  -- serves both.  `Σᴿ-&` is that one-way comparison.
-  -- ================================================================
+  -- PRESERVATION. A left adjoint preserves coproducts; a right adjoint
+  -- preserves products.
 
   Πᴿ-& : {B : J → Type ℓA} {C : J → Type ℓB} (i : I)
        → Iso (Πᴿ (λ j → B j × C j) i) (Πᴿ B i × Πᴿ C i)
@@ -151,40 +84,7 @@ module Rel {I : Type ℓI} {J : Type ℓJ} (R : I → J → Type ℓR) where
        → Σᴿ (λ i → A i × B i) j → (Σᴿ A j × Σᴿ B j)
   Σᴿ-& j (i , r , (a , b)) = (i , r , a) , (i , r , b)
 
-  -- ================================================================
-  -- WHEN DOES Σ DISTRIBUTE BACK IN?  The general principle.
-  --
-  -- `Σᴿ-&` above goes one way unconditionally.  The converse is what
-  -- "unambiguity" means, and stating it generally shows it is not a
-  -- property of the theory but of the theory RELATIVE TO A PAIR OF
-  -- GRAMMARS -- which is why `⊛` could never yield `DecReadable`.
-  --
-  --   `isProp (FibreR j)` -- "at most one way to reach j" -- is far too
-  --   strong.  It fails for strings, where `w` has `length w + 1` cuts,
-  --   and no hypothesis will rescue it.
-  --
-  --   `DetPair A B j` asks only that two witnesses agree WHEN ONE
-  --   SUPPORTS AN A AND THE OTHER A B.  Most of the fibre is allowed to
-  --   be as ambiguous as it likes, provided the parts these two
-  --   grammars can see pin it down.
-  --
-  -- That is the general form of sequential unambiguity, and it is what
-  -- `Instances.Strings.SeqUnambig.⊗-align` establishes at the splitting
-  -- relation: `⊛` supplies exactly `DetPair`.
-  --
-  -- PRECISION.  `DetPair` is ANTITONE in its grammars -- refining
-  -- either one preserves it (`DetPair-mono`).  So unambiguity is
-  -- inherited by more precise grammars, never lost, which is the right
-  -- behaviour: sharpening what you are parsing cannot introduce
-  -- ambiguity.  Taking `A = B = ⊤` recovers `isProp (FibreR j)`, the
-  -- global condition, as the least precise case.
-  --
-  -- ARBITRARY OPERATIONS.  Nothing here mentions arity.  At an n-ary
-  -- operation the alignment reads
-  --     (⊗ o A) & (⊗ o A) ⊢ ⊗ o (λ a → A a & A a)
-  -- and the hypothesis is the same `DetPair` at the same relation.
-  -- Binary-ness was never used.
-  -- ================================================================
+  -- WHEN DOES Σ DISTRIBUTE BACK IN? The general principle.
 
   FibreR : J → Type (ℓ-max ℓI ℓR)
   FibreR j = Σ[ i ∈ I ] R i j
@@ -207,16 +107,9 @@ module Rel {I : Type ℓI} {J : Type ℓJ} (R : I → J → Type ℓR) where
                → DetPair A B j → DetPair A' B' j
   DetPair-mono j fa fb det p q a' b' = det p q (fa (p .fst) a') (fb (q .fst) b')
 
-  -- ================================================================
-  -- THE COMPARISON, and what it measures.
-  --
-  -- `Σᴿ A j → Πᴿ`-style universality needs the accessibility structure
-  -- to be a PROPOSITION -- "at most one way to reach j".  That single
-  -- statement is `splitProp` for a splitting, injectivity for an
-  -- action, and antisymmetry-of-reachability for an order: the three
-  -- unique-readability hypotheses in this development are one
-  -- condition on `R`.
-  -- ================================================================
+  -- THE COMPARISON, and what it measures. `Σᴿ A j → Πᴿ`-style universality
+  -- needs the accessibility structure to be a PROPOSITION -- "at most one
+  -- way to reach j".
 
   Σ→all : {A : I → Type ℓA} (j : J)
         → ((i i' : I) → R i j → R i' j → i ≡ i')

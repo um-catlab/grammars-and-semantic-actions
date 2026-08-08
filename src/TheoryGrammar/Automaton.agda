@@ -29,55 +29,9 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   open HyloM GS ℓA X xs public
   open FibNotation (GS .fib)
 
-  -- ================================================================
   -- AUTOMATA ARE ALGEBRAS, and running one is a hylomorphism.
-  --
-  -- This is theory-generic: nothing below mentions strings, characters,
-  -- or even the signature's operations.  Three notions, all of which
-  -- already exist:
-  --
-  --   * an AUTOMATON over a description is an ALGEBRA for it.  A DFA's
-  --     transition table is one way to build such an algebra, not a
-  --     separate notion -- and an algebra may have an infinite carrier,
-  --     which a DFA may not.
-  --
-  --   * ⊤ carries a COALGEBRA for the description exactly when the
-  --     theory can take its elements apart one step along it.  That is
-  --     the DECOMPOSITION AXIOM (`charCase` for strings, `bagCase` for
-  --     bags), and stating it as `Scanner` says what it actually is
-  --     rather than leaving it an ad-hoc lemma.
-  --
-  --   * the description being GUARDED is local contractivity: each
-  --     recursive position sits at a strictly smaller degree.
-  --
-  -- Given those, running the automaton on an input is `hyloC` and
-  -- nothing else -- no recursion is written at the use site, and the
-  -- termination certificate IS the guardedness.  Any theory with a
-  -- decomposition axiom gets automata for free.
-  -- ================================================================
 
-  -- ================================================================
-  -- PROGRAMS OUT OF ⊤.
-  --
-  -- There is no "automaton" structure to define.  An automaton is an
-  -- ALGEBRA -- `Algᴳ F A`, which already exists -- and running one on
-  -- the input needs exactly two things:
-  --
-  --   * F is LOCALLY CONTRACTIVE (`LocallyContractive`, in `Hylo`), so
-  --     the recursion is total;
-  --   * ⊤ carries a COALGEBRA for F, so F really decomposes the input.
-  --     That is the theory's decomposition axiom -- `charCase`,
-  --     `bagCase` -- and `Scanner` is just its name.
-  --
-  -- Neither implies the other: a ⊤-coalgebra alone permits a step that
-  -- consumes nothing and loops; contractivity alone describes a
-  -- shrinking process that need not decompose THIS input.  But they do
-  -- not need bundling into a record either -- there are no laws
-  -- relating them, so a record would be indirection with nothing in it.
-  -- They are two arguments.
-  --
-  -- What remains is a one-line specialisation of `hyloLC`.
-  -- ================================================================
+  -- PROGRAMS OUT OF ⊤. There is no "automaton" structure to define.
 
   -- ⊤'s coalgebra for a description -- the theory's decomposition axiom.
   Scanner : ((x : X) → Functor (xs x)) → Type _
@@ -88,26 +42,7 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
          → (x : X) → ⊤G ⊢ A x
   runAut lc sc α x = hyloLC lc sc α x ∘⊢ ⊤ᴳ-I
 
-  -- ================================================================
   -- ⊤ ≅ μ(shape), the generic replacement for `⊤ ≅ String`.
-  --
-  -- PORTING.md lists this as stated-but-unbuilt, and says the blocker
-  -- is that `μ` cannot be a motive at `ℓSh`.  It can be avoided: `löb`
-  -- is level-polymorphic, so building the parse DIRECTLY by löb never
-  -- mentions `⟦_⟧c` and never meets the constraint.  Only `shapeOf` is
-  -- needed from the scanner -- the payloads are trivial, since the
-  -- coalgebra is carried by ⊤.
-  --
-  -- EXISTENCE is unconditional: any theory with a decomposition axiom
-  -- and a guarded description can parse every element.
-  --
-  -- UNIQUENESS is `Free`, and it is exactly what distinguishes theories.
-  -- Strings have it -- a word decomposes into characters one way.  Bags
-  -- do not -- a multiset comes apart in |m|! orders -- and THAT is the
-  -- commutative-theory caveat, finally stated as a property rather than
-  -- as a warning: `runAut`'s answer depends on the scanner precisely
-  -- when the theory is not free.
-  -- ================================================================
 
   scanμ : {F : (x : X) → Functor (xs x)} → ((x : X) → Guarded (F x))
         → Scanner F → (x : X) → ⊤G ⊢ μᴳ F x
@@ -135,20 +70,8 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
     → scanμ gF sc x m u ≡ scanμ gF sc' x m u
   scanμ-scanner-irrelevant fr gF sc sc' x m u = free→isProp fr (x , m) _ _
 
-  -- ================================================================
-  -- A USABLE CRITERION FOR FREENESS.
-  --
-  -- `Free` as stated is a property of `μ F`, which nothing can discharge
-  -- directly.  This reduces it to a property of the description's SHAPES:
-  -- if each `Sh (F x) m` is contractible -- "there is exactly one way to
-  -- take this element apart, one step" -- then the whole parse is unique.
-  --
-  -- The proof is the recursion, once: `roll`/`unroll` are already
-  -- definitional inverses, so `μ F (x , m)` retracts onto
-  -- `Σ[ sh ] ((p : Pos ...) → μ F (nx ...))`, and contractibility of a Σ
-  -- is contractibility of its base and fibres.  löb supplies the fibres,
-  -- with guardedness as the descent.
-  -- ================================================================
+  -- A USABLE CRITERION FOR FREENESS. `Free` as stated is a property of `μ
+  -- F`, which nothing can discharge directly.
 
   shapeContr→Free : {F : (x : X) → Functor (xs x)}
                   → ((x : X) (m : GS .fib .carrier (xs x)) → isContr (Sh (F x) m))
@@ -158,53 +81,4 @@ module Guard {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
     isContrRetract unroll roll roll-unroll
       (isContrΣ (shc x m) (λ sh → isContrΠ λ p → rec _ (gF x m sh p))) }
 
-  -- ================================================================
   -- VIEWS, FREENESS, AND EQUIDIVISIBILITY -- one story.
-  --
-  -- `TheoryGrammar.View` observes that a coalgebra out of ⊤ IS a view
-  -- in McBride's sense: `Cover P = ⊤G ⊢ P` is the covering function.
-  -- `Scanner`/`runAut` here ARE that file's `ViewsOf`/`byView` -- it now
-  -- aliases them rather than keeping a second copy, and the view names
-  -- are the ones to prefer at a use site.  What that file leaves open
-  -- is the question "views from the left" actually turns on, and the
-  -- pieces are now all present to answer it.
-  --
-  -- A view needs TWO properties to be a genuine pattern match.  Cover
-  -- gives the first.  The second is that the analysis be DETERMINED --
-  -- otherwise matching refines nothing, and dependent elaboration has
-  -- no equation to propagate leftward.
-  --
-  --   `Free F` IS that second property.  `∀ i → isContr (μ F i)` says
-  --   the iterated view has exactly one analysis.  Strings have it;
-  --   bags do not.  So freeness is precisely "this view is a pattern
-  --   match, not merely a cover".
-  --
-  -- WHERE DETERMINISM IS UNAVAILABLE, EQUIDIVISIBILITY IS THE FALLBACK.
-  -- The ⊗-view genuinely has many analyses -- `length w + 1` cuts --
-  -- and no hypothesis makes it deterministic.  Levi's lemma says they
-  -- are DIRECTED: any two have a common refinement.  That is weaker
-  -- than determinism and it is enough, because it lets two matches be
-  -- COMPARED.
-  --
-  --   `Instances.Strings.SeqUnambig.sameSplit` is exactly this trade.
-  --   Levi produces the middle piece `t`; `⊛` -- First/FollowLast
-  --   disjointness -- rules out `t ≠ ε`.  So sequential unambiguity is
-  --   "the concatenation view is a pattern match AT THESE TWO
-  --   GRAMMARS".  Which is why it cannot yield `DecReadable`:
-  --   determinism there is relative to the grammars, not a property of
-  --   the promodel, and the interface has no slot for that.
-  --
-  -- AND "FROM THE LEFT" NEEDS A LEFT.
-  -- The derivative is this view iterated: consume on the left, refine
-  -- the remaining obligation.  Its two obstructions are exactly the two
-  -- halves of that sentence --
-  --
-  --   equidivisibility  lets you INVERT the ⊗-view at a consumption;
-  --   an ordered arity  is what makes "the left" mean anything, since
-  --                     `δ(A⊗B) = δA⊗B ⊕ νA·δB` asks WHICH slot
-  --                     absorbed the action.
-  --
-  -- Bags have neither.  That is the same reason `Greedy`'s "leftmost"
-  -- is string-specific, and the same reason `Free` fails there.  A
-  -- commutative theory has views; it has no views FROM THE LEFT.
-  -- ================================================================

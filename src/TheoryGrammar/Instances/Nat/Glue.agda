@@ -1,20 +1,5 @@
 {-# OPTIONS -WnoUnsupportedIndexedMatch #-}
-{-
-  THE FIRST INSTANCE OF `Gluing`: A STRING PAIRED WITH ITS LENGTH.
-
-  `Nat/LengthFib` gives `length` as a reindexing of promodels; handing it
-  to `Gluing.Pullback` with the IDENTITY right leg makes the comma object
-  `Determined`, so every string program lifts into the glue carrying its
-  length.  Note the relation is the GRAPH of a function, so this glue is
-  a reindexing in disguise -- `Strings/Aligned` is the non-degenerate
-  instance.  What this file is good for is that its tests EVALUATE.
-
-  The point of the file is the `refl` tests at the end.  Everything in
-  `Gluing` was a convertibility claim about an abstract promodel; these
-  are closed terms that must EVALUATE, which is the failure mode a green
-  typecheck does not detect.
-  PRIMITIVE: none -- the length reindexing is `Nat/LengthFib`.
--}
+{- THE FIRST INSTANCE OF `Gluing`: A STRING PAIRED WITH ITS LENGTH. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Nat.Glue (Char : Type₀) where
@@ -38,23 +23,17 @@ import TheoryGrammar.Instances.Nat.Base as Nt
 import TheoryGrammar.Instances.Nat.LengthFib as LF
 module L = LF Char
 
--- ==================================================================
--- `length` AS A REINDEXING OF PROMODELS -- imported, not restated.
--- ==================================================================
+-- `length` AS A REINDEXING OF `Fibered`s -- imported, not restated.
 
--- The right leg of the comma object is the identity on `ℕ`, so it
--- reflects splittings for free.  (`Strings/Aligned` is where the right
--- leg is non-trivial and `LengthFib.cutS` earns its keep; here the
--- arithmetic side is not being refined, only recorded.)
+-- The right leg of the comma object is the identity on `ℕ`, so it reflects
+-- splittings for free.
 natId : Reindex Nt.natFib Nt.natFib
 natId .hom _ n = n
 
 natIdReflects : (o : MonOp) → Along.ReflectsSplitAt natId o
 natIdReflects o n sp = sp , λ _ → Eq.refl
 
--- ==================================================================
 -- THE COMMA OBJECT, and its `Determined` structure.
--- ==================================================================
 
 open Pullback St.strFib Nt.natFib L.lenIx natId public
 
@@ -66,11 +45,9 @@ Sized = glue .carrier tt
 lenDetermined : Determined
 lenDetermined = pullbackDetermined L.lenPres natIdReflects
 
--- ==================================================================
 -- THE TESTS.  Closed terms, at an ABSTRACT pair of characters -- the
 -- arithmetic never looks at them, which is the whole content of
 -- `lenSplit3`.
--- ==================================================================
 
 module _ (x y : Char) where
 

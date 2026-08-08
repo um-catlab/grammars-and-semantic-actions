@@ -1,19 +1,7 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  ENDPOINT 1.  At `I = ⊥` -- nothing commutes -- the shuffle IS
-  concatenation: `ITr ⊥I u v w ≅ Split3 u v w`, with `Split3` imported
-  from `Instances.Strings.Base` unchanged.
-
-  The only asymmetry between the two presentations is where the "left
-  factor exhausted" step is spent: `Split3` stops with a single `nil`,
-  while `ITr` must walk the remainder of `v` by `right`s.  `bump` is that
-  translation, and it is the reason the iso is proved rather than
-  definitional.
-
-  DEFINES `⊥I`, the translations `toSplit3`/`fromSplit3`/`bump`, and the
-  two theorems `ordered≅` (on shuffles) and `orderedSplit≅` (on the
-  `appop` splittings of a word, which is the form the promodel uses).
--}
+{- ENDPOINT 1. At `I = ⊥` -- nothing commutes -- the shuffle IS
+   concatenation: `ITr ⊥I u v w ≅ Split3 u v w`, with `Split3` imported
+   from `Instances.Strings.Base` unchanged. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Traces.Ordered (Letter : Type₀) where
@@ -73,7 +61,7 @@ ordered≅ .Iso.inv = fromSplit3
 ordered≅ .Iso.sec = ordSec
 ordered≅ .Iso.ret = ordRet
 
--- ... and hence at the level the promodel actually uses: the `appop`
+-- ... and hence at the level the `Fibered` actually uses: the `appop`
 -- splittings of a word agree with `Strings`' on the nose.
 orderedSplit≅ : (w : Word)
               → Iso (Σ[ u ∈ Word ] Σ[ v ∈ Word ] ITr ⊥I u v w)

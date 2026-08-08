@@ -1,20 +1,8 @@
-{-
-  `Grading` AND DIRECT CATEGORIES.
-
-  Read in this order:
-
-    Divisibility   the divisibility preorder of a promodel, and the
-                   theorem that a `Grading` makes it a direct category in
-                   ccl's sense (`Cubical.Categories.Direct.Base`)
-    Proper         is `Proper` the non-identity maps?  (No: strictly more
-                   general, and the maximal choice is not always
-                   available)
-    Later          is our `▷` the direct-category `▷`?  (Same
-                   presentation; different category)
-    Associativity  what `Fibered`'s missing associativity actually costs
-    Group          `Instances/Group/NoGrading` re-read as a statement
-                   about the divisibility category
--}
+{- `Grading` AND DIRECT CATEGORIES. Read in this order: Divisibility the
+   divisibility preorder of a `Fibered`, and the theorem that a `Grading`
+   makes it a direct category in ccl's sense
+   (`Cubical.Categories.Direct.Base`) Proper is `Proper` the non-identity
+   maps? (No: strictly more general, and the... -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Direct.Everything where
 

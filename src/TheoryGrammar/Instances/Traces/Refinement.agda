@@ -1,21 +1,6 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 {- A TRACE MONOID IS A REFINEMENT MONOID -- for every independence
-   relation, with no hypothesis on `Ind` at all.
-
-   `ITr Ind u v w` is a two-colouring of the positions of `w` whose every
-   inversion is independent.  Two colourings INTERSECT, and the four
-   intersections are the matrix; each side condition the intersection
-   needs is an inversion of one of the two given colourings, so `cross`
-   consults `Ind` only through `itrIndepAllˡ`/`itrIndepAllʳ`, never
-   through a decision.  Everything is at the level of WORDS, so the
-   result descends to the quotient rather than being assumed of it.
-
-   The endpoints interpolate: at `Ind = ⊤` this is the bag refinement,
-   and at `Ind = ⊥` the off-diagonal cells cannot both be inhabited,
-   which is `levi`'s two-case disjunction (`offDiagZero`; `bothCorners`
-   is a word where both ARE inhabited once one pair commutes).
-
-   PRIMITIVE: `_∈ᵂ_` (membership, used only to state `Indep2`). -}
+   relation, with no hypothesis on `Ind` at all. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Traces.Refinement
@@ -38,15 +23,7 @@ appHom .op⋆    = appop
 appHom .resH   = Eq.refl
 appHom .argH _ = Eq.refl
 
--- ==================================================================
--- A sub-factor owes no more than the whole does.  This is the ONLY
--- lemma about `Ind`, and it is what discharges every side condition
--- below: the letter a `right` step must commute past is always owed by
--- a factor of a word whose debt is already known.
---
--- Stated once per factor rather than as a pair: every use below wants
--- one side, and the paired form was only ever projected.
--- ==================================================================
+-- A sub-factor owes no more than the whole does.
 
 itrIndepAllˡ : ∀ {u v w y} → ITr Ind u v w → IndepAll Ind w y → IndepAll Ind u y
 itrIndepAllˡ nil         _       = tt
@@ -58,15 +35,13 @@ itrIndepAllʳ nil         _       = tt
 itrIndepAllʳ (left s)    (_ , h) = itrIndepAllʳ s h
 itrIndepAllʳ (right _ s) (i , h) = i , itrIndepAllʳ s h
 
--- ==================================================================
 -- THE MATRIX, as a record so the four entries and the four splittings
 -- stay in step.
--- ==================================================================
 
--- The intersection of two colourings of one word, as a 2x2 matrix of
--- words together with the four factorisations that make it one: the
--- rows recompose the parts of the first colouring, the columns those
--- of the second.
+-- The intersection of two colourings of one word, as a 2x2 matrix of words
+-- together with the four factorisations that make it one: the rows
+-- recompose the parts of the first colouring, the columns those of the
+-- second.
 record Cross (u₁ v₁ u₂ v₂ : Word) : Type₀ where
   field
     -- the four intersections, `cᵢⱼ` = (i-th part of the first) ∩
@@ -113,7 +88,7 @@ cross (right {x = y} h₁ d₁) (right h₂ d₂) =
          ; col₁ = right (itrIndepAllʳ (r .row₀) h₁) (r .col₁) }
   where r = cross d₁ d₂
 
--- ... and that is refinability of the promodel, with no coercion: the
+-- ... and that is refinability of the `Fibered`, with no coercion: the
 -- signature has one sort, so `SplitH`/`partsH` are `Split`/`parts`.
 trRefinable : Refinable appHom appHom
 trRefinable w (u₁ , v₁ , d₁) (u₂ , v₂ , d₂) = R
@@ -137,14 +112,7 @@ trRefinable w (u₁ , v₁ , d₁) (u₂ , v₂ , d₂) = R
   R .colCell false true  = Eq.refl
   R .colCell false false = Eq.refl
 
--- ==================================================================
 -- THE STRONG FORM: the two off-diagonal cells are INDEPENDENT.
---
--- This is the extra content a trace monoid has over a bare refinement
--- monoid, and it is what specialises to Levi's disjunction.  It costs
--- one hypothesis -- symmetry of `Ind`, which every independence alphabet
--- has, and which `cross` itself never needed.
--- ==================================================================
 
 -- PRIMITIVE.  `a ∈ᵂ u` denotes: `a` occurs at some position of `u`.
 infix 4 _∈ᵂ_
@@ -173,12 +141,8 @@ crossIndep sy (right h₁ d₁) (left d₂) m here      =
 crossIndep sy (right h₁ d₁) (left d₂) m (there n) = crossIndep sy d₁ d₂ m n
 crossIndep sy (right h₁ d₁) (right h₂ d₂) = crossIndep sy d₁ d₂
 
--- AT `I = ⊥`: independence of the two off-diagonal cells says one of
--- them is EMPTY.  That is exactly `levi`'s case split, and it explains
--- why the ordered version has one and the commutative version does not:
--- the disjunction is not part of the refinement axiom, it is what the
--- refinement axiom degenerates to when nothing commutes.  Stated as an
--- eliminator, so no sum appears.
+-- AT `I = ⊥`: independence of the two off-diagonal cells says one of them
+-- is EMPTY.
 offDiagZero : ∀ {ℓZ} {Z : Type ℓZ} → (∀ {a b} → Ind a b → ⊥)
             → {u v : Word} → Indep2 u v
             → (IsNil u → Z) → (IsNil v → Z) → Z
@@ -186,10 +150,8 @@ offDiagZero ni {[]}    {_}     ind f g = f tt
 offDiagZero ni {_ ∷ _} {[]}    ind f g = g tt
 offDiagZero ni {_ ∷ _} {_ ∷ _} ind f g = E.rec (ni (ind here here))
 
--- ==================================================================
 -- It computes -- and the two off-diagonal cells really can BOTH be
 -- inhabited, which is the whole difference from the free monoid.
--- ==================================================================
 
 private
   module _ (x y : Letter) where

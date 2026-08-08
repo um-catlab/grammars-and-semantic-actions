@@ -1,21 +1,4 @@
-{-
-  REINDEXING BETWEEN PROMODELS -- change of theory with the laws dropped.
-
-  `ChangeOfTheory` reinterprets along a homomorphism of MODELS.  A pass
-  rewrites the term, so it moves the carrier and is NOT a homomorphism.
-  `Reindex` is therefore `ModelHom` minus `homOp`: just `hom`, with
-  `CarrierMap` the endo case.  That suffices for the whole additive
-  fragment -- `pull`, `pullTerm`, and the seven laws below, all `refl` --
-  and for nothing else; `⌈_⌉` is the one former mentioning the carrier
-  and the one that does not commute.
-
-  `homOp` reappears as `SplitPresAt o`, what `push⊗` needs.  It is
-  PER-OPERATION, which is the point: a pass fails it at exactly the
-  operation it rewrites.  `ReflectsSplitAt` inverts `push⊗`.
-
-  `Transport`: preserving ALL splittings transports every inductive
-  grammar, leaving one obligation per CONSTANT of the description.
--}
+{- REINDEXING BETWEEN `Fibered` -- change of theory with the laws dropped. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.CarrierMap where
 
@@ -30,18 +13,9 @@ import TheoryGrammar.ChangeOfTheory as CT
 
 private variable ℓS ℓ ℓ' ℓX ℓX' ℓP ℓP' ℓA ℓB ℓD ℓM ℓV : Level
 
--- ==================================================================
 -- A carrier map, and preservation of splittings.
--- ==================================================================
 
--- A reindexing between two promodels over one signature.  A compiler
--- PASS is the special case `Fib' = Fib` (it rewrites within a theory);
--- an ELABORATION lands in a different one, which is what named →
--- de Bruijn is and what the endo-only version could not express.
--- The two promodels may sit at DIFFERENT levels: the glued promodel of
--- `TheoryGrammar.Gluing` has a carrier at the max of its two factors'
--- and projects to each, so level-uniformity here would exclude the only
--- interesting reindexings.  Nothing else in the file used it.
+-- A reindexing between two `Fibered` over one signature.
 record Reindex {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                (Fib : Fibered σ ℓX ℓP) (Fib' : Fibered σ ℓX' ℓP')
              : Type (ℓ-max ℓS (ℓ-max ℓX ℓX')) where
@@ -59,11 +33,6 @@ CarrierMap : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
 CarrierMap Fib = Reindex Fib Fib
 
 -- `SplitPresAt h o` denotes: `h` carries `o`-decompositions forward.
--- It is `homOp` of a `ModelHom`, respelled for a promodel and localised
--- at ONE operation -- a pass satisfies it at every operation it leaves
--- alone and fails it at the one it rewrites.  The two fields say the
--- transported splitting exists and that it holds the transported parts;
--- the second is what makes the first more than a shape coincidence.
 record SplitPresAt {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                    {Fib : Fibered σ ℓX ℓP} {Fib' : Fibered σ ℓX' ℓP'}
                    (h : Reindex Fib Fib') (o : σ .ops)
@@ -81,12 +50,9 @@ record SplitPresAt {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
 
 open SplitPresAt public
 
--- ==================================================================
--- The bridge to `ChangeOfTheory`: at the CANONICAL promodel (the
--- equational presentation), a `ModelHom` is precisely a carrier map
--- that preserves every splitting.  `homOp` is the whole content of
--- `homSplit`, and `homParts` is then `Eq.refl`.
--- ==================================================================
+-- The bridge to `ChangeOfTheory`: at the CANONICAL `Fibered` (the
+-- equational presentation), a `ModelHom` is precisely a carrier map that
+-- preserves every splitting.
 
 module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {M : Model σ ℓX}
          (g : CT.ModelHom M M) where
@@ -99,9 +65,7 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {M : Model σ ℓX}
     (λ a → CT.ModelHom.hom g _ (m⃗ a)) , Eq.sym (CT.ModelHom.homOp g o m⃗)
   ofModelHomPres o .homParts _ (m⃗ , Eq.refl) a = Eq.refl
 
--- ==================================================================
 -- Reinterpretation.
--- ==================================================================
 
 module Along {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
              {Fib : Fibered σ ℓX ℓP} {Fib' : Fibered σ ℓX' ℓP'}
@@ -161,12 +125,14 @@ module Along {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   module _ (o : σ .ops) (P : SplitPresAt h o)
            {B : (a : σ .arities o) → T.TheoryTy ℓA (σ .sortOf o a)} where
 
+    -- PRIMITIVE (phase 1): this is the CONSTRUCTION of the reindexing, not
+    -- a program in it.
     push⊗ : ⊗ˢ o (λ a → pull (B a)) ⊢ pull (T.⊗ˢ o B)
     push⊗ m (sp , k) =
       P .homSplit m sp , λ a → coeTy (B a) (P .homParts m sp a) (k a)
 
   -- ... and invertible exactly when `h` REFLECTS splittings: the
-  -- discrete Conduché condition of `ChangeOfTheory`, at a promodel.
+  -- discrete Conduché condition of `ChangeOfTheory`, at a `Fibered`.
   ReflectsSplitAt : (o : σ .ops)
                   → Type (ℓ-max ℓ' (ℓ-max ℓX (ℓ-max ℓX' (ℓ-max ℓP ℓP'))))
   ReflectsSplitAt o =
@@ -178,19 +144,15 @@ module Along {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   module _ (o : σ .ops) (R : ReflectsSplitAt o)
            {B : (a : σ .arities o) → T.TheoryTy ℓA (σ .sortOf o a)} where
 
+    -- PRIMITIVE (phase 1): this is the CONSTRUCTION of the reindexing, not
+    -- a program in it.
     pull⊗ : pull (T.⊗ˢ o B) ⊢ ⊗ˢ o (λ a → pull (B a))
     pull⊗ m (sp' , k) =
       R m sp' .fst , λ a → coeTy (B a) (Eq.sym (R m sp' .snd a)) (k a)
 
-
--- ==================================================================
--- FREE TRANSPORT of an inductive grammar.
---
--- If `h` preserves every splitting then `μ F` transports along it,
--- and the ONLY obligations are one per CONSTANT of the description.
--- The recursion, the shapes, the positions and the index bookkeeping
--- are all discharged generically.
--- ==================================================================
+-- FREE TRANSPORT of an inductive grammar. If `h` preserves every splitting
+-- then `μ F` transports along it, and the ONLY obligations are one per
+-- CONSTANT of the description.
 
 module Transport {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} {Fib : Fibered σ ℓX ℓP}
                  (h : CarrierMap Fib)

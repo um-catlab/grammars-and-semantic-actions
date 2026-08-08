@@ -1,46 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  LambekD's connectives at the Dirichlet promodel.
-
-  This file is, deliberately, Instances/Strings/Connectives with `Split3`
-  replaced by `Times`.  That it can be is the whole content: the calculus
-  never knew it was about strings.  The dictionary is
-
-      ε' = ⊗ˢ nilop (λ ())        δ = ⊗ˢ oneop (λ ())     "the index is 1"
-      A ⊗ B  over cuts            A ⊗ B  over factorings
-      literal c = ⌈ c ∷ [] ⌉      ⌈ p ⌉                    a fixed number
-      C ⟜ A  = left quotient      C ⟜ A  = DIVISION
-
-  and only the last entry has any surprise in it.  `C ⟜ A` at e is
-
-      (sa : Σ[ d , n ] d · e = n) → A d → C n,
-
-  i.e. "however you multiply me by something satisfying A, the result
-  satisfies C".  For strings that reads "however you extend me on the
-  left"; here it reads "for every multiple of me by an A".  So the
-  residual of Dirichlet convolution is division, and the `Focus` record
-  supplies the one-hole factorisation d · [-] = n directly rather than
-  reconstructing it from an equation -- which is why `⟜-app` below, like
-  its string counterpart, needs no transport at all.
-
-  ------------------------------------------------------------------
-  PHASE.  Everything in this file is phase 1: it builds the language.
-  The pointful definitions are all NAMED PRIMITIVES with a `⊢` type or a
-  stated intro/elim shape, and they are the only pointful things any
-  later file is allowed to use.  `⊗-mk`, `⊗I`, `⊗E`, `⊗-elim` are the
-  intro/elim pair for `⊗ˢ mulop`; `⊕-elim`, `⊕ᴰ-in`, `⊕ᴰ-elim`, `liftg`
-  are Gr-monomorphic spellings of the polymorphic rules from `RulesF`,
-  present only because grammar-valued implicits are not inferrable
-  (CLAUDE.md, "Known traps").
-
-  ONE INFERENCE NOTE.  `⊗-mk` and `⊗I` take the two factors EXPLICITLY,
-  where the string versions leave them implicit.  The reason is exact:
-  in `Split3 u v w` the parts appear as bare indices and unify, but in
-  `Times (val d) (val e) (val n)` they appear under `val`, i.e. under a
-  projection of a Σ, and `val d =?= suc (suc k)` has no solution for d.
-  The output index `n` stays implicit because it is fixed by the expected
-  type `(A ⊗' B) n`.  This is the ℕ₊-as-a-Σ tax, and it is the only one.
--}
+{- LambekD's connectives at the Dirichlet `Fibered`. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Dirichlet.Connectives where
@@ -60,9 +19,7 @@ open import TheoryGrammar.Fibered
 
 open import TheoryGrammar.Instances.Dirichlet.Base public
 
--- ==================================================================
 -- The multiplicatives.
--- ==================================================================
 
 -- the ⊗-unit: "the index is 1".  Dirichlet's δ.
 δ : Gr
@@ -105,10 +62,8 @@ num n = ⌈ n ⌉
 δ-mk : δ one₊
 δ-mk = tt , λ ()
 
--- ==================================================================
 -- Combinators.  Gr-monomorphic spellings of the rules in `RulesF`;
 -- programs downstream use these and nothing else.
--- ==================================================================
 
 ⊤' : Gr
 ⊤' _ = Unit
@@ -124,19 +79,10 @@ num n = ⌈ n ⌉
         → ((y : Y) → P y ⊢ R) → ⊕ᴰ Y P ⊢ R
 ⊕ᴰ-elim f n (y , p) = f y n p
 
-liftg : {P : Gr} → P ⊢ (λ n → Lift ℓ-zero (P n))
-liftg _ p = lift p
-
 ⊗-map : {P P' Q Q' : Gr} → P ⊢ P' → Q ⊢ Q' → (P ⊗' Q) ⊢ (P' ⊗' Q')
 ⊗-map f g n ((d , e , t) , h) = ⊗-mk d e t (f d (h true)) (g e (h false))
 
--- ==================================================================
 -- The residual at slot `false` -- DIVISION.
---
--- `Focus` asks for the one-hole factorisations viewed from the right
--- factor: given e, the pairs (d , n) with d · e = n.  Because that is
--- supplied as data, `⟜-app` is a projection and not a transport.
--- ==================================================================
 
 focR : Focus dirFib mulop false
 focR .SplitAt e = Σ[ d ∈ ℕ₊ ] Σ[ n ∈ ℕ₊ ] Times (val d) (val e) (val n)

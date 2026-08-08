@@ -1,22 +1,6 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 {- Regular expressions and Brzozowski matching, over the generic
-   connectives.
-
-   The syntax is INDEXED BY ITS NULLABILITY.  That index is not
-   bookkeeping: `Strings/KleeneStar` already needs `NonNullable A` for
-   `A *` to be guarded, and non-nullability is *also* exactly what makes
-   the star's derivative law hold --
-
-       δ_c (r *)  =  δ_c r · r *
-
-   is correct precisely when `r` cannot match ε, since otherwise
-   unrolling offers a summand `⟦r⟧ ε × ⟦r*⟧ (c ∷ w)` that is the thing
-   being defined.  One hypothesis, two jobs, so it belongs in the type:
-   `_⋆` takes a `RegExp false` and nothing else has to be checked.
-
-   The matcher is `decRE`, which DECIDES the denotation rather than
-   returning a `Bool` to be verified afterwards -- so there is no
-   correctness theorem about `decRE` at all, only about `δ`. -}
+   connectives. -}
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Sum using (_⊎_; inl; inr)
 import Cubical.Data.Equality as Eq
@@ -43,9 +27,7 @@ open import TheoryGrammar.Instances.Strings.Derivative Char public
 
 private variable b b₁ b₂ : Bool
 
--- ==================================================================
 -- Syntax, indexed by nullability.
--- ==================================================================
 
 data RegExp : Bool → Type₀ where
   ∅ᵣ  : RegExp false
@@ -67,9 +49,7 @@ infix  26 _⋆
 ⟪ r · s ⟫ = ⟪ r ⟫ ⊗' ⟪ s ⟫
 ⟪ r ⋆   ⟫ = KL* ⟪ r ⟫
 
--- ==================================================================
 -- The index really is nullability: both directions.
--- ==================================================================
 
 private
   orFalseL : b₁ or b₂ Eq.≡ false → b₁ Eq.≡ false
@@ -132,13 +112,9 @@ decNil {b} r = go b Eq.refl
     go true  e = inl (yesNil r e)
     go false e = inr (noNil r e)
 
--- ==================================================================
--- The syntactic derivative.
---
--- Its nullability is not determined statically -- `δ_c r` can be
--- nullable for a non-nullable `r` -- so it comes back paired with its
--- index.
--- ==================================================================
+-- The syntactic derivative. Its nullability is not determined statically
+-- -- `δ_c r` can be nullable for a non-nullable `r` -- so it comes back
+-- paired with its index.
 
 RE : Type₀
 RE = Σ[ d ∈ Bool ] RegExp d
@@ -164,16 +140,7 @@ private
 δᵣ c (_·_ {b₁ = b₁} r s) = δcat b₁ (δᵣ c r) s (δᵣ c s)
 δᵣ c (r ⋆)               = _ , (δᵣ c r .snd · (r ⋆))
 
--- ==================================================================
 -- CORRECTNESS: `δᵣ` computes the semantic derivative.
---
--- A logical equivalence, not an isomorphism, and deliberately so.  At
--- `r · s` with `r` nullable, the classical law replaces `r` by `ε`,
--- which forgets WHICH ε-parse `r` had.  For an unambiguous regex that
--- is no loss; for an ambiguous one it is exactly the ambiguity, and a
--- parser (as opposed to a matcher) would have to keep it.  Deciding
--- only needs the equivalence.
--- ==================================================================
 
 private
   Aof : (r : RegExp b₁) (s : RegExp b₂) → (a : MonAr appop) → Gr
@@ -265,10 +232,8 @@ private
       (_ , v , sp) , λ { true  → δ-complete c r _ (h true)
                        ; false → h false }
 
--- ==================================================================
 -- THE MATCHER.  Decides the denotation, so there is nothing left to
 -- verify about it: `δ-sound`/`δ-complete` carry the whole argument.
--- ==================================================================
 
 decRE : (r : RegExp b) (w : String) → ⟪ r ⟫ w ⊎ No (⟪ r ⟫ w)
 decRE r []      = decNil r

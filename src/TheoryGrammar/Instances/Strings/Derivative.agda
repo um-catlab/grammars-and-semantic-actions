@@ -1,20 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- The Brzozowski derivative, as an instance of the generic one.
-
-   Two things are being checked here.
-
-   (1) `act` is `c ∷ _` DEFINITIONALLY.  It is assembled as "appop with
-   the left slot pinned to `c`", so it unfolds to `(c ∷ []) ++ x`, and
-   `act-β` is `refl`.  Nothing in `Derivative.agda` mentions strings;
-   the string-ness is entirely in the `Assembly`.
-
-   (2) The tensor law -- the one thing the generic layer cannot prove --
-   is a PATTERN MATCH.  `Split3` is indexed by its output, so a
-   splitting of `c ∷ x` is inverted by matching its two constructors:
-   `nil` says the left factor is empty, `cons` says the left factor
-   absorbed the `c`.  That is Levi's lemma for free monoids, and it is
-   four lines.  The `split++` inversion lemma the old
-   `Grammar/Derivative/String.agda` needed does not appear. -}
+{- The Brzozowski derivative, as an instance of the generic one. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Strings.Derivative (Char : Type₀) where
@@ -52,16 +37,11 @@ module Derivᶜ (c : Char) where
   act-β : (x : String) → act x ≡ (c ∷ x)
   act-β x = refl
 
-  -- ================================================================
-  -- (2) THE TENSOR LAW.
-  --
-  --   δ (A ⊗ B)  ≅  (A ε × δ B)  ⊕  (δ A ⊗ B)
-  --
-  -- the classical Brzozowski rule, with the left disjunct saying the
-  -- `c` went to the right factor (so the left factor is empty and
-  -- contributes its nullability) and the right disjunct saying the left
-  -- factor absorbed it.
-  -- ================================================================
+  -- (2) THE TENSOR LAW. δ (A ⊗ B) ≅ (A ε × δ B) ⊕ (δ A ⊗ B) the classical
+  -- Brzozowski rule, with the left disjunct saying the `c` went to the
+  -- right factor (so the left factor is empty and contributes its
+  -- nullability) and the right disjunct saying the left factor absorbed
+  -- it.
   module _ (A : (a : monoidSig .arities appop) → TheoryTy ℓA tt) where
 
     -- the derivative of the left factor, in the same slot shape
@@ -97,23 +77,7 @@ module Derivᶜ (c : Char) where
     δ⊗-Iso x .Iso.ret ((.(c ∷ _) , v        , cons s') , h) =
       ΣPathP (refl , funExt λ { true → refl ; false → refl })
 
--- ==================================================================
--- CONSTRUCTOR 3 for the tensor decision rule: decide by
--- DIFFERENTIATING.
---
--- `Decidable/Rule.agda` names three ways to establish `⊗-EM`, of which
--- two were built.  This is the third, and it is the one that does no
--- search: at `c ∷ x` the law offers exactly two cases -- the `c` went
--- left or it went right -- where the enumerating decider builds and
--- scans all `length w + 1` cuts.  Those cuts ARE the unfolding of this
--- two-case law along the word.
---
--- The recursion is structural on the string, but the SLOT FAMILY moves:
--- the recursive call is at `δA`, not `A`.  That is why the decider is
--- indexed by decisions at every string rather than at the parts of one
--- splitting -- and why the enumerating route, which cannot re-index,
--- has to pay for the list.
--- ==================================================================
+-- CONSTRUCTOR 3 for the tensor decision rule: decide by DIFFERENTIATING.
 
 SlotDec : ((a : MonAr appop) → TheoryTy ℓA tt) → Type _
 SlotDec A = (a : MonAr appop) (w : String) → A a w ⊎ No (A a w)
@@ -159,20 +123,11 @@ decδ⊗ A d (c ∷ x) =
   goCons c x A (d true []) (d false (c ∷ x))
          (decδ⊗ (Derivᶜ.δA c A) (dδ c A d) x)
 
--- ==================================================================
 -- ... and hence the rule, by the third route.
---
--- `Strings/Decidable.agda` already proves this same `DecTensorRule` by
--- enumeration.  That both routes reach the identical interface is the
--- point of stating `⊗-EM` as the conclusion and the witnesses as
--- constructors: a client cannot tell which was used.
--- ==================================================================
 
 -- the slotwise decisions `DecTensorRule` supplies are at the parts of a
--- splitting; `w ++ []` split at `(w , [])` has `w` as its `true` part,
--- ON THE NOSE, so decisions at every string are recovered with no
--- transport.  (Only the split's own index moves, and `Dec⟨_⟩` does not
--- mention it.)
+-- splitting; `w ++ []` split at `(w , [])` has `w` as its `true` part, ON
+-- THE NOSE, so decisions at every string are recovered with no transport.
 strDecTensorδ : DecTensorRule strFib {ℓA = ℓA}
 strDecTensorδ nilop A d []      _ = inl (tt , λ ())
 strDecTensorδ nilop A d (c ∷ x) _ = inr λ { (() , _) }

@@ -151,9 +151,7 @@ Gr = TheoryTy ℓ-zero tt
 -- PRIMITIVE (phase 1), and the ONE place `true`/`false` are matched.
 -- An extended lambda here would be nominally distinct from every other
 -- extended lambda over `Bool`, which is why this is a named function.
-boolΠ : ∀ {ℓ} {M : Bool → Type ℓ} → M true → M false → (b : Bool) → M b
-boolΠ t f true  = t
-boolΠ t f false = f
+-- `boolΠ` now comes from `TheoryGrammar.Base`, opened above.
 
 -- Coercion of an assertion along `Eq`.  PRIMITIVE (phase 1): the one
 -- match on `Eq.refl` in the file, kept out of every theorem below.

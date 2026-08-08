@@ -1,211 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  PHASE 3.  OPTIMISATION PASSES OVER THE LINEAR CALCULUS -- and the
-  theorems that make them interesting.
-
-  `Syntax.agda` ends with the claim this file is here to cash:
-
-      Pass = TmG ⊢ TmG
-
-  and `_⊢_` preserves the index, so a pass CANNOT silently drop or
-  duplicate a variable.  Three things need saying about that claim
-  before any pass is written, because they are what the file is
-  organised around.
-
-  ------------------------------------------------------------------
-  1.  WHY THIS IS DIFFERENT FROM `Instances/Lambda/Passes`.
-  ------------------------------------------------------------------
-
-  Compare the untyped development's `Passes/Framework.agda`.  There a
-  pass has type
-
-      Scoped Γ ⊢ Out Γ,        Out Γ = ⊕ᴰ Raw (λ t' → Scoped Γ t')
-
-  and its own header says the decisive thing: `Out Γ` is CONSTANT in
-  the index, so "the index pins nothing; what is free is the
-  recursion."  A pass there is a map into an existential over the
-  carrier, i.e. it has already forgotten which term it started from.
-  That is why `Passes/Dead.agda` can discard the argument of a redex
-  invisibly: the existential form is affine by construction.
-
-  Here the domain and the codomain are the SAME grammar at the SAME
-  index.  A pass is an endomorphism of `TmG` over `Usage`, so the
-  usage -- which variables this subterm is responsible for -- survives
-  the pass definitionally.  Nothing had to be arranged for that; it is
-  the difference between rewriting terms of a family and rewriting
-  terms of a family INDEXED BY THE RESOURCE.
-
-  What that actually buys, concretely, is listed at the end of the
-  file under "WHAT THE INDEX BOUGHT".  It is less than one might hope
-  and more than nothing, and both halves are worth stating.
-
-  ------------------------------------------------------------------
-  2.  β IS SAFE HERE, AND THE REASON IS THE TYPE OF SUBSTITUTION.
-  ------------------------------------------------------------------
-
-  `Instances/Lambda/Passes/Inline.agda` proves a negative result:
-  substitution in the untyped calculus is a CARRIER MAP `Raw → Raw`,
-  and `¬subSplitPres` refutes `SplitPresAt` at `varOp` -- substituting
-  into a variable produces something that is not a variable, so the
-  multiplicative structure does not transport.  Inlining is unsound as
-  a structural operation, and the restricted positive case
-  (`Passes/Rename`) is exactly renaming.
-
-  Linear substitution is not a carrier map at all.  It is
-
-      substT : (BodyOf TmG ⊛ TmG) ⊢ TmG
-
-  where `BodyOf A u = A (true ∷ u)` is `A` reindexed along weakening
-  and `⊛ = ⊗ˢ appop` is the splitting.  Read the type: the body owns
-  `u₁`, the argument owns `u₂`, `u₁ ⊎ u₂ = u`, and the result owns
-  `u`.  That IS the substitution lemma
-
-      Γ₁ , x:A ⊢ b : B     Γ₂ ⊢ a : A
-      -------------------------------  Γ₁ # Γ₂
-           Γ₁ ⊎ Γ₂ ⊢ b[a/x] : B
-
-  with no side condition to discharge, because `⊛` is the side
-  condition.  And it is why β cannot duplicate: duplicating `a` would
-  need `u₂` on both sides of the splitting, and `Use⊎` has no
-  constructor taking `true` twice (`noDupUse`, in `Context.agda`).
-  The general λ-calculus fails precisely because `Raw` has no index to
-  be split.
-
-  So the contrast between the two files is not "one pass works and one
-  does not".  It is that the SAME operation has two different types,
-  and the linear one is a term of the calculus while the untyped one
-  is a map of carriers that is asked, and fails, to preserve the
-  splittings.
-
-  §3.4 pushes this to its proper form.  Giving the usage promodel its
-  FOCUSED splittings (`Focus linFib appop true`, the zipper view) makes
-  the residual `⊸ᶠ` a plain Π, and then
-
-      substUP : Iso ((BodyOf TmG ⊛ TmG) ⊢ B) (BodyOf TmG ⊢ ⊸ᶠ Redex B)
-
-  says substitution IS the internal hom and β IS its evaluation map --
-  `substIsApp` holds by `refl`.  One direction of the iso is
-  definitional; the other costs exactly one `boolΠ`-η, which is the
-  documented "arities have no η" trap appearing in the one place it
-  genuinely bites.
-
-  ------------------------------------------------------------------
-  3.  DEAD-CODE ELIMINATION IS VACUOUS -- as a theorem, not an absence.
-  ------------------------------------------------------------------
-
-  This is the most interesting item, and it lands.
-
-  The untyped `Passes/Dead.agda` rewrites `(λx. b) a ↦ b` when `x` is
-  unused in `b`.  In this calculus the premise cannot be stated: the
-  body of a binder has type `Tm (true ∷ u)`, and the `true` says the
-  bound variable is live.  There is no `Tm (false ∷ u)` masquerading
-  as a body.
-
-  That is not yet a theorem -- "you cannot write it down" is a remark
-  about the syntax.  The theorem is quantitative.  Fold the term with
-  the motive
-
-      Budget u = Σ[ oc ∈ ℕ ] Σ[ lm ∈ ℕ ] (oc ≡ live u + lm)
-
-  ("occurrences = live variables + binders").  This is the Quicksort
-  idiom: the motive of the fold IS the statement being proved, so the
-  algebra produces the invariant as it computes the counts and there
-  is nothing to re-check afterwards.  The three branches are the three
-  typing rules and each contributes one line of arithmetic --
-  `soloLive` for a variable, `liveSplit` (already a primitive of
-  `Context.agda`) for an application, `+-suc` for a binder.
-
-  With the budget in hand, "the binder is dead" says: there is a body
-  `b : Tm (true ∷ u)` and a replacement `c : Tm u` -- the term DCE
-  would put in its place -- with the same occurrence profile.  Then
-
-      occ b = live (true ∷ u) + lm b = suc (live u + lm b)
-      occ c = live u + lm c          = live u + lm b
-
-  and `suc n ≡ n` is absurd.  So
-
-      deadBinder : DeadBinder ⊢ ⊥G
-
-  the dead-binder grammar is the EMPTY grammar, and a dead-code
-  eliminator's rewriting branch is `⊥-E`.  Any two of them agree; the
-  pass is the identity.  Note the hypothesis is only that the profiles
-  agree, which is far weaker than syntactic equality -- so the theorem
-  is correspondingly stronger.
-
-  ------------------------------------------------------------------
-  4.  HOW A PASS IS BUILT.
-  ------------------------------------------------------------------
-
-  `Tm` is a data type, so somebody has to recurse on it.  That is done
-  ONCE, in `foldTm`, and every pass below is an algebra
-
-      StepG A = SoloG ⊕ ((A ⊛ A) ⊕ BodyOf A)
-      foldTm  : (A : Ctx) → StepG A ⊢ A → TmG ⊢ A
-
-  whose three summands are the three rules of `Syntax.agda`.  In
-  particular
-
-      roll = ⊕-E varT (⊕-E appT lamT) : StepG TmG ⊢ TmG
-
-  is the algebra of the typing rules themselves, and `foldRoll` proves
-  `foldTm TmG roll ≡ idPass` -- the untyped `Framework.agda` asserts
-  the corresponding fact about `idAlg` without proving it.  A pass is
-  then literally `roll` with one branch replaced.
-
-  The recursion CANNOT come from `hyloC`.  `linGrading` grades by
-  `live`, and going under a binder makes `live` go UP, so the
-  well-founded recursion the graded framework supplies descends on the
-  wrong thing.  Structural recursion on `Tm` is a genuine primitive
-  here, and it is marked as one.
-
-  ------------------------------------------------------------------
-  5.  THE PRIMITIVES, AND WHY EACH IS ONE.
-  ------------------------------------------------------------------
-
-  Everything pointful is in §1-§3, and it comes in TWO LAYERS that this
-  header used to run together.  Counting the `PRIMITIVE` labels:
-
-    13 in §1-§2, at the INDEX.  `useEmptyL`, `useEmptyR`, `soloLive`,
-       `useAssoc`, `useExch`, `markF-Empty→`, `markT-¬Empty`,
-       `insSplit`, `freshSplit`, and the three `⊛` structural maps.
-       These are metalanguage functions on `Usage`/`Use⊎`/`Mark` -- they
-       do NOT have `⊢` types, because the resource algebra is not a
-       grammar.  That is the substrate being built, phase 1 proper.
-
-    10 in §3, at the TERM, every one with a `⊢` type.
-
-  Ten is more than "a handful" and the number should be read, not
-  glossed: this instance pays for linearity with a thicker primitive
-  layer than any other in the tree.  The seven that carry content:
-
-    `insT` / `delT`     a variable that is not used can be inserted
-                        into, or deleted from, the scope.  Both are
-                        `⊢`-maps at a reindexed motive, exactly as
-                        `lamT` is.  `delT` is STRENGTHENING, and it is
-                        what η-contraction has to pay for.
-
-    `freshSplit`        THE linearity lemma: in an application under a
-                        binder, the fresh variable is used in exactly
-                        ONE of the two premises.  In a cartesian
-                        calculus this map does not exist -- the
-                        variable may appear in both, or in neither.
-
-    `soloUnit`          an application whose argument is exactly the
-                        fresh variable is its own function part.  This
-                        is the unit law of `⊛` at an `Empty` slot, and
-                        it is where η actually happens.
-
-    `substT`            substitution, discussed above.
-
-    `⊛-distR`/`⊛-distL` `⊗ˢ` is a Σ, so it distributes over `⊕`.
-                        Structural; needed because branching on a
-                        subterm has to happen INSIDE a tensor slot.
-
-  `boolΠ` is used for every arity-indexed family, never an extended
-  lambda -- arities have no η and two extended lambdas written in
-  different places are nominally distinct, which has bitten this
-  codebase before.
--}
+{- PHASE 3. OPTIMISATION PASSES OVER THE LINEAR CALCULUS. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.LinLam.Opt where
@@ -229,14 +23,9 @@ open import TheoryGrammar.Instances.LinLam.Syntax public
 
 private variable ℓA ℓB : Level
 
--- ==================================================================
--- §0  NOTATION.
---
--- `BodyOf A` is `A` pulled back along the weakening map `u ↦ true ∷ u`
--- -- the Cartesian lift `Syntax.agda` already uses to type `lamT`.
--- Giving it a name makes the passes readable and makes `under` (the
--- functorial action of that pullback) statable.
--- ==================================================================
+-- §0 NOTATION. `BodyOf A` is `A` pulled back along the weakening map `u ↦
+-- true ∷ u` -- the Cartesian lift `Syntax.agda` already uses to type
+-- `lamT`.
 
 BodyOf : TheoryTy ℓA tt → TheoryTy ℓA tt
 BodyOf A u = A (true ∷ u)
@@ -244,29 +33,17 @@ BodyOf A u = A (true ∷ u)
 SoloG : Ctx
 SoloG u = Solo u
 
--- PRIMITIVE (phase 1): reindexing is functorial.  This is
--- `CarrierMap.pullTerm` along `u ↦ true ∷ u`, written out because the
--- carrier map in question is not a model homomorphism (it does not
--- preserve `Use⊎`; it is the weakening map of the fibration).
+-- PRIMITIVE (phase 1): reindexing is functorial.
 under : {A : TheoryTy ℓA tt} {B : TheoryTy ℓB tt}
       → A ⊢ B → BodyOf A ⊢ BodyOf B
 under f u = f (true ∷ u)
 
--- ==================================================================
--- §1  THE INDEX ALGEBRA.
---
--- Usages form a partial commutative monoid; the passes need its
--- associativity, its unit laws, and one fact about scope extension.
--- All of it is phase 1 and none of it mentions `Tm`.
--- ==================================================================
+-- §1 THE INDEX ALGEBRA. Usages form a partial commutative monoid; the
+-- passes need its associativity, its unit laws, and one fact about scope
+-- extension.
 
--- ------------------------------------------------------------------
--- 1.1  Unit laws.  An `Empty` slot contributes nothing, so the other
--- slot IS the whole.  Stated in `Eq`-world so that consumers match
--- `Eq.refl` rather than transporting -- a `subst` at a family over a
--- variable usage would not reduce, and every `refl` test downstream
--- would break far from here.
--- ------------------------------------------------------------------
+-- 1.1 Unit laws. An `Empty` slot contributes nothing, so the other slot IS
+-- the whole.
 
 -- PRIMITIVE (phase 1)
 useEmptyL : ∀ {u₁ u₂ u} → Use⊎ u₁ u₂ u → Empty u₁ → u₂ Eq.≡ u
@@ -291,13 +68,7 @@ soloLive (true  ∷ u) e = cong suc (emptyLive u e)
   emptyLive (false ∷ v) e = emptyLive v e
 soloLive (false ∷ u) e = soloLive u e
 
--- ------------------------------------------------------------------
--- 1.2  Associativity, in the two shapes the passes actually need.
--- Both are proved by simultaneous induction; the clauses that are
--- ABSENT are the ones where the two derivations disagree about
--- whether a variable is live, and Agda discharges them by index
--- unification.
--- ------------------------------------------------------------------
+-- 1.2 Associativity, in the two shapes the passes actually need.
 
 -- PRIMITIVE (phase 1):  (p ⊎ q) ⊎ r  ↦  p ⊎ (q ⊎ r)
 useAssoc : ∀ {p q pq r s} → Use⊎ p q pq → Use⊎ pq r s
@@ -325,17 +96,8 @@ useExch (uskip s₁)  (uright s₂) =
 useExch (uskip s₁)  (uskip s₂) =
   let (t , a , b) = useExch s₁ s₂ in (false ∷ t) , uskip  a , uskip  b
 
--- ------------------------------------------------------------------
--- 1.3  MARKERS.  `Mark b n u v` says `v` is `u` with the bit `b`
--- inserted at position `n`.  The position is carried because the two
--- markers have to agree on it: when a splitting is pushed through an
--- insertion, the marked variable lands in one branch and the OTHER
--- branch has a `false` at the same place.  Without the `n` that
--- coincidence cannot be stated.
---
--- `Mark false` is scope extension by an unused variable (shifting);
--- `Mark true` is the position being substituted for.
--- ------------------------------------------------------------------
+-- 1.3 MARKERS. `Mark b n u v` says `v` is `u` with the bit `b` inserted at
+-- position `n`.
 
 data Mark (b : Bool) : ℕ → Usage → Usage → Type₀ where
   mhere  : ∀ {u} → Mark b 0 u (b ∷ u)
@@ -406,10 +168,7 @@ delSplit (mthere false m) (uskip s) =
   let (u₁ , u₂ , m₁ , m₂ , s') = delSplit m s
   in _ , _ , mthere false m₁ , mthere false m₂ , uskip s'
 
--- PRIMITIVE (phase 1): THE LINEARITY LEMMA AT THE INDEX LEVEL.  A
--- splitting of an extended usage sends the marked variable to exactly
--- one branch, and the other branch has an unused slot in its place.
--- The `⊎` is exclusive because `Use⊎` has no (true,true) constructor.
+-- PRIMITIVE (phase 1): THE LINEARITY LEMMA AT THE INDEX LEVEL.
 atSplit : ∀ {n u v v₁ v₂} → Mark true n u v → Use⊎ v₁ v₂ v
         → (Σ[ p ∈ Usage ] Σ[ q ∈ Usage ]
              (Mark true n p v₁ × Mark false n q v₂ × Use⊎ p q u))
@@ -433,15 +192,9 @@ atSplit (mthere false m) (uskip s) with atSplit m s
 ... | inr (p , q , m₁ , m₂ , s') =
         inr (_ , _ , mthere false m₁ , mthere false m₂ , uskip s')
 
--- ==================================================================
--- §2  THE MULTIPLICATIVE INTERFACE, once.
---
--- `⊛` is `⊗ˢ appop (boolΠ A B)`, so its intro and elim are `⊗ˢ-I` and
--- `⊗ˢ-E` with the arity family spelled by `boolΠ`.  Writing that here
--- ONCE is the point: every extended lambda over `Bool` in this file
--- would otherwise be a fresh nominal function that fails to reduce
--- against the ones in `Syntax.agda`.
--- ==================================================================
+-- §2 THE MULTIPLICATIVE INTERFACE, once. `⊛` is `⊗ˢ appop (boolΠ A B)`, so
+-- its intro and elim are `⊗ˢ-I` and `⊗ˢ-E` with the arity family spelled
+-- by `boolΠ`.
 
 -- PRIMITIVE (phase 1): intro for `⊛`
 ⊛-mk : (A B : Ctx) (u u₁ u₂ : Usage) → Use⊎ u₁ u₂ u → A u₁ → B u₂ → (A ⊛ B) u
@@ -466,9 +219,10 @@ atSplit (mthere false m) (uskip s) with atSplit m s
     (boolΠ {M = λ a → boolΠ {M = λ _ → Ctx} A B a
                     ⊢ boolΠ {M = λ _ → Ctx} A' B' a} f g)
 
--- PRIMITIVE (phase 1): `⊗ˢ` is a Σ, so it distributes over `⊕` in
--- either slot.  Needed because a pass has to BRANCH on a subterm, and
--- the subterm sits inside a tensor slot.
+-- NOT a primitive: a composite of `⊛-E'` and `⊛-mk`, i.e. of `⊗ˢ-E` and
+-- `⊗ˢ-I`.  The general fact is `RulesFib.⊗ˢ-⊕ᴰ-out`; the binary form is
+-- written out here only because matching it against `⊗ˢ o (λ a → ⊕ᴰ …)`
+-- costs more arity-η coercion than the two clauses below.
 ⊛-distR : (A B C : Ctx) → (A ⊛ (B ⊕ C)) ⊢ ((A ⊛ B) ⊕ (A ⊛ C))
 ⊛-distR A B C = ⊛-E' A (B ⊕ C) go
   where
@@ -485,12 +239,7 @@ atSplit (mthere false m) (uskip s) with atSplit m s
   go u u₁ u₂ s (inl x) z = inl (⊛-mk A C u u₁ u₂ s x z)
   go u u₁ u₂ s (inr y) z = inr (⊛-mk B C u u₁ u₂ s y z)
 
--- ==================================================================
--- §3  TERM PRIMITIVES.
---
--- Four of them, and the recursor.  Every pass below is built from
--- these plus `_∘g_`, `⊕-E`, `⊕-I₁/₂`, `⊛-map`, `⊛-dist*` and `under`.
--- ==================================================================
+-- §3 TERM PRIMITIVES. Four of them, and the recursor.
 
 -- transport along an `Eq` equation of usages; reduces on `Eq.refl`,
 -- which is why §1.1 produces `Eq.≡` and not a Path
@@ -507,11 +256,7 @@ insT m (tapp s a b) =
   in tapp s' (insT m₁ a) (insT m₂ b)
 insT m (tlam b)     = tlam (insT (mthere true m) b)
 
--- PRIMITIVE (phase 1): STRENGTHENING -- an unused variable may be
--- removed.  This is what η-contraction pays for; in the untyped
--- development the same obligation is `scoped?` in `Passes/Eta.agda`,
--- a DECISION that may fail.  Here it cannot fail, because the usage
--- already says the variable is unused.
+-- PRIMITIVE (phase 1): STRENGTHENING -- an unused variable may be removed.
 delT : ∀ {n u v} → Mark false n u v → Tm v → Tm u
 delT m (tvar s)     = tvar (markF-Solo← m s)
 delT m (tapp s a b) =
@@ -530,9 +275,7 @@ shiftT u = insT mhere
 strengthenT : Unused ⊢ TmG
 strengthenT u = delT mhere
 
--- ------------------------------------------------------------------
 -- 3.1  The shape functor and the recursor.
--- ------------------------------------------------------------------
 
 StepG : Ctx → Ctx
 StepG A = SoloG ⊕ ((A ⊛ A) ⊕ BodyOf A)
@@ -563,10 +306,7 @@ rollUnroll u (tvar s)     = refl
 rollUnroll u (tapp s a b) = refl
 rollUnroll u (tlam b)     = refl
 
--- THEOREM.  The identity pass is the fold of the typing rules.  This
--- is what licenses "a pass is `roll` with one branch replaced"; the
--- untyped `Passes/Framework.agda` states the corresponding fact about
--- `idAlg` but never proves it.
+-- THEOREM. The identity pass is the fold of the typing rules.
 foldRoll : (u : Usage) (t : Tm u) → foldTm TmG roll u t ≡ t
 foldRoll u (tvar s)     = refl
 foldRoll u (tapp s a b) = cong₂ (tapp s) (foldRoll _ a) (foldRoll _ b)
@@ -575,19 +315,9 @@ foldRoll u (tlam b)     = cong tlam (foldRoll _ b)
 foldRollPass : foldTm TmG roll ≡ idPass
 foldRollPass i u t = foldRoll u t i
 
--- ------------------------------------------------------------------
 -- 3.2  The two structural facts about a binder.
--- ------------------------------------------------------------------
 
--- PRIMITIVE (phase 1): THE LINEARITY LEMMA.  Under a binder, an
--- application uses the fresh variable in EXACTLY ONE premise; the
--- other premise does not mention it, so it can be strengthened.
---
--- This map is the whole difference from a cartesian calculus.  There
--- the variable may occur in both branches (so the codomain would have
--- to be a `&`, not a `⊕`) or in neither (so a third summand would be
--- needed).  Here `Use⊎`'s missing (true,true) constructor rules out
--- the first and the body's `true` index rules out the second.
+-- PRIMITIVE (phase 1): THE LINEARITY LEMMA.
 freshSplit : BodyOf (TmG ⊛ TmG)
            ⊢ ((BodyOf TmG ⊛ TmG) ⊕ (TmG ⊛ BodyOf TmG))
 freshSplit u ((v₁ , v₂ , s) , k) = go v₁ v₂ s (k true) (k false)
@@ -611,30 +341,14 @@ unfreshR : (TmG ⊛ BodyOf TmG) ⊢ BodyOf (TmG ⊛ TmG)
 unfreshR = ⊛-E' TmG (BodyOf TmG) λ u w₁ w₂ s a b →
   ⊛-mk TmG TmG (true ∷ u) (false ∷ w₁) (true ∷ w₂) (uright s) (insT mhere a) b
 
--- PRIMITIVE (phase 1): THE UNIT LAW, which is where η happens.  An
--- application whose argument is exactly the fresh variable has an
--- `Empty` right slot, so the splitting is trivial and the function
--- part already lives at the whole usage.  No `subst`: `useEmptyR`
--- lands in `Eq`-world and `coeTm` matches `Eq.refl`.
+-- PRIMITIVE (phase 1): THE UNIT LAW, which is where η happens.
 soloUnit : (TmG ⊛ BodyOf SoloG) ⊢ TmG
 soloUnit = ⊛-E' TmG (BodyOf SoloG) λ u u₁ u₂ s f so →
   coeTm (useEmptyR s so) f
 
--- ------------------------------------------------------------------
 -- 3.3  Substitution -- the β step, and the file's headline type.
--- ------------------------------------------------------------------
 
--- PRIMITIVE (phase 1): linear substitution.  Recursion on the body;
--- the three cases are the three ways the marked variable can sit.
---
---   tvar   the body IS the variable, so the argument is the answer;
---          `markT-Solo` says the rest of the body's usage is empty
---          and `useEmptyL` turns that into `u₂ ≡ u`.
---   tapp   `atSplit` says the variable went to exactly one premise;
---          the argument follows it and `useExch`/`useAssoc`
---          reassociate the splitting.  NOTHING is duplicated, and
---          nothing could be: `Use⊎` cannot put `u₂` on both sides.
---   tlam   go under the binder, shifting the argument past it.
+-- PRIMITIVE (phase 1): linear substitution.
 subT : ∀ {n u₁ v u₂ u} → Mark true n u₁ v → Use⊎ u₁ u₂ u
      → Tm v → Tm u₂ → Tm u
 subT m sp (tvar so) arg = coeTm (useEmptyL sp (markT-Solo m so)) arg
@@ -650,34 +364,12 @@ subT m sp (tapp s a b) arg = go (atSplit m s)
 subT m sp (tlam b) arg =
   tlam (subT (mthere true m) (uleft sp) b (insT mhere arg))
 
--- THE HEADLINE.  Substitution is a term of the calculus, at the
--- multiplicative connective.  Its type IS the substitution lemma of
--- the linear λ-calculus, side condition included, and it is the exact
--- statement that `Instances/Lambda/Passes/Inline.agda` REFUTES for
--- the untyped calculus (`¬subSplitPres` at `varOp`).
---
--- PRIMITIVE (phase 1)
+-- THE HEADLINE. Substitution is a term of the calculus, at the
+-- multiplicative connective.
 substT : (BodyOf TmG ⊛ TmG) ⊢ TmG
 substT = ⊛-E' (BodyOf TmG) TmG λ u u₁ u₂ s b a → subT mhere s b a
 
--- ------------------------------------------------------------------
--- 3.4  ... AND SUBSTITUTION IS THE INTERNAL HOM.
---
--- The type of `substT` is the substitution lemma; the CURRIED type is
--- the better statement, because it says substitution is a term of the
--- residual and β is its evaluation map:
---
---     substCurried : BodyOf TmG ⊢ (TmG ⊸ TmG)
---
--- `Fibered.agda`'s naive `⊸ˢ` carries a `parts o m sp i ≡ x`
--- component, so writing this against it would need a `subst` at a
--- family over a variable usage -- the wrong derivation, and every
--- `refl` test in §6 would stop reducing.  The right answer is the one
--- `Fibered.agda` anticipates: supply the FOCUSED splittings (the
--- zipper view -- a splitting seen from slot `true`, indexed by what
--- sits there) and the residual becomes a plain Π with both laws
--- `refl`.  For usages that view is immediate.
--- ------------------------------------------------------------------
+-- 3.4 ... AND SUBSTITUTION IS THE INTERNAL HOM.
 
 -- PRIMITIVE (phase 1): the zipper view of a usage splitting.
 linFocus : Focus linFib appop true
@@ -711,12 +403,10 @@ focusLam f u₁ b (u₂ , u , s) k = f u (⊛-mk (BodyOf TmG) TmG u u₁ u₂ s 
 substIsApp : substT ≡ focusApp substCurried
 substIsApp = refl
 
--- ... and the currying is an isomorphism.  ONE direction is `refl`;
--- the other costs exactly one instance of the documented trap
--- "arities have no η" -- `boolΠ (k true) (k false)` is not `k`, so
--- rebuilding a payload from its two slots is only PROPOSITIONALLY the
--- identity.  That single `cong` is the whole price of the residual
--- here, and naming it is the point of stating the iso at all.
+-- ... and the currying is an isomorphism. ONE direction is `refl`; the
+-- other costs exactly one instance of the documented trap "arities have no
+-- η" -- `boolΠ (k true) (k false)` is not `k`, so rebuilding a payload
+-- from its two slots is only PROPOSITIONALLY the identity.
 private
   boolΠ-η : ∀ {ℓ} {M : Bool → Type ℓ} (k : (b : Bool) → M b)
           → boolΠ {M = M} (k true) (k false) ≡ k
@@ -735,15 +425,19 @@ substUP .Iso.inv = focusApp
 substUP .Iso.sec = focusRet
 substUP .Iso.ret = focusSec
 
--- ==================================================================
 -- §4  THE BUDGET, and DEAD-CODE ELIMINATION IS VACUOUS.
 --
 -- The motive of the fold is the statement being proved.
--- ==================================================================
 
--- occurrences = live variables + binders
+-- occurrences = live variables + binders `Budget` IS a connective
+-- composite: two `⊕ᴰ`s over `ℕ` (both tags are plain types, independent of
+-- the world) around the invariant, which is the only part that mentions
+-- the world.
+BudgetEqn : ℕ → ℕ → Ctx
+BudgetEqn oc lm u = oc ≡ live u + lm
+
 Budget : Ctx
-Budget u = Σ[ oc ∈ ℕ ] Σ[ lm ∈ ℕ ] (oc ≡ live u + lm)
+Budget = ⊕ᴰ ℕ λ oc → ⊕ᴰ ℕ λ lm → BudgetEqn oc lm
 
 private
   shuffle : (a b c d : ℕ) → (a + b) + (c + d) ≡ (a + c) + (b + d)
@@ -769,7 +463,9 @@ budgetApp = ⊛-E' Budget Budget
       ∙ cong (_+ (l₁ + l₂)) (liveSplit s))
 
 -- a binder trades one live variable for one binder: the invariant is
--- literally `+-suc`
+-- literally `+-suc` Phase 1 is not the issue: the two `⊕ᴰ` tags are plain
+-- numbers, so the body is arithmetic on them -- a semantic action, which
+-- is allowed.
 budgetLam : BodyOf Budget ⊢ Budget
 budgetLam u (o , l , e) = o , suc l , (e ∙ sym (+-suc (live u) l))
 
@@ -794,22 +490,16 @@ private
   noSucSelf zero    p = snotz p
   noSucSelf (suc n) p = noSucSelf n (injSuc p)
 
--- ------------------------------------------------------------------
--- A DEAD BINDER, spelled out.  `b` is the body of a `λ`; `c` is what
--- a dead-code eliminator would return in its place, at the SMALLER
--- usage (the binder gone, the variable never mentioned).  For the
--- rewrite to be dead-code elimination rather than an arbitrary
--- rewrite, `c` must be the same term as `b` -- and we ask only that
--- their occurrence profiles agree, which is much weaker.
--- ------------------------------------------------------------------
+-- A DEAD BINDER, spelled out. `b` is the body of a `λ`; `c` is what a
+-- dead-code eliminator would return in its place, at the SMALLER usage
+-- (the binder gone, the variable never mentioned).
 
 DeadBinder : Ctx
 DeadBinder u =
   Σ[ b ∈ BodyOf TmG u ] Σ[ c ∈ TmG u ]
     ((occOf b ≡ occOf c) × (lamOf b ≡ lamOf c))
 
--- THEOREM.  THE DEAD-BINDER GRAMMAR IS EMPTY.  Nothing is dead in a
--- linear calculus, and this is the internal statement of it.
+-- THEOREM. THE DEAD-BINDER GRAMMAR IS EMPTY.
 deadBinder : DeadBinder ⊢ ⊥G
 deadBinder u (b , c , eo , el) = E.rec (noSucSelf (live u + lamOf b) contradiction)
   where
@@ -821,11 +511,9 @@ deadBinder u (b , c , eo , el) = E.rec (noSucSelf (live u + lamOf b) contradicti
     ∙ budgetEq c
     ∙ cong (live u +_) (sym el)
 
--- COROLLARY.  A dead-code eliminator's rewriting branch is `⊥-E`, so
--- there is nothing to choose: any two of them agree, and the pass is
--- the identity.  In the untyped development this branch is
--- `Passes/Dead.agda`'s `dropBinder`, an entire alternative of the
--- algebra guarded by a `scoped?` decision.
+-- COROLLARY. A dead-code eliminator's rewriting branch is `⊥-E`, so there
+-- is nothing to choose: any two of them agree, and the pass is the
+-- identity.
 stripDead : DeadBinder ⊢ TmG
 stripDead = ⊥-E ∘g deadBinder
 
@@ -836,25 +524,17 @@ dceUnique f g = funExt λ u → funExt λ d → E.rec* (deadBinder u d)
 dcePass : Pass
 dcePass = idPass
 
--- ------------------------------------------------------------------
--- The other half of "no variable is dropped or duplicated": a usage
--- that owns a live variable does not split as itself twice.  This is
--- `noDupUse` propagated along a whole usage, and it is the statement
--- that a pass cannot make two copies of a subterm that uses anything.
--- ------------------------------------------------------------------
+-- The other half of "no variable is dropped or duplicated": a usage that
+-- owns a live variable does not split as itself twice.
 
 noSelfSplit : (u : Usage) → 0 < live u → Use⊎ u u u → ⊥
 noSelfSplit []          p _         = ¬-<-zero p
 noSelfSplit (true  ∷ u) p ()
 noSelfSplit (false ∷ u) p (uskip s) = noSelfSplit u p s
 
--- ==================================================================
 -- §5  THE PASSES.  From here on there is no pointful Agda at all.
--- ==================================================================
 
--- ------------------------------------------------------------------
 -- 5.1  Two views, built from `unroll` alone.
--- ------------------------------------------------------------------
 
 -- "is it a variable?"  The negative branch keeps the term, because
 -- `roll` puts back what `unroll` took apart.
@@ -873,18 +553,11 @@ lamView =
       (⊕-E (⊕-I₂ ∘g appT) ⊕-I₁)
   ∘g unroll
 
--- ------------------------------------------------------------------
--- 5.2  β-CONTRACTION.  One alternative of `roll` replaced.
---
---   look at the function part                 ⊛-map lamView idg
---   push the choice out of the tensor         ⊛-distL
---   it was a λ: substitute; else: rebuild     ⊕-E substT appT
---
--- Read the middle line: `⊛-distL` is exactly the step that a
--- cartesian calculus would need `&` for.  And read `substT`'s type
--- again -- the argument goes into the body ONCE, because the tensor
--- gave it its own half of the usage.
--- ------------------------------------------------------------------
+-- 5.2 β-CONTRACTION. One alternative of `roll` replaced. look at the
+-- function part ⊛-map lamView idg push the choice out of the tensor
+-- ⊛-distL it was a λ: substitute; else: rebuild ⊕-E substT appT Read the
+-- middle line: `⊛-distL` is exactly the step that a cartesian calculus
+-- would need `&` for.
 
 betaApp : (TmG ⊛ TmG) ⊢ TmG
 betaApp =
@@ -897,34 +570,10 @@ betaAlg = ⊕-E varT (⊕-E betaApp lamT)
 
 -- A single bottom-up sweep, NOT a normaliser: contracting a redex can
 -- expose a new one at an ancestor, and this pass does not revisit it.
--- (A normaliser would be `löb`/`hyloC` over a decreasing measure, and
--- `linGrading` is not that measure -- see the header.)
 betaPass : Pass
 betaPass = foldTm TmG betaAlg
 
--- ------------------------------------------------------------------
--- 5.3  η-CONTRACTION.  `λx. f x  ↦  f`.
---
--- The `lam` alternative replaced, and every step is one of §3's
--- primitives:
---
---   unroll the body under the binder            under unroll
---   body is the variable                        no η
---   body is an application:
---     fresh variable in the function part       no η   (unfreshL)
---     fresh variable in the argument:           freshSplit
---       argument IS the variable                η !    (soloUnit)
---       argument is something else              no η   (unfreshR)
---   body is a λ                                 no η
---
--- The two obligations `Passes/Eta.agda` has to DECIDE -- "is the
--- argument the bound variable" and "does the function part survive at
--- the smaller scope" -- are here the two halves of `freshSplit`, and
--- neither can fail.  The second one, strengthening, is free because
--- `freshSplit` already produced the function part at the smaller
--- usage; in the untyped setting it is `scoped?`, a decision procedure
--- with a refutation branch.
--- ------------------------------------------------------------------
+-- 5.3 η-CONTRACTION. `λx. f x ↦ f`.
 
 etaApp : BodyOf (TmG ⊛ TmG) ⊢ TmG
 etaApp =
@@ -946,18 +595,14 @@ etaAlg = ⊕-E varT (⊕-E appT etaLam)
 etaPass : Pass
 etaPass = foldTm TmG etaAlg
 
--- ------------------------------------------------------------------
 -- 5.4  A PIPELINE.  `_then_` is `Syntax.agda`'s; passes are the
 -- endomorphisms of `TmG` in the category of the calculus, so
 -- composing them is `_∘g_` and nothing has to be checked.
--- ------------------------------------------------------------------
 
 optimise : Pass
 optimise = betaPass then etaPass then dcePass
 
--- ==================================================================
 -- §6  IT COMPUTES.
--- ==================================================================
 
 -- `λx. x` at the empty usage, with the binder's variable live
 idLin0 : Tm (false ∷ [])
@@ -995,81 +640,7 @@ _ = refl
 _ : foldTm TmG roll [] selfApp ≡ selfApp
 _ = refl
 
-{-
-  ==================================================================
-  WHAT THE INDEX BOUGHT -- and where it bought nothing.
-  ==================================================================
-
-  BOUGHT.
-
-  * The substitution lemma.  `substT : (BodyOf TmG ⊛ TmG) ⊢ TmG` is
-    the whole statement, and its proof never mentions a context
-    invariant -- the `Use⊎` reassociations in `subT` ARE the context
-    reasoning, and they are forced by the type.  Written as
-    `Tm → Tm → Tm` this would need a separate "substitution preserves
-    typing" theorem; here there is nothing left to prove.  §3.4 goes
-    one better: `substUP` says substitution IS the internal hom and β
-    IS evaluation, with `substIsApp` holding by `refl`.
-
-  * No duplication, no discarding, for free.  Every pass has type
-    `TmG ⊢ TmG`, so its output owns exactly the variables its input
-    owned.  `noSelfSplit` is the sharp form: a live usage does not
-    split as itself twice, so no pass can copy a subterm that uses
-    anything.  This is the fact `Passes/Inline.agda` cannot have.
-
-  * Strengthening for free.  η-contraction in the untyped setting has
-    to DECIDE that the function part survives at the smaller scope
-    (`scoped?`, with a refutation branch).  Here `freshSplit` hands it
-    over already strengthened, because the splitting said the fresh
-    variable went elsewhere.
-
-  * The dead-code theorem.  `deadBinder : DeadBinder ⊢ ⊥G` is a
-    statement one cannot even phrase without the index.
-
-  BOUGHT NOTHING.
-
-  * Semantic correctness.  `TmG ⊢ TmG` says nothing about the pass
-    preserving MEANING.  `etaPass` could return `λx. x` for every
-    input and would still typecheck.  The index is a resource
-    discipline, not a semantics, and every claim of the form "this
-    really is η" in §5 is a claim about the code, not a theorem.
-    Fixing that needs an evaluation relation and a motive that
-    carries it -- the Quicksort `Spec` move -- and this file does not
-    do it.
-
-  * Termination of a normaliser.  `foldTm` is one bottom-up sweep.
-    Iterating to a normal form needs a decreasing measure, and the
-    grading the framework supplies (`live`) is the WRONG one -- it
-    increases under a binder.  So `hyloC`/`löb` are unavailable here
-    and the passes are single-sweep by necessity, not by choice.
-
-  * Confluence, or any relation between the passes.  `optimise` is a
-    composite because `_∘g_` composes; that `betaPass then etaPass`
-    is better than either alone is an empirical remark about the
-    `refl` tests in §6.
-
-  * The index algebra itself.  §1 is 150 lines of `Use⊎` combinatorics
-    -- associativity, exchange, markers -- that an unindexed
-    development simply does not have.  It is paid once and reused by
-    every pass, but it is a real cost and it is not "free" in any
-    sense.  What the framework gave was the SHAPE (`⊗ˢ` is the
-    splitting) rather than the proofs.
-
-  ==================================================================
-  WHAT IS NOT HERE.
-  ==================================================================
-
-  * A normaliser.  See "bought nothing", second bullet: the grading is
-    the wrong measure, so `hyloC`/`löb` do not apply and the passes
-    are single-sweep.
-
-  * Any semantic statement about the passes.  §5's comments name what
-    each branch is FOR; nothing checks it.
-
-  * `⊸ᶠ` in `Context.agda`.  §3.4 builds `Focus linFib appop true`
-    locally because this file may not touch `Context.agda`.  It
-    belongs there -- it is a fact about the usage promodel, not about
-    optimisation, and `Refinement`/`CanonicalFocus` would both want
-    it.  Moving it is a one-line change to `Context.agda` and a
-    deletion here.
--}
+{- ================================================================== WHAT
+   THE INDEX BOUGHT -- and where it bought nothing.
+   ==================================================================
+   BOUGHT. * The substitution lemma. -}

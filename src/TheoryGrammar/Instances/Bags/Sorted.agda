@@ -1,11 +1,8 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 {- Mergesort, fully intrinsic: the output is a SORTED permutation of the
-   input, both halves carried by the type.
-
-     mergesortS : ⊤ ⊢ SortedOf      SortedOf m = Σ[out] (Sorted out × Perm out m)
-
-   The permutation half is free, as before -- `_⊢_` preserves the index.
-   The sorted half is not, and is what the order hypotheses below buy. -}
+   input, both halves carried by the type. mergesortS : ⊤ ⊢ SortedOf
+   SortedOf m = Σ[out] (Sorted out × Perm out m) The permutation half is
+   free, as before -- `_⊢_` preserves the index. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Bags.Sorted (A : Type₀) where
@@ -34,9 +31,7 @@ module Sortedness (le : A → A → Bool)
   open MSort  le
   open MSortV le
 
-  -- ================================================================
   -- Sortedness.
-  -- ================================================================
 
   -- `merge` keeps a common lower bound.  As with `mergePerm`, the two
   -- recursive results are ARGUMENTS so the descent stays visible.
@@ -70,9 +65,7 @@ module Sortedness (le : A → A → Bool)
         consˢ (belowMerge (x ∷ a) b
                 (leTotal x y e ∷ᵇ belowTrans (leTotal x y e) bx) by) q
 
-  -- ================================================================
   -- ... and the sorter, as a term.
-  -- ================================================================
 
   SortedOf : Gr
   SortedOf m = Σ[ out ∈ Bag ] (Sorted out × Perm out m)
@@ -90,62 +83,56 @@ module Sortedness (le : A → A → Bool)
   mergeS : (SortedOf ⊗' SortedOf) ⊢ SortedOf
   mergeS w ((u , v , s) , h) = mergeSortedAt s (h true) (h false)
 
-  -- the base case reads the INTERNAL `Small`: empty, or one atom
-  smallSorted : (w : Bag) → Small w → SortedOf w
-  smallSorted .([])      (inl Eq.refl)       = [] , []ˢ , nil
-  smallSorted .(x ∷ [])  (inr (x , Eq.refl)) =
-    (x ∷ []) , consˢ []ᵇ []ˢ , cons nil (left nil)
+  -- the base case, at the two representables `Small` is built from
+  smallSorted : Small ⊢ SortedOf
+  smallSorted =
+    ⊕-E (⌈⌉-E ([] , []ˢ , nil))
+        (⊕ᴰ-E λ x → ⌈⌉-E ((x ∷ []) , consˢ []ᵇ []ˢ , permRefl (x ∷ [])))
 
-  malgS : AlgC MF SortedIx
+  malgS : Algᴳ MF (λ _ → SortedOf)
   malgS tt =
-    ⊕ᴰ-E λ { true  → λ w sm → smallSorted w (lower sm)
-           ; false → λ w t →
-               ⊗E {P = λ _ → ⟦ MHalf ⟧c SortedIx} {w = w}
-                  (λ u v s l r → mergeSortedAt s (l true) (r true)) t }
+    ⊕ᴰ-E λ { true  → smallSorted ∘g lowerg
+           ; false → mergeS ∘g dropNT (λ _ → SortedOf) ∘g outM (λ _ → SortedOf) }
 
   -- MERGESORT: a sorted permutation of the input, by type
   mergesortS : ⊤G ⊢ SortedOf
-  mergesortS m _ = hyloC mfGuarded mcoalg malgS (tt , m) tt
+  mergesortS = hyloᴳ mfGuarded mcoalg malgS tt
 
-  -- ================================================================
-  -- QUICKSORT, sorted.
-  --
-  -- Nothing here re-derives an ordering fact: `partitionOrd` already
-  -- put `Above piv lo` and `Below piv hi` into the description's slots,
-  -- and the only step is to move them off the INPUT parts onto the
-  -- SORTED OUTPUTS, which differ from them by a permutation.  That move
-  -- is `abovePerm` / `belowPerm`, and it is the reason those two lemmas
-  -- exist.  The coalgebra is untouched -- it was already supplying the
-  -- witnesses, for the plain sort to ignore.
-  -- ================================================================
+  -- QUICKSORT, sorted. `partitionOrd` already put `Above piv lo` and
+  -- `Below piv hi` into the description's slots; the only step is to move
+  -- them off the INPUT parts onto the SORTED OUTPUTS, which differ by a
+  -- permutation -- `abovePerm` / `belowPerm`.
 
-  sortedNil : {w : Bag} → w Eq.≡ [] → SortedOf w
-  sortedNil Eq.refl = [] , []ˢ , nil
+  sortedNil : ⌈ [] ⌉ ⊢ SortedOf
+  sortedNil = ⌈⌉-E ([] , []ˢ , nil)
 
-  joinS : (piv : A) {lo rest w p1 hi : Bag}
-        → Ilv lo rest w → Ilv p1 hi rest → p1 Eq.≡ piv ∷ []
-        → SortedOf lo → Above piv lo
-        → SortedOf hi → Below piv hi
-        → SortedOf w
-  joinS piv e1 e2 Eq.refl (loOut , sl , pl) aa (hiOut , sh , ph) bb =
+  joinSortedAt : (piv : A) {lo rest w p1 hi : Bag}
+               → Ilv lo rest w → Ilv p1 hi rest → p1 Eq.≡ piv ∷ []
+               → (SortedOf & Liftg (Above piv)) lo
+               → (SortedOf & Liftg (Below piv)) hi
+               → SortedOf w
+  joinSortedAt piv e1 e2 Eq.refl ((loOut , sl , pl) , aa) ((hiOut , sh , ph) , bb) =
       (loOut ++ (piv ∷ hiOut))
-    , sortedApp sl (abovePerm pl aa) (belowPerm ph bb) sh
+    , sortedApp sl (abovePerm pl (lower aa)) (belowPerm ph (lower bb)) sh
     , permMerge pl (cons ph e2) e1
 
-  qalgS : AlgC QF SortedIx
+  -- PRIMITIVE (phase 1): the join, and the only order-theoretic content
+  -- in quicksort's sortedness.  `appendSpec` is its permutation half.
+  joinSorted : (piv : A)
+             → ((SortedOf & Liftg (Above piv))
+                  ⊗' (⌈ piv ∷ [] ⌉ ⊗' (SortedOf & Liftg (Below piv))))
+             ⊢ SortedOf
+  joinSorted piv w ((lo , rest , e1) , h) = go (h false)
+    where
+      go : (⌈ piv ∷ [] ⌉ ⊗' (SortedOf & Liftg (Below piv))) rest → SortedOf w
+      go ((p1 , hi , e2) , g) = joinSortedAt piv e1 e2 (g true) (h true) (g false)
+
+  qalgS : Algᴳ QF (λ _ → SortedOf)
   qalgS tt =
-    ⊕ᴰ-E λ { true  → λ w e → sortedNil (lower e)
-           ; false → ⊕ᴰ-E λ piv → λ w t →
-               ⊗E {P = λ a → ⟦ QG piv a ⟧c SortedIx} {w = w}
-                  (λ lo rest e1 sLo inner →
-                     ⊗E {P = λ a → ⟦ QG' piv a ⟧c SortedIx}
-                        (λ p1 hi e2 pf sHi →
-                           joinS piv e1 e2 (lower pf)
-                                 (sLo true) (lower (sLo false))
-                                 (sHi true) (lower (sHi false)))
-                        inner) t }
+    ⊕ᴰ-E λ { true  → sortedNil ∘g lowerg
+           ; false → ⊕ᴰ-E λ piv → joinSorted piv ∘g outQ (λ _ → SortedOf) piv }
 
   -- INTRINSICALLY VERIFIED QUICKSORT: a sorted permutation of the
   -- input, by type, from the SAME coalgebra as the plain one.
   quicksortS : ⊤G ⊢ SortedOf
-  quicksortS m _ = hyloC qfGuarded qcoalg qalgS (tt , m) tt
+  quicksortS = hyloᴳ qfGuarded qcoalg qalgS tt

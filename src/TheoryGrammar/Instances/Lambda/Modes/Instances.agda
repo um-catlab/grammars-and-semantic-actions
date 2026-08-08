@@ -1,20 +1,7 @@
-{-
-  THE FOUR MODES.
-
-  Each is `Core.Mode` at a context promodel and a leaf, so each exports
-  `Uses`, `check`, `checkAST`, `accepts` and `acceptsLf` unchanged, and
-  supplies only `Lf` (its leaf grammar) and `decLf` (that leaf's
-  decision).  Nothing else varies:
-
-      Ord   Concat      (free monoid)            Lf n = ⌈n⌉
-      Lin   Interleave  (free comm. monoid)      Lf n = ⌈n⌉
-      Aff   Interleave  (the SAME promodel)      Lf n = ⌈n⌉ ⊗ᶜ ⊤
-      Rel   Overlap     (+ idempotence)          Lf n = ⌈n⌉
-
-  So weakening is a MODALITY on the leaf ("a variable may consume
-  slack"), while exchange and contraction are properties of `Split`.
-  That asymmetry is the one real finding.
--}
+{- THE FOUR MODES. Each is `Core.Mode` at a context `Fibered` and a leaf,
+   so each exports `Uses`, `check`, `checkAST`, `accepts` and `acceptsLf`
+   unchanged, and supplies only `Lf` (its leaf grammar) and `decLf` (that
+   leaf's decision). -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Modes.Instances where
 
@@ -48,7 +35,7 @@ module Modes (Name : Type₀) (_≟_ : Discrete Name) where
 
   private
     -- `dec-⌈⌉` needs the CARRIER and nothing else, and all three
-    -- promodels have the same one -- so ONE instance serves all four
+    -- `Fibered` have the same one -- so ONE instance serves all four
     -- modes, and the three bare leaves below are literally one term.
     module Rep = DecRep {S = Unit} (λ _ → List Name)
 
@@ -56,9 +43,7 @@ module Modes (Name : Type₀) (_≟_ : Discrete Name) where
     module LinC = Core Name Il.fib Il.point Il.dec sing
     module RelC = Core Name Ov.fib Ov.point Ov.dec sing
 
-  -- ================================================================
   -- ORDERED: concatenation, no exchange.
-  -- ================================================================
   module Ord where
     open OrdC public
 
@@ -70,9 +55,7 @@ module Modes (Name : Type₀) (_≟_ : Discrete Name) where
 
     open Mode Lf decLf public
 
-  -- ================================================================
   -- LINEAR: interleaving.  Exchange, no weakening, no contraction.
-  -- ================================================================
   module Lin where
     open LinC public
 
@@ -84,11 +67,9 @@ module Modes (Name : Type₀) (_≟_ : Discrete Name) where
 
     open Mode Lf decLf public
 
-  -- ================================================================
-  -- AFFINE: the LINEAR promodel, with weakening as a leaf modality.
+  -- AFFINE: the LINEAR `Fibered`, with weakening as a leaf modality.
   -- `⌈n⌉ ⊗ᶜ ⊤` denotes "a use of n, plus any slack" -- and slack is
   -- exactly what weakening licenses.  Its decision is the tensor's.
-  -- ================================================================
   module Aff where
     open LinC public
 
@@ -100,9 +81,7 @@ module Modes (Name : Type₀) (_≟_ : Discrete Name) where
 
     open Mode Lf decLf public
 
-  -- ================================================================
   -- RELEVANT: interleaving WITH SHARING.  Contraction, no weakening.
-  -- ================================================================
   module Rel where
     open RelC public
 

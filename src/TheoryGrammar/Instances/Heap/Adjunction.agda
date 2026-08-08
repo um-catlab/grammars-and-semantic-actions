@@ -1,28 +1,4 @@
-{-
-  BI'S ADJUNCTION  (P ∗ Q ⊢ R) ≅ (Q ⊢ P ─∗ R),  AND WHERE IT DIVERGES.
-
-  `⊸ᶠ` at `heapFocus` IS the textbook magic wand on the nose -- `wandIso`,
-  both round trips `refl`.  The adjunction itself is NOT free, and the
-  reason is in what the framework's two universal properties classify:
-  `⊗ˢ-UP` lands on `MultiHomˢ`, whose splitting is indexed by the WHOLE,
-  and `⊸ᶠ-UP` on `FocusedHom`, indexed by the focused SLOT.  Same data
-  reassociated -- but the payload changes from an n-ary slot function to
-  two separate arguments.  `refocus` is that identification, and it is
-  where the cost sits:
-
-      refocus-β   refl     Σ-η reassociates, Unit-η collapses `Rest`
-      refocus-η   funExt   the slot function over `MonAr appop = Bool`
-      ∗-η         refl     all three components definitional
-      ∗-β         funExt   exactly one, inherited from `refocus-η`
-
-  `Bool` is `data`, so a function out of it has no η, and `∗-β` cannot be
-  made definitional without giving the ARITY type η.  That is the defect
-  `Fibered`'s own header names for `Eq._≡_`, one level up.
-
-  DEFINES `Wand` and `wandIso`; `Multi`/`Foc` with the refocusing
-  `refocus`/`unfocus`/`refocus-β`/`refocus-η`/`refocus-UP`; the
-  adjunction `curry∗`/`uncurry∗`/`∗-η`/`∗-β`/`∗─∗-UP`; and `wand-app`.
--}
+{- BI'S ADJUNCTION (P ∗ Q ⊢ R) ≅ (Q ⊢ P ─∗ R), AND WHERE IT DIVERGES. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 open import Cubical.Foundations.Prelude
 
@@ -39,18 +15,10 @@ open import TheoryGrammar.Fibered
 
 open import TheoryGrammar.Instances.Heap.Connectives public
 
--- ==================================================================
--- 1.  `⊸ᶠ` IS THE TEXTBOOK WAND, on the nose.
---
--- `Wand` is separation logic's definition written out.  It differs from
--- `⊸ᶠ` only by currying a Σ and by `Rest = Unit`, and both round trips
--- are `refl`.
--- ==================================================================
+-- 1. `⊸ᶠ` IS THE TEXTBOOK WAND, on the nose.
 
--- `Wand A B v` DENOTES "hand me any heap DISJOINT from mine satisfying
--- A, and the join satisfies B".  Disjointness is a hypothesis of the
--- function, so a caller must already hold the proof -- it is never
--- re-tested inside.
+-- `Wand A B v` DENOTES "hand me any heap DISJOINT from mine satisfying A,
+-- and the join satisfies B".
 Wand : Gr → Gr → Gr
 Wand A B v = (u h : Heap) → Ilv u v h → u # v → A u → B h
 
@@ -61,9 +29,7 @@ wandIso A B v .Iso.inv g sa ps =
 wandIso A B v .Iso.sec _ = refl
 wandIso A B v .Iso.ret _ = refl
 
--- ==================================================================
 -- 2.  REFOCUSING: the whole-indexed and slot-indexed hom-sets.
--- ==================================================================
 
 module _ (P Q R : Gr) where
 
@@ -95,9 +61,7 @@ module _ (P Q R : Gr) where
   refocus-UP .Iso.sec = refocus-β
   refocus-UP .Iso.ret = refocus-η
 
-  -- ================================================================
   -- 3.  THE ADJUNCTION, composed from `⊗ˢ-UP`, `refocus`, `⊸ᶠ-UP`.
-  -- ================================================================
 
   curry∗ : (P ∗ Q ⊢ R) → (Q ⊢ (P ─∗ R))
   curry∗ f = ⊸ᶠ-lam {A = boolΠ P Q} {B = R}
@@ -122,10 +86,8 @@ module _ (P Q R : Gr) where
   ∗─∗-UP .Iso.sec = ∗-η
   ∗─∗-UP .Iso.ret = ∗-β
 
--- ==================================================================
 -- 4.  Modus ponens for the wand: the counit, i.e. `uncurry∗` at the
 --     identity.  No new content, which is the point.
--- ==================================================================
 
 wand-app : (P R : Gr) → (P ∗ (P ─∗ R)) ⊢ R
 wand-app P R = uncurry∗ P (P ─∗ R) R idg

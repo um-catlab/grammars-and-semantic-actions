@@ -1,17 +1,7 @@
-{-
-  Well-scoped terms, as the generic `μ`.
-
-  No bespoke datatype: `Scoped` is `Ind.μ` at `ScopedF`, a description in
-  the generic functor language, with the SCOPE as nonterminal index -- so
-  the binder's action on the scope lives entirely in the index of the
-  recursive occurrence.  `Scope` and its membership grammar `In` are here.
-
-  `⟦Sc⟧`/`⟦Sc⟧⁻` is the one primitive: the container encoding respelled
-  in the connectives (the one-step form `Step`).  It never matches a term
-  and never opens a splitting -- `sp` passes through abstractly -- so it
-  is a change of notation, not a proof.  Everything after it composes:
-  `sc-unroll`/`sc-roll` and the rules `sc-var`/`sc-app`/`sc-lam`.
--}
+{- Well-scoped terms, as the generic `μ`. No bespoke datatype: `Scoped` is
+   `Ind.μ` at `ScopedF`, a description in the generic functor language,
+   with the SCOPE as nonterminal index -- so the binder's action on the
+   scope lives entirely in the index of the recursive occurrence. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Scoped where
 
@@ -33,10 +23,7 @@ module Wellscoped (Name : Type₀) where
   Scope : Type₀
   Scope = List Name
 
-  -- `In Γ n` DENOTES: "`n` occurs in the scope `Γ`".  A scope IS a
-  -- grammar over names, built from the internal connectives: `⊥G` at
-  -- the empty scope, `⊕` with a representable at an extension.  So it
-  -- is eliminated by `⊕-E`/`⊥-E` like anything else.
+  -- `In Γ n` DENOTES: "`n` occurs in the scope `Γ`".
   In : Scope → NmG
   In []      = ⊥G
   In (m ∷ Γ) = ⌈ m ⌉ ⊕ In Γ
@@ -47,10 +34,9 @@ module Wellscoped (Name : Type₀) where
   data ScTag : Type₀ where
     tVar tApp tLam : ScTag
 
-  -- Three alternatives, one per operation.  The binder: `⊕e Name`
-  -- guesses the bound name, `⌜ ⌈ n ⌉ ⌝` pins the name slot to it, and
-  -- the body's nonterminal is `n ∷ Γ`.  The guess is determined by the
-  -- representable, so the alternative stays unambiguous.
+  -- Three alternatives, one per operation. The binder: `⊕e Name` guesses
+  -- the bound name, `⌜ ⌈ n ⌉ ⌝` pins the name slot to it, and the body's
+  -- nonterminal is `n ∷ Γ`.
   ScopedF : Scope → Functor tm
   ScopedF Γ = ⊕e ScTag λ
     { tVar → ⊗e varOp (λ _ → ⌜ In Γ ⌝)

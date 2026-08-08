@@ -1,14 +1,8 @@
 {-# OPTIONS -WnoUnsupportedIndexedMatch #-}
-{-
-  RECOMPOSITION, freed from `SeqUnambig`.
-
-  `SeqUnambig.split3App` proves exactly this, but that module takes a
-  `decChar` parameter, so every client that merely wants "a splitting
-  recomposes" has had to prove it again -- `FINDINGS` counts the copies.
-  Nothing here needs decidable equality on the alphabet.
-  PRIMITIVE: `recompose`, `isNilEq`, `appCancel` -- one recursion each.
-  `ordDetermines` is derived from the first and the third.
--}
+{- RECOMPOSITION, freed from `SeqUnambig`. `SeqUnambig.split3App` proves
+   exactly this, but that module takes a `decChar` parameter, so every
+   client that merely wants "a splitting recomposes" has had to prove it
+   again -- `FINDINGS` counts the copies. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Strings.Recompose (Char : Type₀) where

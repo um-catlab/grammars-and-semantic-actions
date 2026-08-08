@@ -1,32 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  THE GRADING AT (ℕ, +): deg = the identity.
-
-  For strings the degree is `length`, and one has to prove that a
-  splitting does not increase it.  Here the degree IS the carrier, so the
-  three obligations of `GradedFib` degenerate to arithmetic on
-  `Add3`:
-
-      deg n   =  n
-      deg≤    =  i ≤ n  and  j ≤ n  whenever  Add3 i j n
-      deg<    =  the complementary slot being nonzero makes it strict
-
-  which is worth saying out loud, because it is the reason `ℕ` is the
-  RIGHT recipient of `length`: the string grading factors as
-
-      String --length--> ℕ --deg=id--> ℕ
-
-  so the well-founded order that drives `löb`/`hyloC` at strings is
-  literally pulled back from the one here.  `Length.agda` upgrades that
-  observation from "the degrees agree" to "the SPLITTINGS agree".
-
-  As in `Strings/Graded.agda`, properness is stated INTERNALLY -- the
-  complementary slot entails `NonTrivial`, a formula in `⌈_⌉`, `⊗` and
-  `⊤` only -- and exactly one primitive (`ntDeg`) bridges that formula to
-  the numeric order.  Since ℕ is the free monoid on ONE letter, the
-  string instance's `⊕ᴰ Char (λ c → ⌈ c ∷ [] ⌉ ⊗ ⊤)` collapses to a
-  single summand, `x ⊗' ⊤'`: "n is at least one".
--}
+{- THE GRADING AT (ℕ, +): deg = the identity. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Nat.Graded where
@@ -47,10 +20,8 @@ open import TheoryGrammar.Graded
 
 open import TheoryGrammar.Instances.Nat.Connectives public
 
--- ==================================================================
 -- Arithmetic of `Add3`.  The four lemmas of `Strings/Graded.agda`,
 -- with `length` erased.
--- ==================================================================
 
 add3L : ∀ {i j n} → Add3 i j n → i ≤ n
 add3L z     = zero-≤
@@ -68,11 +39,9 @@ add3R< : ∀ {i j n} → Add3 i j n → 0 < i → j < n
 add3R< z     pr = E.rec (¬-<-zero pr)
 add3R< (s a) pr = suc-≤-suc (add3R a)
 
--- ==================================================================
 -- THE RESOURCE PREDICATE, internally.  `n` is non-trivial when it
 -- decomposes with the GENERATOR on the left.  Nothing about the numeric
 -- order appears: this is `⌈_⌉`, `⊗` and `⊤` only.
--- ==================================================================
 
 NonTrivial : Gr
 NonTrivial = x ⊗' ⊤'

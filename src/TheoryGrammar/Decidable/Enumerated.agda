@@ -1,17 +1,4 @@
-{-
-  Decidability through a tensor, the OTHER way.
-
-  `Decidable.Tensor` decides `⊗ˢ o A` from `splitProp` -- at most one
-  splitting.  That is unique readability: true for a free signature, and
-  FALSE for the monoid (`w` has `length w + 1` cuts) and for bags (`2ⁿ`
-  interleavings).  So neither of those instances can use it.
-
-  The complementary hypothesis is that the splittings are finitely
-  ENUMERABLE.  Then a refutation is "none of the listed splittings
-  works", and completeness of the enumeration turns that into a
-  refutation of the tensor.  `splitProp` is the degenerate case where
-  the list is a singleton.
--}
+{- Decidability through a tensor, the OTHER way. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Decidable.Enumerated where
 
@@ -49,34 +36,11 @@ module DecEnum {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
             (m : Fib .carrier (σ .resultSort o)) → Fib .Split o m → Type (ℓ-max ℓ' ℓA)
   Refutes o A m sp = ⊗at o A m sp → ⊥* {ℓ-zero}
 
-  -- ================================================================
   -- THE TENSOR, DECIDED FROM A DECISION AT EACH SPLITTING.
-  --
-  -- `decAt` (the record field below) forces the two slots to be decided
-  -- INDEPENDENTLY, and a guarded recursion cannot supply that: the
-  -- recursive call at a slot is available only once the SIBLING has
-  -- certified that slot to be a proper part.  What such a recursion can
-  -- always supply is a decision of the splitting AS A WHOLE, because
-  -- refuting one slot refutes the splitting even when the other slot is
-  -- not decidable at all.  That short circuit is the whole of "CNF has
-  -- no ε-productions, therefore CYK terminates".
-  --
-  -- The proof is `decΣ` and nothing else: `⊗ˢ o A m` IS `Σ` of `⊗at`
-  -- over the splittings, definitionally, and `Refutes` IS `No ⊗at`.  So
-  -- the search over splittings and the search over the tags of a `⊕ᴰ`
-  -- (`Decidable.Listable.dec-⊕ᴰ`) are literally the same combinator.
-  -- ================================================================
 
-  -- The short circuit itself, ONCE.  "A slot refuted refutes the whole
-  -- splitting": the hypothesis is a TERM `A a ⊢ B`, and the conclusion
-  -- is a refutation at the splitting.
-  --
-  -- This cannot be a `⊢` and the reason is the standing one: `Refutes
-  -- o A m sp` is indexed by a SPLITTING, and `TheoryTy` is a family over
-  -- the CARRIER, so "the tensor fails AT THIS CUT" is not the statement
-  -- of any grammar.  What can be done is to prove it once here rather
-  -- than let every instance write `λ h → k (f _ (h a))` inline -- which
-  -- is what `Strings.CYK` and `Spans.CYK` both did.
+  -- The short circuit itself, ONCE. "A slot refuted refutes the whole
+  -- splitting": the hypothesis is a TERM `A a ⊢ B`, and the conclusion is
+  -- a refutation at the splitting.
   slotMiss : (o : σ .ops) (A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
              (m : Fib .carrier (σ .resultSort o)) (sp : Fib .Split o m)
              (a : σ .arities o) (B : TheoryTy ℓB (σ .sortOf o a))
@@ -106,9 +70,7 @@ module DecEnum {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   lookupNo o A m (sp ∷ sps) .sp here      (k , _) = k
   lookupNo o A m (_  ∷ sps) sp  (there p) (_ , r) = lookupNo o A m sps sp p r
 
--- ==================================================================
 -- The hypothesis.
--- ==================================================================
 
 record DecEnumerable {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                      (Fib : Fibered σ ℓX ℓP) ℓA
@@ -133,9 +95,7 @@ record DecEnumerable {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
 
 open DecEnumerable public
 
--- ==================================================================
 -- The tensor rule.
--- ==================================================================
 
 module DecTensorEnum {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                      {Fib : Fibered σ ℓX ℓP} (DE : DecEnumerable Fib ℓA) where
@@ -176,18 +136,12 @@ module DecTensorEnum {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
     dec-⊗-enum : Dec⟨ ⊗ˢ o A ⟩ m
     dec-⊗-enum = finish (search (DE .enumSplit o m))
 
--- ==================================================================
 -- The pure core: decide a Σ over a listable index.  Both `dec-⊗-enum`
 -- (Σ over splittings) and `dec-⊕ᴰ` (Σ over the tag type) are instances,
 -- because `⊗ˢ o A m` and `⊕ᴰ Y A m` are both Σs.
--- ==================================================================
 
--- ==================================================================
 -- The enumeration is a WITNESS for the internal statement, not the
--- statement.  `⊗-EM` (TheoryGrammar.Par) says the multiplicative
--- satisfies excluded middle -- ⊗ and its De Morgan dual ⅋ are
--- complementary.  A complete list is one way to establish that.
--- ==================================================================
+-- statement.
 
 module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
          {Fib : Fibered σ ℓX ℓP} (DE : DecEnumerable Fib ℓA) where

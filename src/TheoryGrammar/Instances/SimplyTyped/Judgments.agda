@@ -1,36 +1,4 @@
-{-
-  THE BIDIRECTIONAL JUDGMENTS, as ONE `μ` with TWO nonterminals.
-
-  The nonterminal index is `Mode × Ctx × Ty`, all at sort `tm`, so
-  `Infer Γ A` and `Check Γ C` are two families of the same fixed point
-  and the mode discipline is a property of the DESCRIPTION, not of a
-  separate datatype:
-
-    Infer  var    the name is bound in Γ, to the index type
-           app    the function's type is A₀ ⇒ A for some GUESSED A₀,
-                  whose argument is CHECKED
-           ann    the term is checked at the type in the `ty` slot,
-                  which the representable `⌈ A ⌉` pins to the index
-    Check  switch synthesis at the very same type
-           lam    only when the index type SPLITS as an arrow
-
-  That last line is what the third sort buys: `⊕e (IsArr C)` IS the
-  promodel's own `Split arrOp C`, so the rule is present exactly when
-  the checking type is an arrow, with `dom`/`cod` read off by `parts`
-  and no case analysis on `Ty` anywhere in the description.
-
-  Two one-step unfoldings live here, side by side: `JStep`/`j-unroll`/
-  `j-roll` at either nonterminal, and -- for the synthesis mode only --
-  `SynStep`/`syn-out`/`syn-in`, which is `JStep` at `syn` with the
-  `⊕ᴰ Ty` pushed past the coproduct.  The second is what a decision
-  procedure needs, but it is a grammar isomorphism and decides nothing,
-  so it is stated where its sibling is rather than in `Check.agda`.
-
-  PRIMITIVE: `⟦J⟧`/`⟦J⟧⁻`, the container encoding respelled in the
-  connectives (they never match a term and never open a splitting), and
-  `varG-pull`, which reads a slot's index and republishes it at the
-  whole.
--}
+{- THE BIDIRECTIONAL JUDGMENTS, as ONE `μ` with TWO nonterminals. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.SimplyTyped.Judgments where
 
@@ -118,9 +86,7 @@ module Judgments (Name : Type₀) (_≟_ : Discrete Name) where
   Syn : Ctx → TmG
   Syn Γ = ⊕ᴰ Ty (Infer Γ)
 
-  -- ================================================================
   -- One unfolding, in the connectives.
-  -- ================================================================
 
   -- `JStep R x` denotes one layer of rules at `x`, with the recursive
   -- occurrences replaced by `R`: the same content as `⟦ JF x ⟧`, said
@@ -135,10 +101,10 @@ module Judgments (Name : Type₀) (_≟_ : Discrete Name) where
     ⊕ ⊕ᴰ (IsArr C) (λ sa → ⊕ᴰ Name (λ n →
         LamG (Nm n) (R (chk , (n , dom sa) ∷ Γ , cod sa))))
 
-  -- PRIMITIVE: the two respellings.  `⟦J⟧` denotes "read a container
-  -- layer as a layer of connectives" and `⟦J⟧⁻` the converse; together
-  -- they say the shape/position presentation and the connective
-  -- presentation of `JStep` are the same grammar.
+  -- PRIMITIVE: the two respellings. `⟦J⟧` denotes "read a container layer
+  -- as a layer of connectives" and `⟦J⟧⁻` the converse; together they say
+  -- the shape/position presentation and the connective presentation of
+  -- `JStep` are the same grammar.
   ⟦J⟧ : {M : Ix → Type₀} (x : NT) → ⟦ JF x ⟧ M ⊢ JStep (λ y t → M (y , t)) x
   ⟦J⟧ (syn , Γ , A) _ ((tVar , sp , sh) , _) = inl (sp , λ a → lower (sh a))
   ⟦J⟧ (syn , Γ , A) _ ((tApp , A₀ , sp , _) , rc) =
@@ -170,9 +136,7 @@ module Judgments (Name : Type₀) (_≟_ : Discrete Name) where
   j-roll : (x : NT) → JStep Jμ x ⊢ Jμ x
   j-roll x = μ-alg JF x ∘g ⟦J⟧⁻ x
 
-  -- ================================================================
   -- The five rules: `roll` after a coproduct injection.
-  -- ================================================================
 
   inf-var : (Γ : Ctx) (A : Ty) → VarG (Lookup Γ A) ⊢ Infer Γ A
   inf-var Γ A = j-roll (syn , Γ , A) ∘g ⊕-I₁
@@ -201,15 +165,7 @@ module Judgments (Name : Type₀) (_≟_ : Discrete Name) where
         ∘g ⊕ᴰ-I Name
           {A = λ n' → LamG (Nm n') (Check ((n' , dom sa) ∷ Γ) (cod sa))} n))
 
-  -- ================================================================
   -- THE SAME UNFOLDING FOR `Syn Γ`, with the ⊕ᴰ pushed inwards.
-  --
-  -- `JStep` says what ONE type's derivations look like; `SynStep` says
-  -- what SOME type's do, which is the shape a decision procedure can
-  -- recurse on -- at `var` the guessed type collapses into `Look Γ`,
-  -- and at `app` two nested guesses become one over `Ty × Ty`.  All of
-  -- it is grammar isomorphism; nothing here decides anything.
-  -- ================================================================
 
   -- the three alternatives of `syn`, at a fixed synthesised type
   QVar : Ctx → Ty → TmG

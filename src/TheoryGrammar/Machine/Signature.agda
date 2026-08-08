@@ -43,7 +43,6 @@
   and `sp ⊣ wp` is `TheoryGrammar.Fibered.⊸ˢ-app`, which is already
   proved, generically, for every operation of every signature.
 
-  ------------------------------------------------------------------
   WHY THE ARITIES ARE ALL `Bool`
 
   All three operations are binary, so `arities o = Bool` uniformly and
@@ -60,16 +59,12 @@ open import Cubical.Data.Bool using (Bool; true; false)
 
 open import TheoryGrammar.Base
 
--- ==================================================================
 -- Sorts.
--- ==================================================================
 
 data ISort : Type₀ where
   prog res : ISort
 
--- ==================================================================
 -- Operations.
--- ==================================================================
 
 data ISAOp : Type₀ where
   seqop sepop runop : ISAOp
@@ -80,9 +75,8 @@ data ISAOp : Type₀ where
 ISAAr : ISAOp → Type₀
 ISAAr _ = Bool
 
-boolΠ : ∀ {ℓ} {M : Bool → Type ℓ} → M true → M false → (b : Bool) → M b
-boolΠ t f true  = t
-boolΠ t f false = f
+-- `boolΠ` (Bool's dependent eliminator, = the binary arity's) now
+-- comes from `TheoryGrammar.Theories.Monoid`, where the arity is.
 
 -- The two-sortedness, concentrated in one line: `runop`'s left slot is a
 -- PROGRAM and its right slot is a RESOURCE.

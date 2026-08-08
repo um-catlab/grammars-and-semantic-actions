@@ -1,24 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  Traces satisfy the tensor decision rule, by the enumerable route.
-
-  `splitProp` is false here (a word shuffles many ways), so
-  `Decidable.Tensor.dec-⊗` is out of reach and `DecSplittings` is the
-  interface that survives; `fromEnumerable` is the constructor that
-  applies.  The arity is `Bool`, so slotwise decisions combine by
-  `decΠBool` exactly as at `Strings`.
-
-  DEFINES `trDecEnum`, `trDecSplittings`, `trDecTensor`.
-
-  WHY A SEPARATE FILE, given that it shares `Enumeration`'s parameter
-  list exactly.  The seam is two names wide -- `enumSplit` and
-  `enumComplete` -- and it is the only one in the directory that narrow.
-  Everything the framework interfaces need (`Decidable.Enumerated`,
-  `Decidable.Rule`, `Decidable.Splittings`) is imported HERE and nowhere
-  else under `Traces/`, so folding this into `Enumeration` would drag
-  three framework modules into the combinatorics.  The cut is where the
-  glue is thinnest, which is the whole criterion.
--}
+{- Traces satisfy the tensor decision rule, by the enumerable route. -}
 open import Cubical.Foundations.Prelude
 
 open import Cubical.Data.Sum using (_⊎_; inl; inr)

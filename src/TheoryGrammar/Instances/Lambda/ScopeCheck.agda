@@ -1,18 +1,6 @@
-{-
-  The scope checker `check`, a map of the calculus at `DecScoped`:
-
-      ⊤ ⊢ &ᴰ Scope (λ Δ → Scoped Δ ⊕ ¬G (Scoped Δ))
-
-  "for every term and every scope, a scoping derivation or a refutation".
-  Deciding in EVERY scope at once is forced: the scope grows while the
-  term shrinks, so no single scope is an invariant of the recursion.
-  `closed?` instantiates it at `[]` with `&ᴰ-E`.
-
-  The algorithm: unfold one step (`sc-unroll`), decide the three summands
-  -- via `dec-In`, itself built from `dec-⌈⌉` -- recombine with `dec-⊕`,
-  fold back (`sc-roll`).  Recursive calls sit at `LParts o t sp a`, and
-  `proper` is their descent proof.
--}
+{- The scope checker `check`, a map of the calculus at `DecScoped`: ⊤ ⊢ &ᴰ
+   Scope (λ Δ → Scoped Δ ⊕ ¬G (Scoped Δ)) "for every term and every scope,
+   a scoping derivation or a refutation". -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.ScopeCheck where
 
@@ -43,22 +31,14 @@ module ScopeCheck (Name : Type₀) (_≟_ : Discrete Name) where
   open Views λFib
 
   -- The ONE place `Discrete Name` is used -- and it is used to BUILD an
-  -- internal map, never to case-split on one.  That is the whole rule
-  -- for how external decidability may enter the calculus, and it is
-  -- stated generically in `Decidable.Representable`; this is only its
-  -- instantiation at the `nm` sort.
+  -- internal map, never to case-split on one.
   private module R = DecRep (λFib .carrier)
 
   dec-⌈⌉ : (m : Name) → ⊤G ⊢ Dec⟨ ⌈_⌉ {s = nm} m ⟩
   dec-⌈⌉ = R.dec-⌈⌉ {s = nm} _≟_
 
-  -- Membership is decidable by induction on the scope, using nothing
-  -- but `⊥`'s rule and the generic `dec-⊕`.
-  --
-  -- As a PROBE (TheoryGrammar.View): a partial view of a name, built
-  -- from the partial view at each scope entry.  `probe-⊕` is `dec-⊕`
-  -- under its view name -- coverage-checking a pattern and deciding a
-  -- grammar are one notion, which is why no new combinator was needed.
+  -- Membership is decidable by induction on the scope, using nothing but
+  -- `⊥`'s rule and the generic `dec-⊕`.
   dec-In : (Γ : Scope) → Probe (In Γ)
   dec-In []      = dec-⊥
   dec-In (m ∷ Γ) = probe-⊕ ⌈ m ⌉ (In Γ) (dec-⌈⌉ m) (dec-In Γ)

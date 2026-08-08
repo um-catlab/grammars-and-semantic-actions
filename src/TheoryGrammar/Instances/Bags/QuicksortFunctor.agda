@@ -1,7 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- Quicksort's functor and its guardedness.  The two recursive slots are
-   discharged differently: `lo` shrinks because its complement holds the
-   pivot, `hi` because the pivot sits inside its own factor. -}
+{- Quicksort's functor and its guardedness. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Bags.QuicksortFunctor (A : Type₀) where
@@ -23,12 +21,9 @@ open import TheoryGrammar.Graded
 
 open import TheoryGrammar.Instances.Bags.Order A public
 
--- The description is parameterised by the order, because its SLOTS
--- carry the pivot bounds: the `lo` slot is "a recursive subproblem AND
--- a proof that it lies below the pivot".  That is the whole redesign --
--- the ordering facts `partition` discovers are exactly the facts the
--- algebra needs, so they travel in the shape rather than being
--- rediscovered afterwards.
+-- The description is parameterised by the order because its SLOTS carry
+-- the pivot bounds: the `lo` slot is "a recursive subproblem AND a proof
+-- that it lies below the pivot".
 module QSF (le : A → A → Bool)
            (leTrans : (x y z : A) → le x y Eq.≡ true → le y z Eq.≡ true
                     → le x z Eq.≡ true)
@@ -105,8 +100,6 @@ module QSF (le : A → A → Bool)
       alt true  = <⌜⌝ ⌈ [] ⌉
       alt false = <⊕e A _ (λ piv → ⊗-guard appop (QG piv) (go piv))
 
--- QUICKSORT, as a hylomorphism.  The coalgebra partitions, the
--- algebra concatenates, and `hylo` (TheoryGrammar.Graded) supplies the
--- recursion from `qfGuarded` alone.  No `with`, no explicit
--- well-founded recursion at the use site: the termination certificate
--- IS the guardedness of the description.
+-- The coalgebra partitions, the algebra concatenates, and `hylo`
+-- supplies the recursion from `qfGuarded` alone: no `with` and no
+-- explicit well-founded recursion at the use site.

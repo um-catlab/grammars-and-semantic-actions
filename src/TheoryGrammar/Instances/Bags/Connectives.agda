@@ -30,13 +30,17 @@ P ⊗' Q = ⊗ˢ appop (λ b → if b then P else Q)
 ⊗-mk : {P Q : Gr} {u v w : Bag} → Ilv u v w → P u → Q v → (P ⊗' Q) w
 ⊗-mk {u = u} {v} s p q = (u , v , s) , λ { true → p ; false → q }
 
--- THE COMMUTATIVITY EQUATION, lifted to an isomorphism.  This is the
--- `eqn→Iso` shape at the one equation that distinguishes commutative
--- monoids from monoids, discharged by `ilvSwap`.
+-- The functorial action of the binary tensor: `⊗ˢ-map` at arity
+-- `Bool`.  It is what lets a program act on both factors without
+-- opening the splitting.
+⊗-map : {P P' Q Q' : Gr} → P ⊢ P' → Q ⊢ Q' → (P ⊗' Q) ⊢ (P' ⊗' Q')
+⊗-map {P} {P'} {Q} {Q'} f g =
+  ⊗ˢ-map appop {A = λ b → if b then P  else Q}
+                {B = λ b → if b then P' else Q'}
+         λ { true → f ; false → g }
 
--- ⊗ intro and elim AT THE CONNECTIVE LEVEL.  These two are the only
--- places below that mention a splitting; everything after is built
--- from them.
+-- ⊗ intro and elim at the connective level: the only two places here
+-- that mention a splitting.
 
 ⊗I : {P : Bool → Bag → Type₀} {u v w : Bag}
    → Ilv u v w → P true u → P false v
@@ -48,16 +52,5 @@ P ⊗' Q = ⊗ˢ appop (λ b → if b then P else Q)
    → Σ[ sp ∈ MonSplit appop w ] ((a : Bool) → P a (MonParts appop w sp a)) → R
 ⊗E f ((u , v , s) , h) = f u v s (h true) (h false)
 
--- PERMUTATION, for the intrinsic specification.  `Perm a w` says the
--- list `a` is a rearrangement of `w`; insertion is `Ilv (x ∷ []) v w`,
--- so permutation is built from the SUBSTRATE'S OWN relation rather
--- than from a quotient.
-
--- The combinators come from `RulesF` (opened in Base); only `liftg`
--- and the binary ⊗ intro/elim are local.
-
-liftg : {P : Gr} → P ⊢ (λ m → Lift ℓ-zero (P m))
-liftg _ p = lift p
-
--- ASSOCIATIVITY OF INTERLEAVING.  w = p ⊎ (q ⊎ r) regrouped as
--- w = q ⊎ (p ⊎ r).  Used once, by the partition primitive.
+-- The combinators come from `RulesF` (opened in Base); only the binary
+-- ⊗ intro/elim/map are local.

@@ -1,11 +1,6 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 {- Recursion over a guarded description: the strength, the container
-   hylomorphism, and the fused connective-form `hyloC`.
-
-   Separate from `Grading` because guardedness is a PROPERTY of a
-   description while these are what you DO with it -- and because the
-   fusion note below is the subtlest thing in the stack and deserves to
-   be findable. -}
+   hylomorphism, and the fused connective-form `hyloC`. -}
 module TheoryGrammar.Hylo where
 
 open import Cubical.Foundations.Prelude
@@ -31,11 +26,9 @@ module HyloM {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   open Grade GS ℓA X xs public
   open FibNotation (GS .fib)
 
-  -- ================================================================
   -- THE STRENGTH.  This is ccl's `▷HomActionFam`, derived rather than
   -- assumed: a guarded description can transport a LATER function
   -- across its positions, because every position is strictly smaller.
-  -- ================================================================
 
   mapGuarded : {s : S} (F : Functor s) → Guarded F
              → {A : Ix → Type ℓM} {B : Ix → Type ℓN}
@@ -44,9 +37,7 @@ module HyloM {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
              → ⟦ F ⟧ A m → ⟦ F ⟧ B m
   mapGuarded F gF m r (sh , f) = sh , λ p → r _ (gF m sh p) (f p)
 
-  -- ================================================================
   -- HYLOMORPHISM.  coalgebra + algebra + guardedness, by löb.
-  -- ================================================================
 
   module _ {F : (x : X) → Functor (xs x)} (gF : (x : X) → Guarded (F x))
            {A : Ix → Type ℓM} {B : Ix → Type ℓN}
@@ -59,17 +50,8 @@ module HyloM {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
         step (x , m) rec ai =
           alg x m (mapGuarded (F x) (gF x) m (λ j q → rec j q) (c x m ai))
 
-  -- ================================================================
-  -- Per-slot guardedness certificates.
-  --
-  -- `<⊗e` above requires EVERY recursive slot to be a proper part.  That
-  -- is too strong once descriptions nest: in quicksort's
-  --     b  =  lo ⊗ (piv ⊗ hi)
-  -- the slot holding `hi` is not a proper part of `b` for the reason its
-  -- sibling `lo` is -- `lo` may be empty.  `hi` decreases because the
-  -- PIVOT sits inside its own factor.  So a slot must be dischargeable
-  -- two different ways, and the ⊗e rule takes a certificate per slot.
-  -- ================================================================
+  -- Per-slot guardedness certificates. `<⊗e` above requires EVERY
+  -- recursive slot to be a proper part.
 
   private
     <≤-tr : {x y z : ℕ} → x < y → y ≤ z → x < z
@@ -103,28 +85,20 @@ module HyloM {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   slotProper o m sp a g pr sh p = ≤<-tr (g _ sh p) (GS .deg< o m sp a pr)
 
   -- strict versions of the additive formers
-  <⌜⌝ : {s : S} (A : FibNotation.TheoryTy (GS .fib) ℓA s) → Guarded ⌜ A ⌝
+  <⌜⌝ : {s : S} (A : FibNotation.TheoryTy (GS .fib) ℓA⁺ s) → Guarded ⌜ A ⌝
   <⌜⌝ A m sh ()
 
-  <⊕e : {s : S} (Y : Type ℓA) (G : Y → Functor s)
+  <⊕e : {s : S} (Y : Type ℓA⁺) (G : Y → Functor s)
       → ((y : Y) → Guarded (G y)) → Guarded (⊕e Y G)
   <⊕e Y G g m (y , sh) p = g y m sh p
 
-  <&e : {s : S} (Y : Type ℓA) (G : Y → Functor s)
+  <&e : {s : S} (Y : Type ℓA⁺) (G : Y → Functor s)
       → ((y : Y) → Guarded (G y)) → Guarded (&e Y G)
   <&e Y G g m sh (y , p) = g y m (sh y) p
 
-  -- ================================================================
-  -- THE INTERNAL HYLOMORPHISM, fused.
-  --
-  -- `mapC` transports a later-function across a CONNECTIVE-form element
-  -- directly, by recursion on the description.  No container round trip
-  -- appears -- which matters, because `toC ∘ fromC` is only pointwise
-  -- the identity, not definitionally so (its ⊗e case rebuilds a lambda
-  -- over the arity, and arities have no η).  Since `löb` consumes the
-  -- guardedness proof to descend the Acc structure, a stuck round trip
-  -- would stall the entire recursion.
-  -- ================================================================
+  -- THE INTERNAL HYLOMORPHISM, fused. `mapC` transports a later-function
+  -- across a CONNECTIVE-form element directly, by recursion on the
+  -- description.
 
   GuardedAt : {s : S} (F : Functor s) (m : GS .fib .carrier s)
             → Sh F m → ℕ → Type ℓPos
@@ -155,35 +129,15 @@ module HyloM {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
       alg x m (mapC (F x) m (GS .deg (xs x) m) (c x m ai)
                     (λ p → gF x m _ p) (λ j q → rec j q)) }
 
-  -- ================================================================
   -- ... and the same thing as an INTERNAL TERM.  `hyloC` is stated with
   -- `Ix` and an element; `hyloᴳ` is the `⊢` a use site actually wants.
   -- Definitionally the same map -- only the presentation differs.
-  -- ================================================================
 
   hyloᴳ : {F : (x : X) → Functor (xs x)} (gF : (x : X) → Guarded (F x))
           {A B : Fam} → Coalgᴳ F A → Algᴳ F B → (x : X) → A x ⊢ B x
   hyloᴳ gF c α x m a = hyloC gF c α (x , m) a
 
-  -- ================================================================
   -- LOCAL CONTRACTIVITY, asked for directly.
-  --
-  -- `Guarded` is a SYNTACTIC condition: it inspects the description's
-  -- positions and checks each next-index has smaller degree.  What the
-  -- recursion actually consumes is the SEMANTIC consequence -- the
-  -- strength `▷(A ⇒ B) → (⟦F⟧ A ⇒ ⟦F⟧ B)`, ccl's `▷HomActionFam`.  That
-  -- is what "F is locally contractive" means, so ask for it.
-  --
-  -- Asking directly pays twice.  The hylomorphism becomes three lines
-  -- (`hyloLC`) with no `mapC`, no `GuardedAt` and no degree arithmetic
-  -- at the use site; and a description that is contractive for a reason
-  -- OTHER than positionwise guardedness is now admissible, where before
-  -- the interface could not express one.
-  --
-  -- `Guarded` survives as the convenient sufficient criterion:
-  -- `guarded→LC` is the one-line bridge, and all the `mapC` machinery
-  -- above is exactly its proof.
-  -- ================================================================
 
   LocallyContractive : ((x : X) → Functor (xs x)) → Type _
   LocallyContractive F =
@@ -208,21 +162,7 @@ module HyloM {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
     hyloLC : (x : X) → A x ⊢ B x
     hyloLC x m = löb hyloStep (x , m)
 
-    -- ================================================================
     -- THE UNIVERSAL PROPERTY, for every theory.
-    --
-    -- `hyloLC` satisfies the hylomorphism equation, and it is the ONLY
-    -- map that does.  Both come straight from `löb`'s own unfolding and
-    -- uniqueness (`Later.agda`), which are generic in the ORDER, so
-    -- these are generic in the theory.
-    --
-    -- This is what makes a program written as a hylo canonical: its
-    -- value depends on the coalgebra and the algebra, and on nothing
-    -- else about how the recursion was arranged.  For a scanner out of
-    -- ⊤ that says the answer depends on the DECOMPOSITION chosen -- and
-    -- that residual dependence is real, which is exactly the caveat a
-    -- commutative theory runs into.
-    -- ================================================================
 
     hyloLC-unfold : (i : Ix) → löb hyloStep i ≡ hyloStep i (λ j _ → löb hyloStep j)
     hyloLC-unfold = löb-unfold hyloStep
@@ -232,25 +172,7 @@ module HyloM {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                   → (i : Ix) → h i ≡ löb hyloStep i
     hyloLC-unique = löb-unique hyloStep
 
-  -- ================================================================
   -- INITIAL/FINAL COINCIDENCE -- the guarded fixed-point theorem.
-  --
-  -- A contractive functor has a UNIQUE fixed point, so its initial
-  -- algebra and its final coalgebra coincide.  Both comparison maps are
-  -- generic in the theory and short, and each is exactly one of the two
-  -- recursion principles:
-  --
-  --   μ→ν  is a FOLD.  Needs no hypothesis at all -- every finite tree
-  --        is in particular an infinite one.  Note it goes through the
-  --        raw container `fold`, not `foldC`, which is what keeps it
-  --        level-polymorphic: `foldC` pins its motive at `ℓSh` and `ν F`
-  --        lives at `ℓμ`.
-  --
-  --   ν→μ  is a LÖB.  This is the direction with content: it says a
-  --        ν-element is FINITE, and contractivity is exactly the reason.
-  --        The `<` proof löb demands at each recursive position is the
-  --        guardedness witness, handed over unchanged.
-  -- ================================================================
 
   μ→ν : {F : (x : X) → Functor (xs x)} → (i : Ix) → μ F i → ν F i
   μ→ν {F = F} = fold (ν F) λ x m sh f → νinto (x , m) (sh , f)
@@ -272,25 +194,6 @@ module HyloM {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
       ∙ cong (sup sh) (funExt λ p → ν→μ-μ→ν _ (f p))
 
     -- ... AND SO IS THE OTHER, without a pragma.
-    --
-    -- This looked blocked: `μ→ν ∘ ν→μ ≡ id` is a statement about
-    -- INFINITE objects, so the obvious proof is corecursive, and the
-    -- corecursive call lands under `funExt`, which is not a guard.
-    -- That is why upstream carries `{-# TERMINATING #-}`.
-    --
-    -- But the recursion does not have to be on the ν-element.
-    -- GUARDEDNESS already makes the INDEX well-founded, so the proof can
-    -- be a löb on `i` -- and löb is total.  The recursive appeal then
-    -- comes from the löb hypothesis at a strictly smaller index rather
-    -- than from a self-call, so nothing needs to be productive and the
-    -- termination checker has nothing to complain about.
-    --
-    -- No copattern-on-a-path either: `νinto-νout` already packages the
-    -- one-step η, so the proof is three `cong`s in a row.
-    --
-    -- Semantically this is the guarded fixed-point theorem doing its
-    -- job -- contractivity is exactly what lets an argument about
-    -- infinite objects be run by well-founded recursion instead.
     μ→ν-ν→μ : (i : Ix) (u : ν F i) → μ→ν i (ν→μ i u) ≡ u
     μ→ν-ν→μ = löb λ { (x , m) rec u →
         cong (μ→ν (x , m)) (funExt⁻ (löb-unfold ν→μStep (x , m)) u)
@@ -298,15 +201,9 @@ module HyloM {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
              (funExt λ p → rec _ (gF x m (u .shOf) p) (u .nxOf p))
       ∙ νinto-νout (x , m) u }
 
-    -- THE SAME TRICK KILLS `coind`.  Uniqueness of the corecursor was
-    -- the other thing upstream needed `{-# TERMINATING #-}` for, and it
-    -- is blocked for an ARBITRARY functor.  For a GUARDED one it is
-    -- not: the recursive indices decrease, so löb on the index does the
-    -- job again and no corecursion appears.
-    --
-    -- That is the real content of the pragma upstream carries -- it is
-    -- paying for generality in `F` that this tree never uses, since
-    -- every description it builds is guarded anyway.
+    -- THE SAME TRICK KILLS `coind`. Uniqueness of the corecursor was the
+    -- other thing upstream needed `{-# TERMINATING #-}` for, and it is
+    -- blocked for an ARBITRARY functor.
     ν-η : {ℓM : Level} (M : Ix → Type ℓM)
           (γ : (x : X) (m : GS .fib .carrier (xs x)) → M (x , m)
              → Σ[ sh ∈ Sh (F x) m ] ((p : Pos (F x) m sh) → M (nx (F x) m sh p)))
@@ -330,31 +227,7 @@ module HyloM {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
     μ≅ν i .Iso.sec = μ→ν-ν→μ i
     μ≅ν i .Iso.ret = ν→μ-μ→ν i
 
-    -- ================================================================
     -- HOW TO USE THE COINCIDENCE, in any theory.
-    --
-    -- Define by CORECURSION; reason by INDUCTION.
-    --
-    -- A coalgebra is a PRODUCER -- a parser, a scanner, an unfold --
-    -- and it is usually the natural way to write a program: you say how
-    -- to take one step, not how to bottom out.  `νunfold` runs it, but
-    -- its result is an infinite object, and the only native way to
-    -- reason about those is bisimulation.
-    --
-    -- Transporting along `μ≅ν` lands the SAME program in `μ`, where
-    -- ordinary structural induction applies and `fold-unique` is
-    -- available.  So `ana` below is "write it coinductively, get a
-    -- finite structure back", and it is the general form of what
-    -- `Automaton.scanμ` does for the ⊤-coalgebra specifically.
-    --
-    -- The other direction of use is that initiality and finality have
-    -- become ONE universal property.  `fold-unique` is structural and
-    -- cheap; `ν-η` is the same statement transported.  Anything proved
-    -- of a fold now holds of the corresponding unfold, for free.
-    --
-    -- What makes all of this available is guardedness alone -- no
-    -- hypothesis on the theory, and no pragma.
-    -- ================================================================
 
     ana : {ℓM : Level} (M : Ix → Type ℓM)
           (γ : (x : X) (m : GS .fib .carrier (xs x)) → M (x , m)
@@ -362,14 +235,9 @@ module HyloM {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
         → (i : Ix) → M i → μ F i
     ana M γ i a = ν→μ i (νunfold M γ i a)
 
-  -- ================================================================
-  -- THE GENERIC ▷-APP.  A `later` may be consumed at any position of a
-  -- GUARDED description, because guardedness is precisely the
-  -- strictness the `later` demands.  This is the analogue of
-  -- `▷-app-NE` (Grammar/Later/Properties.agda) and is what makes a
-  -- point-free löb step writable: without it, the only way to use a
-  -- `▷` is to apply it to a hand-supplied `<` proof.
-  -- ================================================================
+  -- THE GENERIC ▷-APP. A `later` may be consumed at any position of a
+  -- GUARDED description, because guardedness is precisely the strictness
+  -- the `later` demands.
 
   ▷pos : {A : Ix → Type ℓM} {s : S} (F : Functor s) → Guarded F
        → (m : GS .fib .carrier s) (sh : Sh F m) (p : Pos F m sh)

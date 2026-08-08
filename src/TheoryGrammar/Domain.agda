@@ -41,19 +41,7 @@ open import TheoryGrammar.Decidable.Additive
 
 private variable ℓS ℓ ℓ' ℓX ℓP ℓA : Level
 
--- ==================================================================
--- 0.  IMAGE AND DOMAIN OF AN OPERATION, ONE SLOT AT A TIME.
---
---     Imgˢ o     at  resultSort o   -- `⊗ˢ o ⊤`: m is an o-composite
---     Domˢ o i   at  sortOf o i     -- x occurs in slot i of one
---
--- `⊗ˢ o ⊤` is the IMAGE, not the domain: `Covering` (surjectivity of the
--- point) is what makes it `⊤` (`covering→img`/`img→covering`), and a
--- total nullary operation already fails it.  `no-point` reads `Domˢ` one
--- SLOT at a time; that reading is complete for a unary partial operation
--- and blind at a heap, so `JointDomain` (§1 onwards) supersedes it with
--- the JOINT form and re-derives this one as a corollary.
--- ==================================================================
+-- 0. IMAGE AND DOMAIN OF AN OPERATION, ONE SLOT AT A TIME.
 
 module DomainOf {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP) where
 
@@ -63,9 +51,7 @@ module DomainOf {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ �
     ¬G-excludes; largest; toDec; contra; &-swap; ¬G-map; dec-map;
     dec-&; dec-⊕; dec-¬)
 
-  -- ================================================================
   -- The two grammars.
-  -- ================================================================
 
   -- the IMAGE of o: which results are o-composites at all.  This is
   -- literally `⊗ˢ o ⊤`, named.
@@ -84,16 +70,10 @@ module DomainOf {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ �
           → m Eq.≡ n → Fib .Split o m → Fib .Split o n
   splitEq o Eq.refl sp = sp
 
-  -- ================================================================
   -- WHAT A TOTAL POINT FORCES.
-  -- ================================================================
 
-  -- A `Fills o i` denotes a way to complete a tuple around slot `i`:
-  -- given an element for that slot, values for all the others.  Trivial
-  -- for a unary operation; for a wider one it is "pad the rest".  The
-  -- law is what makes it a completion rather than an arbitrary tuple,
-  -- and it is exactly what turns a bad ELEMENT into a bad TUPLE in
-  -- `no-point-from-joint`.
+  -- A `Fills o i` denotes a way to complete a tuple around slot `i`: given
+  -- an element for that slot, values for all the others.
   record Fills (o : σ .ops) (i : σ .arities o) : Type (ℓ-max ℓ' ℓX) where
     field
       -- the completed tuple
@@ -129,9 +109,7 @@ module DomainOf {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ �
             → Imgˢ o (P .op o m⃗)
   point→img P o m⃗ = P .split o m⃗ , λ _ → tt
 
-  -- ================================================================
   -- WHEN IS `⊗ˢ o ⊤` THE UNIT?  Exactly when o is surjective.
-  -- ================================================================
 
   Covering : (P : LaxPoint Fib) (o : σ .ops) → Type (ℓ-max ℓ' ℓX)
   Covering P o = (m : Fib .carrier (σ .resultSort o))
@@ -149,9 +127,7 @@ module DomainOf {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ �
   img→covering P hon o f m =
     Fib .parts o m (f m tt .fst) , hon o m (f m tt .fst)
 
--- ==================================================================
 -- 1.  THE JOINT READING.
--- ==================================================================
 
 module JointDomain {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP) where
 
@@ -168,18 +144,13 @@ module JointDomain {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ
               img→covering to image→surjective;
               no-point to no-point-slotwise)
 
-  -- ================================================================
   -- JOINT COMPOSABILITY.
-  -- ================================================================
 
   -- an argument tuple for o
   Tuple : (o : σ .ops) → Type (ℓ-max ℓ' ℓX)
   Tuple o = (a : σ .arities o) → Fib .carrier (σ .sortOf o a)
 
-  -- INTERNAL: "this result is a composite of exactly this tuple".  The
-  -- payload is pointwise `Eq`, i.e. a representable at each slot, which
-  -- is what makes this a connective of the calculus rather than an
-  -- equation between two functions.
+  -- INTERNAL: "this result is a composite of exactly this tuple".
   Composableᴳ : (o : σ .ops) → Tuple o
               → TheoryTy (ℓ-max ℓP (ℓ-max ℓ' ℓX)) (σ .resultSort o)
   Composableᴳ o m⃗ = ⊗ˢ o (λ a → ⌈ m⃗ a ⌉)
@@ -188,9 +159,7 @@ module JointDomain {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ
   Composable : (o : σ .ops) → Tuple o → Type (ℓ-max ℓX (ℓ-max ℓP ℓ'))
   Composable o m⃗ = Σ[ m ∈ Fib .carrier (σ .resultSort o) ] Composableᴳ o m⃗ m
 
-  -- ================================================================
   -- WHAT A TOTAL POINT FORCES -- and the contrapositive.
-  -- ================================================================
 
   -- THEOREM.  A total point composes every tuple.  Note the absence of
   -- any `Fills` hypothesis: there is no slot to pad around.
@@ -207,18 +176,14 @@ module JointDomain {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ
                  → (Composable o m⃗ → ⊥) → LaxPoint Fib → ⊥
   no-point-joint o m⃗ k P = k (point→composable P o m⃗)
 
-  -- ... in the form instances actually use: the refutation is a MAP OF
-  -- THE CALCULUS out of the tensor of representables.  (This is
-  -- `Heap/Connectives.Generic.no-tuple-point`, hoisted upstream where it
-  -- belongs and generalised in the levels.)
+  -- ... in the form instances actually use: the refutation is a MAP OF THE
+  -- CALCULUS out of the tensor of representables.
   no-point-internal : (o : σ .ops) (m⃗ : Tuple o)
                     → (Composableᴳ o m⃗ ⊢ ⊥G) → LaxPoint Fib → ⊥
   no-point-internal o m⃗ k =
     no-point-joint o m⃗ (λ c → E.rec* (k (c .fst) (c .snd)))
 
-  -- ================================================================
   -- HOW THE THREE NOTIONS RELATE.
-  -- ================================================================
 
   -- (1) JOINT ⟹ SLOTWISE, at every slot.  This is a projection: the
   -- payload at slot i IS the witness `Domˢ o i` asks for.
@@ -251,11 +216,10 @@ module JointDomain {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ
      → (Domˢ o i ⊢ ¬G ⌈ x ⌉) → LaxPoint Fib → ⊥)
   no-point-same-statement = no-point-slotwise
 
-  -- (4) THE CONVERSE OF (1) FAILS.  It cannot be proved here, so it is
+  -- (4) THE CONVERSE OF (1) FAILS. It cannot be proved here, so it is
   -- NAMED here and refuted at an instance: `Heap/Joint.no-slotwise-joint`
-  -- exhibits a tuple every slot of which is in `Domˢ` -- `Located`'s
-  -- `dom-total-L/R` -- and which does not compose.  Surjectivity is no
-  -- help either: `Located.img-total` holds at the same instance.
+  -- exhibits a tuple every slot of which is in `Domˢ` -- `Located`'s `dom-
+  -- total-L/R` -- and which does not compose.
   SlotwiseSuffices : Type (ℓ-max ℓ (ℓ-max ℓ' (ℓ-max ℓX ℓP)))
   SlotwiseSuffices = (o : σ .ops) (m⃗ : Tuple o)
                    → ((i : σ .arities o) → Domˢ o i (m⃗ i)) → Composable o m⃗
@@ -265,10 +229,8 @@ module JointDomain {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ
   point→slotwise : (P : LaxPoint Fib) → SlotwiseSuffices
   point→slotwise P o m⃗ _ = point→composable P o m⃗
 
--- ==================================================================
 -- SANITY: a TOTAL algebra composes everything, so nothing above is
 -- vacuous.  `canonical`/`canonicalPoint` are `Fibered`'s own.
--- ==================================================================
 
 canonicalComposable : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX)
                       (o : σ .ops)

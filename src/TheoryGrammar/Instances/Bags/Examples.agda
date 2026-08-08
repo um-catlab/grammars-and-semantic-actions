@@ -1,8 +1,7 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- Sorting at ℕ.  Four sorters -- quicksort and mergesort, each plain and
-   intrinsically verified -- and every one of them is a term `⊤G ⊢ Δ Bag`
-   observed by `run` inside a `passes` line.  The plain/verified split is
-   in the ALGEBRA's carrier, never in how the program is read. -}
+{- Sorting at ℕ. Six sorters -- quicksort and mergesort, each plain,
+   permutation-verified and sorted-verified -- every one a term `⊤G ⊢ Δ
+   Bag` observed by `run` inside a `passes` line. -}
 module TheoryGrammar.Instances.Bags.Examples where
 
 open import Cubical.Foundations.Prelude
@@ -37,18 +36,9 @@ open Sort   leℕ leTotalℕ leTransℕ
 open MSort  leℕ using (msortP)     -- the plain mergesort ...
 open MSortV leℕ                    -- ... and the certified one
 
--- ==================================================================
--- Every sorter below is observed the same way, and it is the only way
--- available: the program is a TERM `⊤G ⊢ Δ Bag`, and `run` appears
--- exclusively inside a `passes` line.  Naming the sorters at `Bag →
--- Bag` -- which is what these tests used to do -- externalises them in
--- a definition, and then the permutation certificate has already been
--- thrown away before anything is observed.
---
--- `quicksortC`/`mergesortV` land in `SpecG`/`Bagged`, both of which are
--- `⊕ᴰ Bag (λ out m → Perm out m)`, so reading the output bag off them
--- is the generic `tagA` and the certificate survives right up to `run`.
--- ==================================================================
+-- `quicksortC`/`mergesortV` land in `SpecG` = `Bagged`, a `⊕ᴰ` over
+-- the output bag, so reading that bag off is the generic `tagA` and the
+-- certificate survives right up to `run`.
 
 msortV : ⊤G ⊢ Δ Bag
 msortV = tagA Bag ∘g mergesortV
@@ -68,11 +58,9 @@ _ : passes (run msortV at
              ∷ [] ))
 _ = refl
 
--- ... and the PLAIN sorters, whose algebras have the constant carrier
--- `λ _ → Bag`.  Same coalgebra, same answers, no certificate -- which
--- is the measurement `qalg`/`qalgV` was written to make.  They are
--- still terms `⊤G ⊢ Δ Bag`; what they lack is in the CARRIER, not in
--- how they are observed.
+-- ... and the PLAIN sorters: same coalgebra, same answers, no
+-- certificate.  What they lack is in the CARRIER, not in how they are
+-- observed.
 _ : passes (run qsortP at
              ( []                        ↦ []
              ∷ (2 ∷ 1 ∷ [])              ↦ (1 ∷ 2 ∷ [])
@@ -86,15 +74,7 @@ _ : passes (run msortP at
              ∷ [] ))
 _ = refl
 
--- ==================================================================
--- `bagCase`, the view the sorters are built on, is itself a map out of
--- `⊤` -- a `Cover (⌈ [] ⌉ ⊕ ⊕ᴰ A …)`, i.e. a `Result` -- so it is read
--- by the same interface.  Its right branch is a `⊕ᴰ` over the element
--- pulled off, so `tagA` recovers that element.
--- ==================================================================
-
--- `NonTrivial` (from `Bags.Graded`) IS `⊕ᴰ ℕ (λ x → ⌈ x ∷ [] ⌉ ⊗' ⊤G)`,
--- and naming it that way is what lets `refute` below be stated.
+-- `bagCase` is itself a map out of `⊤`, so the same interface reads it.
 empty? : ⊤G ⊢ Δ Bool
 empty? = okA ⌈ [] ⌉ NonTrivial ∘g bagCase
 
@@ -108,24 +88,17 @@ _ = refl
 _ : passes (run someElem at ([] ↦ nothing ∷ (3 ∷ 1 ∷ []) ↦ just 3 ∷ []))
 _ = refl
 
--- ... and the `↦ false` above is not the whole content of that case.
--- `bagCase`'s error grammar is `NonTrivial`, a POSITIVE complement, so
--- the same `refl` that observes `false` hands back the decomposition --
--- `refute` is what turns the observation into the branch content, and
--- it is uniform in the error grammar (`SemanticAction`).
+-- The `↦ false` above is not the whole content of that case: the error
+-- grammar is a POSITIVE complement, so `refute` turns the same `refl`
+-- into the decomposition itself.
 notEmpty : (m : Bag) → run empty? m ≡ false → NonTrivial m
 notEmpty = refute ⌈ [] ⌉ NonTrivial bagCase
 
 nonTrivial-3 : NonTrivial (3 ∷ [])
 nonTrivial-3 = notEmpty (3 ∷ []) refl
 
--- ==================================================================
--- ... and the FULLY intrinsic sorters: the output is a sorted
--- permutation of the input by TYPE, so these `passes` checks are
--- confirming that it computes, not that it is correct.  Both are read
--- by the same generic `tagA`, since `SortedOf` is a `⊕ᴰ` over the
--- output bag just as `SpecG` was.
--- ==================================================================
+-- The FULLY intrinsic sorters: sorted permutation by TYPE, so these
+-- `passes` checks confirm that it computes, not that it is correct.
 
 open Sortedness leℕ leTotalℕ leTransℕ
 
@@ -143,14 +116,9 @@ _ : passes (run msortS at
       ([] ↦ [] ∷ (5 ∷ 3 ∷ 4 ∷ 1 ∷ 2 ∷ []) ↦ (1 ∷ 2 ∷ 3 ∷ 4 ∷ 5 ∷ []) ∷ []))
 _ = refl
 
--- ==================================================================
--- AUTOMATA over a commutative theory.  Same generic `Automaton` /
--- `Scanner` / `runAut` as the string instance -- only the description
--- and the decomposition axiom differ.
---
--- Both algebras below are commutative, which is what makes the answer
--- independent of the order `bagCase` happens to pull elements out in.
--- ==================================================================
+-- AUTOMATA: same generic `Automaton`/`Scanner`/`runAut` as the string
+-- instance.  Both algebras below are commutative, which is what makes
+-- the answer independent of the order `bagCase` pulls elements out in.
 
 module Sum  = Fold ℕ 0 _+_
 module Size = Fold ℕ 0 (λ _ n → suc n)

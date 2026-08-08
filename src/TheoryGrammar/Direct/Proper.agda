@@ -1,54 +1,7 @@
-{-
-  IS `Proper` THE NON-IDENTITY MAPS?
-
-  In a direct category the dichotomy is forced: a map either is the
-  identity or is not, and `Direct/StrictDownset.agda`'s sieve `↡c`
-  contains exactly the maps that strictly raise degree.  `↡-proper` says
-  the identity is never in ↡; `Reflecting` -- an EXTRA hypothesis there,
-  not a consequence -- says the converse, that every non-identity is in
-  ↡, i.e. that ↡ is the maximal proper sieve.
-
-  `Grading` does not have that dichotomy.  `Proper` is a field: a chosen
-  family of types, constrained only by `deg<`.  This file settles what
-  the relationship is, in both directions.
-
-  ------------------------------------------------------------------
-  THEOREM 1 (`proper→≢`, in `Direct/Divisibility.agda`).  Proper implies
-  non-identity, always and unconditionally.  The proof is one line and
-  goes entirely through the degree: `deg<` gives `deg n < deg m`, and if
-  `n ≡ m` then `deg n ≡ deg m`, contradicting irreflexivity of `<` on ℕ.
-  So `Proper ⊆ non-identity` is not a design choice, it is forced -- and
-  it is the exact analogue of `↡-proper`.
-
-  THEOREM 2 (`Proper-undetermined`).  The converse FAILS, and fails as
-  badly as possible: `Proper` is not a function of the promodel.  ONE
-  promodel here carries TWO gradings, `full` and `triv`, that disagree on
-  the very same splitting.  So `Grading` is a PROPER generalisation of
-  "direct category with Proper = non-identity": it is
-
-      a direct structure  +  a chosen sub-relation of the non-identities
-                             on which the degree is certified to drop,
-
-  and the maximal choice is a property of the grading -- called
-  `Saturated` below -- not part of the definition.  This is exactly ccl's
-  `Reflecting`, restated where `Grading` can see it.
-
-  THEOREM 3 (`no-saturated`).  And `Saturated` is not merely unrequired,
-  it is sometimes UNACHIEVABLE.  The two-element promodel whose only
-  operation is negation has a non-identity slot over every element and
-  therefore -- by the `deg≤`-antisymmetry argument of
-  `Instances/Group/NoGrading.agda`, in miniature -- a constant degree, so
-  NO grading of it is saturated.  Demanding `Proper = non-identity` in
-  the definition would have made `Grading` uninhabited there, rather than
-  degenerately inhabited; degeneracy is the better failure mode, because
-  it keeps the rigidity theorem statable.
-
-  ------------------------------------------------------------------
-  VERDICT.  `Proper` is strictly more general than "non-identity".  The
-  inclusion `Proper ⊆ non-identity` always holds; the reverse is an
-  optional property (`Saturated`) which is (i) not implied, (ii) not
-  always satisfiable, and (iii) exactly ccl's `Reflecting`.
--}
+{- IS `Proper` THE NON-IDENTITY MAPS? In a direct category the dichotomy is
+   forced: a map either is the identity or is not, and
+   `Direct/StrictDownset.agda`'s sieve `↡c` contains exactly the maps that
+   strictly raise degree. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Direct.Proper where
 
@@ -69,13 +22,7 @@ open import TheoryGrammar.Direct.Divisibility
 
 private variable ℓS ℓ ℓ' ℓX ℓP : Level
 
--- ==================================================================
--- PART A.  SATURATION -- "Proper IS non-identity".
---
--- Note the shape: this is a property OF A GRADING, mentioning only the
--- promodel and `Proper`.  Together with `Div.Graded.proper→≢` it pins
--- `Proper` to the non-identity slots up to logical equivalence.
--- ==================================================================
+-- PART A. SATURATION -- "Proper IS non-identity".
 
 module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP) where
 
@@ -88,14 +35,7 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP
     → ¬ (Path Elt (σ .sortOf o a , Fib .parts o m sp a) (σ .resultSort o , m))
     → G .Proper o m sp a
 
--- ==================================================================
--- PART B.  THE PROMODEL THAT SEPARATES THEM.
---
--- One sort, one UNARY operation, carrier ℕ, and a splitting of `m` is a
--- proof that `m` is a successor.  So `_◃₁_` is the predecessor relation:
--- the smallest promodel with a non-identity slot.  (Unary is deliberate:
--- nothing about the phenomenon needs a tensor.)
--- ==================================================================
+-- PART B. THE `Fibered` THAT SEPARATES THEM.
 
 predSig : SortedSig Unit ℓ-zero ℓ-zero
 predSig .ops          = Unit
@@ -144,15 +84,8 @@ step01-proper = Full.pslot tt 1 (0 , refl) tt tt
 triv-no-proper : {n m : D.Elt} → ¬ (n Triv.◃ᵖ m)
 triv-no-proper (Triv.pslot o m sp a ())
 
--- ==================================================================
--- THEOREM 2.  `Proper` is not determined by the promodel: two gradings
--- of `predFib` disagree on the very same slot.
---
--- Read categorically: `Div predFib` is a fixed category, `full` and
--- `triv` are two direct structures on it, and the SIEVES they cut out
--- differ -- `full`'s ↡ is everything below, `triv`'s is empty.  A direct
--- category has one ↡; a graded promodel chooses one.
--- ==================================================================
+-- THEOREM 2. `Proper` is not determined by the `Fibered`: two gradings of
+-- `predFib` disagree on the very same slot.
 
 Proper-undetermined :
   ((tt , 0) Full.◃ᵖ (tt , 1)) × (¬ ((tt , 0) Triv.◃ᵖ (tt , 1)))
@@ -165,15 +98,7 @@ full-saturated o m sp a ne = tt
 triv-not-saturated : ¬ (Saturated predFib triv)
 triv-not-saturated sat = E.rec* (sat tt 1 (0 , refl) tt step01-≢)
 
--- ==================================================================
--- PART C.  SATURATION IS NOT ALWAYS ACHIEVABLE.
---
--- One sort, one unary operation, carrier `Bool`, and the unique
--- splitting of `m` has `not m` in its slot.  Every element is therefore
--- a non-identity slot of every element -- the two-object version of
--- `Group/NoGrading`'s `GroupLike` -- and the `deg≤`-antisymmetry
--- argument there collapses the degree, so `deg<` becomes unsatisfiable.
--- ==================================================================
+-- PART C. SATURATION IS NOT ALWAYS ACHIEVABLE.
 
 notFib : Fibered predSig ℓ-zero ℓ-zero
 notFib .carrier _      = Bool

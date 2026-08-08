@@ -10,7 +10,6 @@
 
   Three things change, and each of them is forced.
 
-  ------------------------------------------------------------------
   (1)  THE `#` BECOMES A TAG, BECAUSE THERE IS NO POSITION.
 
   `Quine.Base`'s `R → H E` says the data comes AFTER the hash.  At bags
@@ -35,7 +34,6 @@
   the text does not grow at all.  That is why the shortest bag quine is
   TWO elements against the string quine's four.
 
-  ------------------------------------------------------------------
   (2)  THE INTERPRETER MUST BE A COMMUTATIVE ALGEBRA, AND THAT COLLAPSES
        "THE DATA" TO A PAIR OF NUMBERS.
 
@@ -51,7 +49,6 @@
   interpreter's "decoded data" is a pair of COUNTS, and there is no
   choice about this.  Everything else follows.
 
-  ------------------------------------------------------------------
   (3)  ... SO THE QUINE EQUATION BECOMES ARITHMETIC.
 
   A source over this 4-letter alphabet is, as a bag, exactly its count
@@ -82,7 +79,6 @@
   over strings.  What kills opcode 2 instead is arithmetic: it emits the
   quote twice, and `a + a ≡ a` forces `a ≡ 0`.
 
-  ------------------------------------------------------------------
   IS THIS EASIER OR HARDER?  Easier, and the reason is a real loss.
 
   A string of length `n` over `Σ` carries `n log|Σ|` bits; a bag over
@@ -101,7 +97,6 @@
   program, and the 4-element quine is 24 texts.  The interpreter prints
   the class's canonical representative from any member of it.
 
-  ------------------------------------------------------------------
   THE GRAMMAR, in commutative Chomsky normal form.  Every binary rule
   is `⊗ˢ appop`, which at bags is a PARTITION with both parts nonempty.
 
@@ -133,11 +128,9 @@ import Cubical.Data.Equality as Eq
 open import TheoryGrammar.Enumerable
 open import TheoryGrammar.SemanticAction
 
--- ==================================================================
 -- §0  THE ALPHABET.  Four letters, and every one of them says which
 --     half of the program it belongs to.  That is the whole of what
 --     replaces `Quine.Base`'s `#`.
--- ==================================================================
 
 data Chr : Type₀ where
   k0 k1 q0 q1 : Chr
@@ -157,9 +150,7 @@ Quo? q1 = Unit
 
 open import TheoryGrammar.Quine.BagCYK Chr public
 
--- ==================================================================
 -- §1  THE GRAMMAR
--- ==================================================================
 
 data NT : Type₀ where ntS ntK ntD ntKb ntDb : NT
 
@@ -235,10 +226,8 @@ allComplete ntDb (inl (k0 , ()))
 allComplete ntDb (inl (k1 , ()))
 allComplete ntDb (inr (_ , _ , ()))
 
--- ==================================================================
 -- §2  THE ONE EXTERNAL INPUT: decidability of the alphabet.  Exactly
 --     `Quine.Base`'s.  It enters the calculus once, as `litProbe`.
--- ==================================================================
 
 decEqC : (a b : Chr) → (a Eq.≡ b) ⊎ No (a Eq.≡ b)
 decEqC k0 k0 = inl Eq.refl
@@ -274,24 +263,16 @@ litProbe c w _ = decEqB w (c ∷ [])
 
 open Decide allRules allComplete litProbe public
 
--- ==================================================================
--- §3  THE SEPARATOR IS FREE, AS A TERM.
---
--- `Quine.Base` marks the boundary between code and data by WHERE the
--- `#` sits; there is nothing in that theory saying the two halves may
--- be exchanged.  Here that statement is `⊗-comm`, and it costs one
--- line -- which is the same fact `Instances.Bags.JSON` records for key
--- order.  Everything about the encoding below is downstream of it.
--- ==================================================================
+-- §3 THE SEPARATOR IS FREE, AS A TERM. `Quine.Base` marks the boundary
+-- between code and data by WHERE the `#` sits; there is nothing in that
+-- theory saying the two halves may be exchanged.
 
 sepFree : (Deriv ntK ⊗' Deriv ntD) ⊢ (Deriv ntD ⊗' Deriv ntK)
 sepFree = ⊗-comm
 
--- ==================================================================
 -- §4  THE VALUES.  The free commutative monoid on the bits (`Cnt`) and
 --     on the alphabet (`Multi`).  These are the only value types a
 --     commutative theory allows -- see the header, (2).
--- ==================================================================
 
 Cnt : Type₀
 Cnt = ℕ × ℕ                      -- (# of 0-bits , # of 1-bits)
@@ -299,10 +280,9 @@ Cnt = ℕ × ℕ                      -- (# of 0-bits , # of 1-bits)
 addC : Cnt → Cnt → Cnt
 addC (a , b) (c , d) = (a + c) , (b + d)
 
--- THE OBLIGATION `⊗-comm` IMPOSES.  A parse of a bag is a partition and
--- the grammar is ambiguous, so the interpreter's answer is well defined
--- only because this holds.  `Quine.Base`'s decoder (`E → B O ↦ b ∷ d`)
--- fails it, which is exactly why it cannot be ported.
+-- THE OBLIGATION `⊗-comm` IMPOSES. A parse of a bag is a partition and the
+-- grammar is ambiguous, so the interpreter's answer is well defined only
+-- because this holds.
 algebra-comm : (x y : Cnt) → addC x y ≡ addC y x
 algebra-comm (a , b) (c , d) i = (+-comm a c i) , (+-comm b d i)
 
@@ -316,10 +296,7 @@ _⊎M_ : Multi → Multi → Multi
 infixr 5 _⊎M_
 
 -- `Multi` is the free COMMUTATIVE monoid on the alphabet, and these two
--- are why.  `⊎M-comm` is what `opcode-irrelevant` (§5) rests on, and
--- `⊎M-assoc`/`⊎M-swap` are what makes the printer's reading of an
--- interleaving independent of the order it happens to unpick it in
--- (`Quine.BagRoundTrip`).
+-- are why.
 ⊎M-comm : (m n : Multi) → m ⊎M n ≡ n ⊎M m
 ⊎M-comm (a , b , c , d) (a' , b' , c' , d') i =
   +-comm a a' i , +-comm b b' i , +-comm c c' i , +-comm d d' i
@@ -357,14 +334,8 @@ rep (suc n) c = c ∷ rep n c
 canon : Multi → Bag
 canon (a , b , c , d) = rep a k0 ++ rep b k1 ++ rep c q0 ++ rep d q1
 
--- ==================================================================
--- §5  QUOTING, AND THE INSTRUCTION SET.
---
--- `Quine.Base`'s `enc c = c c` doubles the text.  Here quoting is
--- RETAGGING: `codeM d` prints the bits `d` as CODE letters, `quoteM d`
--- prints them as DATA letters, and neither changes the size.  That one
--- substitution is what makes the bag quine half the length.
--- ==================================================================
+-- §5 QUOTING, AND THE INSTRUCTION SET. `Quine.Base`'s `enc c = c c`
+-- doubles the text.
 
 codeM : Cnt → Multi
 codeM (a , b) = a , b , 0 , 0
@@ -372,34 +343,25 @@ codeM (a , b) = a , b , 0 , 0
 quoteM : Cnt → Multi
 quoteM (a , b) = 0 , 0 , a , b
 
--- THE OPCODE.  A commutative theory has no "first bit of the code";
--- the only reading of a code part is its COUNT, so the opcode is the
--- number of 1-bits in the code, and there are as many instructions as
--- there are numbers.  Three suffice:
---
---     0     print the data as code, then quote it
---     1     quote the data, then print it as code   -- the SAME map
---     2+    print it as code and quote it TWICE
+-- THE OPCODE. A commutative theory has no "first bit of the code"; the
+-- only reading of a code part is its COUNT, so the opcode is the number of
+-- 1-bits in the code, and there are as many instructions as there are
+-- numbers.
 emit : ℕ → Cnt → Multi
 emit zero             d = codeM  d ⊎M quoteM d
 emit (suc zero)       d = quoteM d ⊎M codeM  d
 emit (suc (suc _))    d = codeM  d ⊎M quoteM d ⊎M quoteM d
 
--- THE PUNCHLINE, AS A THEOREM.  `Quine.Base`'s two opcodes are the two
+-- THE PUNCHLINE, AS A THEOREM. `Quine.Base`'s two opcodes are the two
 -- ORDERS of the same two pieces, and over strings they are different
--- programs -- one has a quine family and the other has none.  Over bags
--- they are one program.  This is `⊗-comm` at the level of values.
+-- programs -- one has a quine family and the other has none.
 opcode-irrelevant : (d : Cnt) → emit 0 d ≡ emit 1 d
 opcode-irrelevant (a , b) i =
   (+-zero a i) , (+-zero b i) , (sym (+-zero a) i) , (sym (+-zero b) i)
 
--- ==================================================================
--- §6  THE QUINE EQUATION, SOLVED.
---
--- A source with code counts `(a' , b')` and data counts `(a , b)` IS
--- the bag `(a' , b' , a , b)`, and it prints `emit b' (a , b)`.  So
--- being a quine is this, and nothing else.
--- ==================================================================
+-- §6 THE QUINE EQUATION, SOLVED. A source with code counts `(a' , b')` and
+-- data counts `(a , b)` IS the bag `(a' , b' , a , b)`, and it prints
+-- `emit b' (a , b)`.
 
 QuineEq : ℕ → ℕ → ℕ → ℕ → Type₀
 QuineEq a' b' a b = emit b' (a , b) ≡ (a' , b' , a , b)
@@ -415,10 +377,9 @@ quine-0 a i = (+-zero a i) , 0 , a , 0
 quine-1 : (a : ℕ) → QuineEq a 1 a 1
 quine-1 a i = a , 1 , (+-zero a i) , 1
 
--- OPCODE ≥ 2: none.  And the argument is ARITHMETIC -- `a + a ≡ a`
--- forces `a ≡ 0` -- where the string theory's argument at its dead
--- opcode was positional ("the output starts with a doubled letter").
--- That substitution is the whole difference between the two theories.
+-- OPCODE ≥ 2: none. And the argument is ARITHMETIC -- `a + a ≡ a` forces
+-- `a ≡ 0` -- where the string theory's argument at its dead opcode was
+-- positional ("the output starts with a doubled letter").
 no-quine-2+ : (n a' a b : ℕ) → QuineEq a' (suc (suc n)) a b → ⊥
 no-quine-2+ n a' a b p = znots (sym b≡0 ∙ sym (+-zero b) ∙ opc)
   where
@@ -431,19 +392,7 @@ no-quine-2+ n a' a b p = znots (sym b≡0 ∙ sym (+-zero b) ∙ opc)
     b≡0 : b ≡ 0
     b≡0 = inj-m+ (dbl ∙ sym (+-zero b))
 
--- ==================================================================
--- §7  THE INTERPRETER, as a semantic action.  One meaning per
---     nonterminal, one metalanguage combination per production.
---
---         Kb , Db  ↦ one letter's bit-count
---         K        ↦ the code's bit-counts       (the opcode lives here)
---         D        ↦ the DECODED data's bit-counts
---         S        ↦ THE OUTPUT
---
---     Every combination is `addC`, which is commutative -- which is
---     what makes the answer independent of the parse tree the ambiguous
---     grammar happens to hand back.
--- ==================================================================
+-- §7 THE INTERPRETER, as a semantic action.
 
 module AI = ActInd bagFib ℓ-zero NT (λ _ → tt)
 
@@ -519,14 +468,8 @@ root (a' , b') d = emit b' d
 
 open Interp Multi (0 , 0 , 0 , 0) root public
 
--- ==================================================================
--- §8  READING THE OUTPUT BACK AS A TEXT.
---
--- `interp ntS` produces the output MULTISET, which is the honest
--- answer.  `canon` picks the class's canonical text so that a test can
--- be written with literals; it is applied by `mapA`, so the pipeline
--- never leaves the calculus.
--- ==================================================================
+-- §8 READING THE OUTPUT BACK AS A TEXT. `interp ntS` produces the output
+-- MULTISET, which is the honest answer.
 
 outBagD : ⊤G ⊢ Result (¬G Deriv ntS) (Δ Bag)
 outBagD = mapR (¬G Deriv ntS) (Δ Bag) (mapA canon (interp ntS)) ∘g derives? ntS

@@ -1,25 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- The star, generic in a monoid promodel.
-
-   `Strings/KleeneStar` and `Bags/Automata` hold line-for-line the same
-   `starSlot`/`starAlt`/`starF` and the same guardedness proof, differing
-   only in the body grammar.  Neither is about its instance: every line
-   mentions `nilop`, `appop` and the grading, which is exactly what a
-   promodel of `monoidSig` supplies.  So it lives here once.
-
-   NOTE WHAT IS AND IS NOT ASSUMED.  This layer needs the SIGNATURE of
-   monoids and a grading -- nothing else.  It does NOT need the theory
-   to be ordered, and it does not need equidivisibility, which is why
-   BAGS get a Kleene star out of it as well as strings.  Those two
-   hypotheses buy the things that genuinely need a left -- the
-   derivative, First/FollowLast, leftmost-longest -- and none of them
-   appear below.
-
-   The one hypothesis is `ProperBody`: the star's body must be a proper
-   resource.  That is the generic form of "non-nullable", and it is
-   exactly the condition `Strings/KleeneStar` already documented as the
-   fence around `(ε)*`.
--}
+{- The star, generic in a monoid `Fibered`. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Theories.MonoidStar where
@@ -33,6 +13,7 @@ open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.Inductive
 open import TheoryGrammar.Graded
+open import TheoryGrammar.RulesFib
 open import TheoryGrammar.Theories.Monoid
 
 -- Levels are pinned at ℓ-zero: that is what every monoid instance in
@@ -41,12 +22,15 @@ open import TheoryGrammar.Theories.Monoid
 module MonStar (GS : GradedFib monoidSig ℓ-zero ℓ-zero) where
 
   open Guard GS ℓ-zero Unit (λ _ → tt) public
-  open FibNotation (GS .fib) public
+  -- `RulesF` rather than bare `FibNotation`: it re-exports the same
+  -- connectives PLUS the combinators (`⊕ᴰ-I`, `⊗ˢ-map`, `liftg`, `idg`,
+  -- `_∘g_`), which is what lets `nil*`/`cons*` below be terms.
+  open RulesF (GS .fib) public
 
   Gr : Type₁
   Gr = TheoryTy ℓ-zero tt
 
-  -- the unit and the product, generic in the promodel
+  -- the unit and the product, generic in the `Fibered`
   ε' : Gr
   ε' = ⊗ˢ nilop (λ ())
 
@@ -55,9 +39,7 @@ module MonStar (GS : GradedFib monoidSig ℓ-zero ℓ-zero) where
 
   infixr 20 _⊗'_
 
-  -- ================================================================
   -- The star description.
-  -- ================================================================
 
   starSlot : Gr → Bool → Functor tt
   starSlot A true  = ⌜ A ⌝
@@ -70,10 +52,8 @@ module MonStar (GS : GradedFib monoidSig ℓ-zero ℓ-zero) where
   starF : Gr → Unit → Functor tt
   starF A _ = ⊕e Bool (starAlt A)
 
-  -- THE HYPOTHESIS.  "The body is a proper resource" -- generically what
-  -- non-nullability says.  If `A` accepts the unit then the splitting
-  -- `(ε , w)` puts the recursive occurrence back at `w` and the star has
-  -- infinitely many parses at every index; this is the fence.
+  -- THE HYPOTHESIS. "The body is a proper resource" -- generically what
+  -- non-nullability says.
   ProperBody : Gr → Type₀
   ProperBody A = (m : GS .fib .carrier tt) (sp : GS .fib .Split appop m)
                → A (GS .fib .parts appop m sp true)
@@ -95,19 +75,54 @@ module MonStar (GS : GradedFib monoidSig ℓ-zero ℓ-zero) where
       alt true  = <⌜⌝ ε'
       alt false = ⊗-guard appop (starSlot A) go
 
-  -- ================================================================
   -- ... and the star itself, with its intro and elim rules.
-  -- ================================================================
 
   KL* : Gr → Gr
   KL* A w = μ (starF A) (tt , w)
 
   module _ {A : Gr} where
 
+    -- THE FUNCTOR, SPELLED IN THE CONNECTIVES, AT AN ARBITRARY MOTIVE. ⟦
+    -- starF A ⟧ M ≅ ε' ⊕ (A ⊗' M) Both directions are composites:
+    -- `⊕e`/`⊗e`/`⌜⌝` ARE `⊕ᴰ`/`⊗ˢ`/ `Liftg` definitionally (`Inductive`'s
+    -- `⟦_⟧c`), so the only content is picking the alternative and moving
+    -- the constant slots across the `Lift`.
+
+    module _ (M : Gr) where
+
+      StarBody : Bool → Gr
+      StarBody b = ⟦ starAlt A b ⟧ᴳ (λ _ → M)
+
+      StarSlot : Bool → Gr
+      StarSlot a = ⟦ starSlot A a ⟧ᴳ (λ _ → M)
+
+      starOut : ⟦ starF A tt ⟧ᴳ (λ _ → M) ⊢ (ε' ⊕ (A ⊗' M))
+      starOut =
+        ⊕ᴰ-E {A = StarBody}
+          (λ { true  → ⊕-I₁ ∘g lowerg
+             ; false → ⊕-I₂
+                       ∘g ⊗ˢ-map appop {A = StarSlot}
+                                       {B = λ b → if b then A else M}
+                                  (λ { true → lowerg ; false → idg }) })
+
+      starIn : (ε' ⊕ (A ⊗' M)) ⊢ ⟦ starF A tt ⟧ᴳ (λ _ → M)
+      starIn =
+        ⊕-E (⊕ᴰ-I Bool {A = StarBody} true ∘g liftg)
+            (⊕ᴰ-I Bool {A = StarBody} false
+             ∘g ⊗ˢ-map appop {A = λ b → if b then A else M}
+                             {B = StarSlot}
+                        (λ { true → liftg ; false → idg }))
+
+    -- ... AND THE FIXED POINT'S FOUR MAPS, AS COROLLARIES.
+
+    roll* : (ε' ⊕ (A ⊗' KL* A)) ⊢ KL* A
+    roll* = rollg (starF A) tt ∘g starIn (KL* A)
+
+    unroll* : KL* A ⊢ (ε' ⊕ (A ⊗' KL* A))
+    unroll* = starOut (KL* A) ∘g unrollg (starF A) tt
+
     nil* : ε' ⊢ KL* A
-    nil* w e = sup (true , lift e) λ ()
+    nil* = roll* ∘g ⊕-I₁
 
     cons* : (A ⊗' KL* A) ⊢ KL* A
-    cons* w (sp , h) =
-      sup (false , sp , λ { true → lift (h true) ; false → tt* })
-          λ { (true , ()) ; (false , _) → h false }
+    cons* = roll* ∘g ⊕-I₂

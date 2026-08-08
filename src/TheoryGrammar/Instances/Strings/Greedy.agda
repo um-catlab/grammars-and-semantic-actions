@@ -1,20 +1,7 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- Leftmost-greedy parses.
-
-   `Greedy A` is "a parse of A over some prefix `w`, together with a
-   proof that no NONEMPTY extension of `w` also has an A-parse" -- the
-   longest match.  It stays a string instance, and correctly so: there
-   is no "leftmost" for bags, which is the same reason `Greedy` sits in
-   PORTING.md's string-specific bucket.
-
-   What ports for free is the residual it needs.  "A-parse of `w ++ v`,
-   as a grammar in `v`" is exactly the DERIVATIVE with the left slot
-   pinned to `w` rather than to a single character -- so `Derivʷ` below
-   is `TheoryGrammar.Derivative`'s `ActOf` at a different rest-tuple,
-   and `actʷ-β` is `refl`.  Nothing new is defined; the `Assembly`
-   parameter is what makes one machine serve both.
-
-   Every term here is a `⊢`-combinator composite. -}
+{- Leftmost-greedy parses. `Greedy A` is "a parse of A over some prefix
+   `w`, together with a proof that no NONEMPTY extension of `w` also has an
+   A-parse" -- the longest match. -}
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Sum using (_⊎_; inl; inr)
 import Cubical.Data.Equality as Eq
@@ -35,25 +22,19 @@ open import TheoryGrammar.Derivative
 
 open import TheoryGrammar.Instances.Strings.SeqUnambig Char decChar public
 
--- ==================================================================
 -- The derivative at a whole prefix.  Same `Assembly`, different
 -- rest-tuple: `Derivᶜ c` pins the left slot to `c ∷ []`, this pins it
 -- to `w`.
--- ==================================================================
 module Derivʷ (w : String) where
   open ActOf strFib strPoint appop false consAs (λ _ → w) public
 
 actʷ-β : (w v : String) → Derivʷ.act w v ≡ (w ++ v)
 actʷ-β w v = refl
 
--- ==================================================================
 -- Greedy parses.
--- ==================================================================
 
 -- (the grammar is `G`, not `A`, only so the pinned implicits below --
--- `⊗ˢ-map`'s own `A`/`B` -- read unambiguously.  Grammar-valued
--- implicits are never inferable here: `⊗'` hides the arity family
--- behind an `if`, so both ends must be given.)
+-- `⊗ˢ-map`'s own `A`/`B` -- read unambiguously.
 module _ (G : Gr) where
 
   -- "G over w, and nothing longer": the second factor refutes every

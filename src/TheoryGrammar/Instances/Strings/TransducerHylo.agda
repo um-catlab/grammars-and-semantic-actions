@@ -1,20 +1,6 @@
 {-# OPTIONS -WnoUnsupportedIndexedMatch #-}
-{-
-  A GUARDED PROGRAM OVER THE GLUE.
-
-  `TransducerGuard` proved the side condition; this runs the recursion.
-  `transCase` is the decomposition axiom for aligned pairs -- `charCase`
-  for a two-tape carrier -- and `complete` is `hyloC` at it, giving the
-  converse of `TransducerMu.μ→Trans`: the `Eq`-predicate implies the
-  inductive grammar, with the termination certificate being
-  `transGuarded` and no recursion written at the use site.
-
-  This is the last place a glued carrier could have got in the way:
-  `löb` descends the degree rather than the structure, so the payload
-  the splittings carry has to survive well-founded descent, not just
-  pattern matching.  The `refl` test at the end is that it does.
-  PRIMITIVE: `mapLen`, `transCase`.
--}
+{- A GUARDED PROGRAM OVER THE GLUE. `TransducerGuard` proved the side
+   condition; this runs the recursion. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Strings.TransducerHylo
@@ -47,14 +33,7 @@ mapLen (c ∷ u) = Eq.ap suc (mapLen u)
 TransFam : Ix → Type ℓ-zero
 TransFam i = Trans (i .snd)
 
--- ==================================================================
--- THE DECOMPOSITION AXIOM.
---
--- PRIMITIVE (phase 1).  Take an aligned transduced pair apart one
--- letter: the `Eq.refl` matches are on the TRANSDUCTION witness, which
--- determines the output tape, so the output splitting is not chosen --
--- it is read off.
--- ==================================================================
+-- THE DECOMPOSITION AXIOM. PRIMITIVE (phase 1).
 
 transCase : CoalgC TransF TransFam
 transCase _ ([]    , v , e) Eq.refl = true  , (tt , tt , λ ()) , λ ()
@@ -84,17 +63,13 @@ transCase _ (c ∷ w , v , e) Eq.refl =
 μAlgC : AlgC TransF (μ TransF)
 μAlgC x m t = μ-alg TransF x m (fromC (TransF x) m t)
 
--- ==================================================================
 -- THE PROGRAM.  No recursion at the use site; `transGuarded` is the
 -- termination certificate.
--- ==================================================================
 
 complete : (g : Aligned) → Trans g → TransM (tt , g)
 complete g t = hyloC {F = TransF} (λ _ → transGuarded) transCase μAlgC (tt , g) t
 
--- ==================================================================
 -- ... AND IT EVALUATES.
--- ==================================================================
 
 module _ (x : In) where
 

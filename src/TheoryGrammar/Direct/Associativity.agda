@@ -10,7 +10,6 @@
   category on its reflexive-transitive CLOSURE, and this file says
   exactly what that closure costs and what would remove it.
 
-  ------------------------------------------------------------------
   THE ANSWER IN ONE LINE.
 
       NOTHING is needed for the direct-category theorem.
@@ -24,7 +23,6 @@
   `≼` collapse back to `◃₁` (`collapse` below), i.e. it makes "factor"
   and "immediate factor" the same relation.
 
-  ------------------------------------------------------------------
   WHY IT IS FALSE.
 
   Take strings with binary concatenation.  `n ◃₁ m` says "n is a prefix
@@ -38,12 +36,11 @@
   these two relations, and `Later/Ordered.agda` is generic in the order
   precisely so that both fit.
 
-  `no-flat` below formalises the failure on the smallest promodel that
+  `no-flat` below formalises the failure on the smallest `Fibered` that
   exhibits it -- ℕ with the predecessor splitting, where `◃₁` is "is the
   predecessor of" and the closure is `<`.  One counterexample suffices
   and this one needs no alphabet.
 
-  ------------------------------------------------------------------
   WHAT WOULD IMPLY IT: `SlotComp`.
 
   Transitivity of `◃₁` says: a slot of a slot is a slot.  Unfolded, given
@@ -62,7 +59,6 @@
   splittings.  `SlotComp` below is that data, stated at the level
   `Fibered` can see it, and `flatten` proves `SlotComp → Flat`.
 
-  ------------------------------------------------------------------
   WHY `Equations.agda` DOES NOT SUPPLY IT.  Three gaps, all real.
 
   1.  WRONG LAYER.  `Equations.agda` is stated for a `Model` -- it needs
@@ -87,7 +83,6 @@
       DATA (which composite splitting?) and an equation is a proposition
       about the operation.  `SlotComp` is the data; nothing weaker is.
 
-  ------------------------------------------------------------------
   RECOMMENDATION.  Do not add associativity to `Fibered`.  The closure
   costs one `≤-trans` and the direct-category theorem is unconditional;
   adding `SlotComp` would exclude strings, which is the wrong trade.  If
@@ -115,9 +110,7 @@ open import TheoryGrammar.Direct.Proper using (predSig ; predFib)
 
 private variable ℓS ℓ ℓ' ℓX ℓP : Level
 
--- ==================================================================
 -- PART A.  `Flat`, and what it buys.
--- ==================================================================
 
 module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP) where
 
@@ -136,14 +129,7 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP
   ... | inl e = inr (subst (λ z → _ ◃₁ z) e s)
   ... | inr t = inr (fl s t)
 
--- ==================================================================
--- PART B.  `SlotComp` -- the data that implies `Flat`.
---
--- Stated single-sorted, so the sort side conditions (`sortOf o a` must
--- be `resultSort o'`) are discharged by `Unit`'s η rather than by a
--- pile of coercions.  Nothing about the phenomenon is single-sorted;
--- the multi-sorted statement is the same with `Eq.≡` guards on sorts.
--- ==================================================================
+-- PART B. `SlotComp` -- the data that implies `Flat`.
 
 module _ {σ : SortedSig Unit ℓ ℓ'} (Fib : Fibered σ ℓX ℓP) where
 
@@ -196,14 +182,8 @@ module _ {σ : SortedSig Unit ℓ ℓ'} (Fib : Fibered σ ℓX ℓP) where
   flatten : SlotComp → Flat Fib
   flatten SC s t = ◃ᶜ→◃₁ (flattenᶜ SC (◃₁→◃ᶜ s) (◃₁→◃ᶜ t))
 
--- ==================================================================
--- PART C.  `Flat` IS FALSE.
---
--- ℕ with the predecessor splitting (`Direct/Proper.agda`'s `predFib`).
--- `0 ◃₁ 1` and `1 ◃₁ 2` but not `0 ◃₁ 2`, because `2` is not the
--- successor of `0`.  The same shape as prefix-then-suffix on strings,
--- with the alphabet removed.
--- ==================================================================
+-- PART C. `Flat` IS FALSE. ℕ with the predecessor splitting
+-- (`Direct/Proper.agda`'s `predFib`).
 
 module P = Div predFib
 

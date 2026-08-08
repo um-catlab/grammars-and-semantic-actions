@@ -1,107 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  DE BRUIJN TERMS AS A PROMODEL -- the theory the elaborator lands IN.
-
-  `Lambda/DeBruijn.agda` folds a well-scoped named term into `DB n`, a
-  bare metalanguage family.  After that fold you are OUTSIDE the
-  calculus: `DB n` carries no `Split`, so nothing downstream may use
-  `⊗ˢ`, `⌈⌉`, `μ`, `hyloC` or `⊸ᶠ` on it, and every later pass degenerates
-  into an Agda function with its own hand-written correctness proof.
-  That is the leak this file closes.  The cure is not to change the fold
-  but to give its CODOMAIN a promodel structure OVER THE SAME SIGNATURE
-  `λSig`, so that elaboration becomes a `Reindex λFib dbFib`
-  (`Scope.agda`) instead of an exit.
-
-  --------------------------------------------------------------------
-  WHY THE CARRIER IS SCOPE-INDEXED, and not raw de Bruijn trees.
-
-  Two carriers present themselves:
-
-      untyped   carrier tm = DB           (dvar : ℕ    → DB)
-      scoped    carrier tm = Σ[n] DBTm n  (dvar : Fin n → DBTm n)
-
-  Take the second.  The reason is exactly the thing this exercise is
-  meant to measure.  Over `λFib`, well-scopedness is a GRAMMAR:
-  `Wellscoped` builds `In Γ : NmG` as a ⊕-chain of representables, and
-  `Scoped Γ` as a `μ` with ONE NONTERMINAL PER SCOPE (`X = Scope`).
-  Over the scoped de Bruijn carrier
-
-      In  ≡  ⊤G                                          (definitionally)
-
-  because a point of `carrier nm = Σ[n] Fin n` carries the scope it lives
-  in, so "this variable is in scope" has no content left; and the
-  nonterminal index collapses from `Scope` to `Unit`.  THAT is the honest
-  sense in which `Scoped` becomes trivial: not that its proof got
-  shorter, but that the whole FAMILY of nonterminals disappears, because
-  the scope moved into the index of the carrier.  `dbAll : ⊤G ⊢ DBAll`
-  below states it as a theorem, and it is the generic `scanμ` -- no
-  induction is written here at all, only the decomposition axiom
-  `dbCase`.
-
-  With the untyped carrier neither happens: `In` would be `i < n`, a
-  perfectly nontrivial grammar, and one nonterminal per scope size would
-  still be wanted.  Untyped de Bruijn buys α-equivalence and nothing
-  else; scoped de Bruijn buys α-equivalence AND scoping.
-
-  --------------------------------------------------------------------
-  THE SECOND THING THAT BECOMES FREE: α-EQUIVALENCE, as an absence.
-
-  Over `λFib`,
-
-      parts lamOp (lam n t) (mkLam n t) true  =  n
-
-  -- the binder's NAME is a genuine degree of freedom in the splitting,
-  which is why `Wellscoped`'s description has to GUESS it (`⊕e Name λ n →
-  …`) and then pin the guess with the representable `⌜ ⌈ n ⌉ ⌝`.  Over
-  `dbFib`,
-
-      parts lamOp (n , dlam b) (mkDLam b) true  =  (suc n , fzero)
-
-  is FORCED: there is exactly one thing a de Bruijn binder can put in its
-  name slot, namely index 0 of the extended scope.  So the `⊕e Name`
-  disappears from the description (`DBAlt tL` below has no guess), and
-  α-equivalence is not a quotient anybody imposes -- it is the absence of
-  a choice in `parts`.  This is the promodel-level reading of "de Bruijn
-  terms are α-equivalence classes", and it is visible in the SIGNATURE of
-  `DBParts`, not in a theorem.
-
-  --------------------------------------------------------------------
-  WHAT DOES NOT BECOME FREE.  Reported here because the honest answer
-  matters more than the positive one; the details are in `Scope.agda`.
-
-  The question asked was whether any operation NEWLY satisfies
-  `SplitPresAt` over this theory.  The answer is NO, and the reason is
-  worth stating precisely rather than apologised for: `SplitPresAt` is a
-  property of a MAP, not of a theory, so a new promodel cannot make it
-  hold -- it can only change which map one is asking about.  For the
-  elaboration `λFib → dbFib` the tally is
-
-      varOp   PRESERVED and REFLECTED
-      appOp   PRESERVED and REFLECTED
-      lamOp   NEITHER  (`¬presLam`, `¬reflLam` in `Scope.agda`)
-
-  and `lamOp` fails twice over -- the name slot moves from `n` to
-  `fzero`, and the scope moves from `n` to `suc n`.  Compare
-  `Lambda/Passes/Inline`, where substitution preserves `appOp`/`lamOp`
-  and fails at `varOp`, and where REFLECTION additionally fails at
-  `appOp`.  So the two passes fail in different places, and in each case
-  the obstruction is exactly the operation the pass rewrites.  That
-  per-operation localisation is the whole content of `CarrierMap`'s
-  design, and it is what this instance confirms rather than what it
-  improves on.
-
-  What DOES improve is the ADDITIVE side, and it improves because of the
-  carrier, not because of any preservation property: see
-  `Scope.elabScoped`, where a theorem about de Bruijn terms becomes a
-  theorem about the elaboration of an arbitrary raw term by `pullTerm`
-  alone.
-
-  --------------------------------------------------------------------
-  PRIMITIVE (phase 1), i.e. everything below that matches the carrier:
-  `IsDVar`, `IsDApp`, `IsDLam`, `DBSplit`, `DBParts`, `boolΠ`, `dbSize`,
-  the grading's four fields, the six intro/elim rules, `⟦DB⟧`/`⟦DB⟧⁻`,
-  and `dbCase`.  Everything after `dbCase` is composition.
--}
+{- DE BRUIJN TERMS AS A `Fibered` -- the theory the elaborator lands IN. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.LinLam.DB where
@@ -126,25 +24,15 @@ open import TheoryGrammar.Decidable
 
 open import TheoryGrammar.Instances.Lambda.Signature public
 
--- ==================================================================
--- The dependent eliminator for a `Bool` arity.  ONE place where
--- `true`/`false` are matched over a slot family, exactly as in
--- `Heap/Base` and `LinLam/Context`; extended lambdas over an arity are
--- identified NOMINALLY in Agda, so two written in different files never
--- reduce against each other.
--- ==================================================================
+-- The dependent eliminator for a `Bool` arity.
 
 -- PRIMITIVE (phase 1)
-boolΠ : ∀ {ℓ} {M : Bool → Type ℓ} → M true → M false → (b : Bool) → M b
-boolΠ t f true  = t
-boolΠ t f false = f
+-- `boolΠ` (Bool's dependent eliminator, = the binary arity's) now
+-- comes from `TheoryGrammar.Theories.Monoid`, where the arity is.
 
--- ==================================================================
--- THE CARRIER.  Two sorts, as in `λSig`: a NAME is a de Bruijn index
--- together with the scope it indexes, a TERM is a de Bruijn tree
--- together with its scope.  Both are Σ-types over ℕ, so the sort
--- structure of `λSig` survives unchanged and a `Reindex` is available.
--- ==================================================================
+-- THE CARRIER. Two sorts, as in `λSig`: a NAME is a de Bruijn index
+-- together with the scope it indexes, a TERM is a de Bruijn tree together
+-- with its scope.
 
 data DBTm : ℕ → Type₀ where
   dvar : ∀ {n} → Fin n → DBTm n
@@ -161,11 +49,9 @@ DBCar : LSort → Type₀
 DBCar nm = Scope•
 DBCar tm = Term•
 
--- ==================================================================
 -- SPLITTINGS.  As in `Lambda/Fibered`, each family has exactly ONE
 -- constructor -- unique readability of the de Bruijn AST -- which is
 -- what makes `parts` a projection rather than an inversion lemma.
--- ==================================================================
 
 data IsDVar {n : ℕ} : DBTm n → Type₀ where      -- PRIMITIVE
   mkDVar : (i : Fin n) → IsDVar (dvar i)
@@ -206,11 +92,9 @@ NmG = TheoryTy ℓ-zero nm
 TmG : Type₁
 TmG = TheoryTy ℓ-zero tm
 
--- ==================================================================
 -- `In` COLLAPSES.  Over `λFib` this is `Wellscoped.In`, a ⊕-chain of
 -- representables built from the scope; here it is the terminal grammar,
 -- ON THE NOSE, because the scope is already in the index.
--- ==================================================================
 
 InDB : NmG
 InDB = ⊤G
@@ -218,10 +102,8 @@ InDB = ⊤G
 in-trivial : InDB ≡ ⊤G
 in-trivial = refl
 
--- ==================================================================
 -- THE THREE TENSORS, and their intro/elim.  Compare `Lambda/Base`: the
 -- ONLY difference is that `LamG`'s name argument has nothing to say.
--- ==================================================================
 
 VarG : NmG → TmG
 VarG P = ⊗ˢ varOp (λ _ → P)
@@ -265,14 +147,7 @@ dlam-elim : {P : NmG} {A : TmG} {C : TmG}
           → LamG P A ⊢ C
 dlam-elim f (n , _) (mkDLam b , h) = f n b (h true) (h false)
 
--- ==================================================================
--- THE GRADING.  `deg` is the size of the tree; a name has degree 0.
--- EVERY slot is proper -- `Proper = Unit` -- and that is itself a
--- finding: over `linFib` properness had to be "the sibling owns a
--- variable", because a usage can split with an empty part, whereas a de
--- Bruijn subtree is ALWAYS strictly smaller than its parent.  Syntax is
--- the well-founded case; resources are not.
--- ==================================================================
+-- THE GRADING. `deg` is the size of the tree; a name has degree 0.
 
 dbSize : {n : ℕ} → DBTm n → ℕ                   -- PRIMITIVE
 dbSize (dvar i)   = 1
@@ -313,12 +188,9 @@ dbGraded = graded dbFib dbGrading
 -- programs-out-of-⊤ interface
 open Guard dbGraded ℓ-zero Unit (λ _ → tm) public
 
--- ==================================================================
--- THE DESCRIPTION.  Three alternatives, one per operation, and NO
--- `⊕e Name` -- compare `Wellscoped.ScopedF`, whose `tLam` branch must
--- guess the bound name and pin it with a representable.  The
--- nonterminal index is `Unit`, not `Scope`.
--- ==================================================================
+-- THE DESCRIPTION. Three alternatives, one per operation, and NO `⊕e Name`
+-- -- compare `Wellscoped.ScopedF`, whose `tLam` branch must guess the
+-- bound name and pin it with a representable.
 
 data DBTag : Type₀ where
   tV tA tL : DBTag
@@ -342,10 +214,10 @@ DBAlt tL = ⊗e lamOp DBLam
 DBF : Unit → Functor tm
 DBF _ = ⊕e DBTag DBAlt
 
--- Guardedness.  Every slot is proper, so every recursive position is
--- discharged by `slotProper` with `tt`; there is no case analysis on
--- which sibling is nonempty, which is the resource-theory complication
--- that syntax simply does not have.
+-- Guardedness. Every slot is proper, so every recursive position is
+-- discharged by `slotProper` with `tt`; there is no case analysis on which
+-- sibling is nonempty, which is the resource-theory complication that
+-- syntax simply does not have.
 private
   gV : Guarded (DBAlt tV)
   gV = ⊗-guard varOp DBVar λ m sp sh a ()
@@ -373,11 +245,9 @@ dbGuarded tt = <⊕e DBTag DBAlt alt
   alt tA = gA
   alt tL = gL
 
--- ==================================================================
 -- THE CONTAINER ENCODING, RESPELLED IN THE CONNECTIVES.  Exactly
 -- `Wellscoped.⟦Sc⟧`'s job: a change of notation, never a proof.  No
 -- splitting is opened -- `sp` passes through abstractly.
--- ==================================================================
 
 DBStep : TmG → TmG
 DBStep M = VarG ⊤G ⊕ (AppG M M ⊕ LamG ⊤G M)
@@ -412,11 +282,9 @@ module _ {M : Ix → Type₀} where
     tL , sp , boolΠ {M = λ c → ⟦ DBLam c ⟧c M (DBParts lamOp m sp c)}
                     (lift (h true)) (h false)
 
--- ==================================================================
 -- THE DECOMPOSITION AXIOM: `⊤` carries a coalgebra for `DBF`.  This is
 -- `bagCase` / `charCase` for de Bruijn terms, and it is the LAST place
 -- in the file that matches the carrier.
--- ==================================================================
 
 TopFam : Fam
 TopFam _ = ⊤ᴳ
@@ -445,20 +313,8 @@ dbCase tt (n , dvar i)   _ = tV , mkDVar i   , varSlots n i
 dbCase tt (n , dapp u v) _ = tA , mkDApp u v , appSlots n u v
 dbCase tt (n , dlam b)   _ = tL , mkDLam b   , lamSlots n b
 
--- ==================================================================
--- `Scoped` IS TRIVIAL, as a theorem.
---
--- `DBAll` is the de Bruijn analogue of `Wellscoped.Scoped`: the μ of the
--- description.  Over `λFib` it is a genuine subgrammar of `Raw` and
--- `scoped?` (Lambda/Passes/Decide) has to DECIDE it.  Here it is
--- inhabited at every point of the carrier, and the proof is the generic
--- `scanμ` applied to the decomposition axiom -- no recursion is written,
--- the termination certificate is `dbGuarded`.
---
--- Read the other way round: `⊤G ⊢ DBAll` says the scope discipline is
--- no longer a property to check but a fact about the carrier, which is
--- what "it is in the index now" means.
--- ==================================================================
+-- `Scoped` IS TRIVIAL, as a theorem. `DBAll` is the de Bruijn analogue of
+-- `Wellscoped.Scoped`: the μ of the description.
 
 DBAll : TmG
 DBAll = μᴳ DBF tt
@@ -468,10 +324,7 @@ dbAll = scanμ dbGuarded dbCase tt
 
 -- ... and the unrolling rules, so downstream never touches `sup`.
 db-unroll : DBAll ⊢ DBStep DBAll
-db-unroll = ⟦DB⟧ {M = μ DBF} ∘g toCg
-  where
-  toCg : DBAll ⊢ ⟦ DBF tt ⟧c (μ DBF)
-  toCg m t = toC (DBF tt) m (μ-coalg DBF tt m t)
+db-unroll = ⟦DB⟧ {M = μ DBF} ∘g unrollg DBF tt
 
 db-roll : DBStep DBAll ⊢ DBAll
-db-roll m s = μ-alg DBF tt m (fromC (DBF tt) m (⟦DB⟧⁻ {M = μ DBF} m s))
+db-roll = rollg DBF tt ∘g ⟦DB⟧⁻ {M = μ DBF}

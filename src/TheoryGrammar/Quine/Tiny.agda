@@ -1,12 +1,7 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  THE QUINES, RUN.
-
-  Every `refl` below is the decision procedure filling its chart at
-  typecheck time and the interpreter running on the parse tree it
-  produced.  Nothing is postulated and nothing is assumed to terminate:
-  if the parse did not evaluate, the file would not compile.
--}
+{- THE QUINES, RUN. Every `refl` below is the decision procedure filling
+   its chart at typecheck time and the interpreter running on the parse
+   tree it produced. -}
 module TheoryGrammar.Quine.Tiny where
 
 open import Cubical.Foundations.Prelude
@@ -20,18 +15,14 @@ import Cubical.Data.Equality as Eq
 open import TheoryGrammar.SemanticAction using (passes; _↦_; _at_)
 open import TheoryGrammar.Quine.Base
 
--- ==================================================================
 -- §0  THE SOURCE TEXT.  Written ONCE.  Everything below refers to this
 --     name, so no test can drift from the text it is about.
--- ==================================================================
 
 -- the four-character program   0 # 0 0
 src : String
 src = c0 ∷ c# ∷ c0 ∷ c0 ∷ []
 
--- ==================================================================
 -- §1  IT PARSES -- and the parse tree is a THEOREM, not a report.
--- ==================================================================
 
 _ : passes (run (derives! ntS) at (src ↦ true ∷ []))
 _ = refl
@@ -39,25 +30,13 @@ _ = refl
 selfDeriv : Deriv ntS src
 selfDeriv = witness (Deriv ntS) (¬G Deriv ntS) (derives? ntS) src refl
 
--- ... and `⌈_⌉` PINS the text.  `⌈ src ⌉` is the grammar that holds at
--- one world and that world is the literal source, so this term says
--- "the source text, and nothing else, derives from S".  The `Eq.refl`
--- hiding inside `⌈⌉-E` is the whole of the pinning.
+-- ... and `⌈_⌉` PINS the text. `⌈ src ⌉` is the grammar that holds at one
+-- world and that world is the literal source, so this term says "the
+-- source text, and nothing else, derives from S".
 selfLit : ⌈ src ⌉ ⊢ Deriv ntS
 selfLit = ⌈⌉-E selfDeriv
 
--- ==================================================================
--- §2  ... AND IT PRINTS ITSELF.
---
--- THE QUINE EQUATION, stated in the calculus.  `⌈ src ⌉ ⊢ Δ String` is
--- by Yoneda (`⌈⌉-UP`) just a string, read off at the point
--- `⌈⌉-pt src = Eq.refl`; the left side is "parse the source and run
--- it", the right side is the source itself.
---
---     ⌈ src ⌉  --selfLit-->  Deriv S  --interp-->  Δ String
---
--- and `refl` says that composite is the identity on the text.
--- ==================================================================
+-- §2 ... AND IT PRINTS ITSELF.
 
 quine : (interp ntS ∘g selfLit) src (⌈⌉-pt src) ≡ (src , tt)
 quine = refl
@@ -67,11 +46,9 @@ quine = refl
 _ : passes (runOut ntS at (src ↦ just src ∷ []))
 _ = refl
 
--- ==================================================================
 -- §3  THE PROPERTY IS NOT FREE.  Neighbours of the quine, and what
 --     they print instead.  If `emit` were the identity every string
 --     would pass; these are what says it is not.
--- ==================================================================
 
 -- `1#11` has the OTHER opcode, which prints the quoted data first
 _ : passes (runOut ntS at ((c1 ∷ c# ∷ c1 ∷ c1 ∷ []) ↦ just (c1 ∷ c1 ∷ c# ∷ c1 ∷ [])) ∷ [])
@@ -86,11 +63,9 @@ _ : passes (runOut ntS at
              ((c0 ∷ c# ∷ c1 ∷ c0 ∷ []) ↦ just (c1 ∷ c# ∷ c1 ∷ c1 ∷ [])) ∷ [])
 _ = refl
 
--- ==================================================================
 -- §4  AND THE LANGUAGE IS NOT EVERYTHING.  A negative answer here is a
 --     REFUTATION (the error grammar is `¬G _`), so these are theorems
 --     that no parse tree exists -- not reports that none was found.
--- ==================================================================
 
 _ : passes (run (derives! ntS) at
              ( (c0 ∷ c# ∷ c0 ∷ [])           ↦ false   -- odd data

@@ -1,5 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- The monoid signature, splittings as an inductive family, and the promodel. -}
+{- The monoid signature, splittings as an inductive family, and the `Fibered`. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Strings.Base (Char : Type₀) where
@@ -26,7 +26,6 @@ String = List Char
 
 -- Signature of monoids; splittings inductively.
 
-
 data Split3 : String → String → String → Type₀ where
   nil  : ∀ {v} → Split3 [] v v
   cons : ∀ {c u v w} → Split3 u v w → Split3 (c ∷ u) v (c ∷ w)
@@ -41,6 +40,32 @@ IsNil (_ ∷ _) = ⊥
 splitAll : (u v : String) → Split3 u v (u ++ v)
 splitAll []      v = nil
 splitAll (c ∷ u) v = cons (splitAll u v)
+
+-- The unit laws of `Split3`, ONCE. These had been reproved in four places
+-- -- `Laws`, `Refinement`, `SeqUnambig`, `Par` -- because the module that
+-- had them took a `decChar` the client did not want.
+
+-- PRIMITIVE.  Move a splitting along strict equalities of its indices.
+split3-coe : ∀ {a a' b b' c c'} → a Eq.≡ a' → b Eq.≡ b' → c Eq.≡ c'
+           → Split3 a b c → Split3 a' b' c'
+split3-coe Eq.refl Eq.refl Eq.refl s = s
+
+-- PRIMITIVE.  An empty right block leaves the whole alone ...
+split3-nilʳ : ∀ {u w} → Split3 u [] w → u Eq.≡ w
+split3-nilʳ nil      = Eq.refl
+split3-nilʳ (cons s) = go (split3-nilʳ s)
+  where go : _ → _
+        go Eq.refl = Eq.refl
+
+-- ... and an empty LEFT block does so with no recursion at all, since
+-- `nil` is the only constructor that can produce it.
+split3-nilˡ : ∀ {v w} → Split3 [] v w → v Eq.≡ w
+split3-nilˡ nil = Eq.refl
+
+-- PRIMITIVE.  The canonical splitting with empty right block.
+split3-idʳ : (u : String) → Split3 u [] u
+split3-idʳ []      = nil
+split3-idʳ (c ∷ u) = cons (split3-idʳ u)
 
 MonSplit : (o : MonOp) → String → Type₀
 MonSplit nilop w = IsNil w
@@ -68,8 +93,8 @@ strPoint .parts-split appop f = funExt λ { false → refl ; true → refl }
 
 -- The connectives, the decision layer and the semantic actions in one
 -- open: `DecFib` is the aggregation point (`RulesF` + `ActFib` +
--- `DecAdd`), so this instance gets `Dec⟨_⟩` and `run` without
--- redefining either.
+-- `DecAdd`), so this instance gets `Dec⟨_⟩` and `run` without redefining
+-- either.
 open DecFib strFib public
 
 Gr : Type₁

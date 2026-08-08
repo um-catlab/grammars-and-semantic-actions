@@ -1,24 +1,7 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- HEAPS ARE A REFINEMENT ALGEBRA -- the separation-logic CROSS-SPLIT,
-   and the reason the generic statement was written on `Split`/`parts`
-   rather than on `op`.
-
-   `Heap` has no total composition, so the usual formulation ("if
-   h₁ ∗ h₂ = k₁ ∗ k₂ then there are four heaps with ...") carries four
-   definedness side conditions.  Here there is nothing to say: a
-   splitting IS an `Ilv` together with `_#_`, the interleaving half is
-   the bag argument verbatim, and the four disjointness obligations are
-   all sub-heap restrictions of the TWO that were given.
-
-   `Cross`/`cross` below are `Bags/Refinement`'s verbatim.  They are not
-   shared because `Ilv` is declared separately at each carrier; the fix
-   is one interleaving relation, generic in the element type.
-
-   MAIN: `cross` (the matrix), `heapRefinable` (`Refinement.Refinable`
-   at heap composition), and the six apartness restrictions
-   `freshSubˡ/ʳ`, `#-subLˡ/ʳ`, `#-subRˡ/ʳ`.
-
-   PRIMITIVE: none new -- the six restrictions are inductions on `Ilv`. -}
+{- HEAPS ARE A REFINEMENT ALGEBRA -- the separation-logic CROSS-SPLIT, and
+   the reason the generic statement was written on `Split`/`parts` rather
+   than on `op`. -}
 module TheoryGrammar.Instances.Heap.Refinement where
 
 open import Cubical.Data.Sigma
@@ -37,15 +20,8 @@ appHom .op⋆    = appop
 appHom .resH   = Eq.refl
 appHom .argH _ = Eq.refl
 
--- ==================================================================
--- Sub-heaps of apart heaps are apart.  Six inductions on `Ilv`, no new
+-- Sub-heaps of apart heaps are apart. Six inductions on `Ilv`, no new
 -- match on `Eq`.
---
--- Each is stated at ONE factor rather than at both: the callers below
--- want a single side, and a conjunctive conclusion would only be
--- projected away again at every use.  `ˡ` is the left factor of the
--- interleaving, `ʳ` the right.
--- ==================================================================
 
 -- `l` is fresh for the whole, hence for the left factor ...
 freshSubˡ : ∀ {a b v l} → Ilv a b v → Fresh l v → Fresh l a
@@ -79,10 +55,8 @@ freshSubʳ (right p) (d , fr) = d , freshSubʳ p fr
 #-subRʳ q []            _        = tt
 #-subRʳ q ((l , x) ∷ u) (fr , d) = freshSubʳ q fr , #-subRʳ q u d
 
--- ==================================================================
 -- The matrix.  Interleaving only -- disjointness is bolted on after,
 -- because it is not an inductive invariant but a restriction.
--- ==================================================================
 
 record Cross (u₁ v₁ u₂ v₂ : Heap) : Type₀ where
   field
@@ -119,11 +93,9 @@ cross (right {c = y} d₁) (right d₂) =
          ; col₀ = r .col₀ ; col₁ = right (r .col₁) }
   where r = cross d₁ d₂
 
--- ==================================================================
 -- REFINABILITY.  Each of the four cells' disjointness is one `#-subL`
 -- followed by one `#-subR`: restrict a given apartness to a sub-heap
 -- on the left, then on the right.
--- ==================================================================
 
 heapRefinable : Refinable appHom appHom
 heapRefinable h (u₁ , v₁ , e₁ , d₁) (u₂ , v₂ , e₂ , d₂) = R
@@ -160,10 +132,8 @@ heapRefinable h (u₁ , v₁ , e₁ , d₁) (u₂ , v₂ , e₂ , d₂) = R
   R .colCell false true  = Eq.refl
   R .colCell false false = Eq.refl
 
--- ==================================================================
 -- It computes, at numerals: `0↦v0 ∗ 1↦v1` split the two ways round has
 -- both off-diagonal cells inhabited and the diagonal empty.
--- ==================================================================
 
 private
   h₂ : Heap

@@ -1,42 +1,5 @@
-{-
-  The simply-typed instance: a THREE-sorted theory (`nm`, `tm`, `ty`)
-  over the `TheoryGrammar` calculus, with a bidirectional typechecker.
-
-  THE RESULT.  Bidirectionality reduces to SUBSINGLETON-NESS of a `⊕ᴰ`,
-  on the refutation side.  `Unique.synUnique` says the synthesis sum
-  `Syn Γ = ⊕ᴰ Ty (Infer Γ)` has at most one inhabited summand, stated in
-  the calculus' own equality of types; `Check.dec-at` takes that as an
-  EXPLICIT argument, so the dependency is checked and not remarked, and
-  every consumption of it is a REFUTATION.  Without uniqueness one can
-  decide "some type" but cannot refute "THIS type".
-
-  THE THIRD SORT PAID.  This is the tree's only genuinely three-sorted
-  instance, and `Discrete Ty` is never assumed: types have operations,
-  so type equality is `dec-⊗` plus the representable iso (`Types`).
-  `Discrete Name` still is -- names have no operations, so there is no
-  tensor to decide.
-
-  This module is only the index; each piece lives in
-  `Instances/SimplyTyped/`.
-
-    Signature  three sorts, six operations, two result sorts
-    Fibered    raw annotated terms and simple types; splittings, and
-               the `unsplit` law the representables need
-    Base       the connectives, and the generic combinator layer
-    Grading    every splitting is proper -- at BOTH result sorts
-    Readable   the `DecReadable` and the two partitions this owes
-    Types      equality of types, decided by the tensor rule at `ty`
-    Context    contexts as name grammars; `Look` and its uniqueness
-    Dependent  the two representable-collapsible dependent tensors
-    Judgments  `Infer`/`Check` as ONE μ with two nonterminals, and both
-               one-step unfoldings -- `JStep` and, for `syn`, `SynStep`
-    Unique     the subsingleton theorem, by the generic fold
-    Check      the typechecker; `dec-at` takes uniqueness as an input
-
-  `SimplyTyped/Tests.agda` checks that the whole pipeline reduces, and
-  `SimplyTyped/Laws.agda` records which laws are `refl` and which need
-  `funExt`.  Both import this module, so neither is re-exported here.
--}
+{- The simply-typed instance: a THREE-sorted theory (`nm`, `tm`, `ty`) over
+   the `TheoryGrammar` calculus, with a bidirectional typechecker. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.SimplyTyped where
 

@@ -1,52 +1,4 @@
-{-
-  ℤ UNDER ADDITION: A SUBSTRATE WHOSE EVERY GRADING IS DEGENERATE.
-
-  The signature is that of a monoid -- `zeroOp` (arity ⊥) and `addOp`
-  (arity Bool), one sort.  Inverses are deliberately NOT in the
-  signature: the obstruction of `NoGrading` needs only that the
-  operation is solvable in a slot, and stating it that way keeps the
-  theorem about the SHAPE of the splittings rather than about extra
-  operations.  What makes ℤ a group shows up instead in the splittings:
-
-      Split addOp n  =  ℤ,        parts addOp n i = (i , n - i)
-
-  -- writing `n` as a sum is the same thing as choosing its left
-  summand, freely.  Compare strings, where `Split appop w` is the
-  (finite, `length w + 1`-element) set of cut points.  The splitting
-  type of a group does not shrink as the element shrinks, because
-  nothing shrinks.
-
-  Consequently `GroupLike ℤFib addOp true` is witnessed by `refl`:
-  slot `true` of the splitting `i` IS `i`, so it ranges over all of ℤ.
-  `NoGrading.GroupObstruction` then gives, for EVERY grading of `ℤFib`:
-
-      deg is constant,
-      no splitting has a proper slot,
-      no description with a recursive position is `Guarded`,
-      hence no `hyloC`, no `löb`, no inductive grammar, no parser.
-
-  This is stated below as `ℤ-deg-const` / `ℤ-no-proper` /
-  `ℤ-no-inductive`, quantified over an ARBITRARY grading supplied as
-  its four components (`deg`, `Proper`, `deg≤`, `deg<`) -- i.e. over an
-  arbitrary `GradedFib` whose `fib` is `ℤFib`.  Note again that
-  the degenerate grading (`deg = const 0`, `Proper = ⊥`) does exist; the
-  theorem is that it is the only one.
-
-  Why this is not a defect.  The same degeneration is familiar from
-  phase semantics of linear logic: over a group the phase space is
-  homogeneous and every fact is provable at every point.  The criterion
-  it points at:
-
-      inductive grammars exist  ⟺  the divisibility preorder
-                                     m ≼ n  =  "m is a slot of some
-                                                splitting of n"
-                                   is well-founded.
-
-  Strings, bags, heaps, (ℕ,+), (ℕ₊,×): well-founded, and their instances
-  in this library all carry gradings with nonempty `Proper`.  Groups,
-  (ℚ₊,×), ℤ: the preorder is the total relation, hence not well-founded,
-  hence no induction.  ℤ is the smallest interesting witness.
--}
+{- ℤ UNDER ADDITION: A SUBSTRATE WHOSE EVERY GRADING IS DEGENERATE. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Group.Base where
 
@@ -68,9 +20,7 @@ open import TheoryGrammar.RulesFib
 
 open import TheoryGrammar.Instances.Group.NoGrading
 
--- ==================================================================
 -- The signature: one sort, a constant and a binary operation.
--- ==================================================================
 
 data GrpOp : Type₀ where
   zeroOp addOp : GrpOp
@@ -85,14 +35,7 @@ grpSig .arities      = GrpAr
 grpSig .sortOf _ _   = tt
 grpSig .resultSort _ = tt
 
--- ==================================================================
--- The promodel.  THE WHOLE CONTENT IS IN `GrpSplit addOp`.
---
--- For a monoid the splittings of `n` are the ways of writing n = i + j.
--- For a GROUP that is a free choice of `i`, with `j = n - i` forced --
--- so `Split addOp n ≃ ℤ`, uniformly in n.  No proof component is
--- carried (CLAUDE.md's third trap), and both β and η for ⊗ˢ stay refl.
--- ==================================================================
+-- The `Fibered`. THE WHOLE CONTENT IS IN `GrpSplit addOp`.
 
 GrpSplit : (o : GrpOp) → ℤ → Type₀
 GrpSplit zeroOp n = pos 0 Eq.≡ n
@@ -103,7 +46,7 @@ GrpParts zeroOp n sp ()
 GrpParts addOp  n i b = if b then i else (n - i)
 
 private
-  -- (a + b) - a ≡ b : the group law, as the promodel's `parts-split`.
+  -- (a + b) - a ≡ b : the group law, as the `Fibered`'s `parts-split`.
   +-cancelˡ : (a b : ℤ) → (a + b) - a ≡ b
   +-cancelˡ a b = cong (_- a) (+Comm a b) ∙ plusMinus a b
 
@@ -113,9 +56,7 @@ private
 ℤFib .parts         = GrpParts
 
 -- The total point, separately: ℤ is total under addition, so the split
--- costs this instance nothing.  What it buys is that `RulesF ℤFib` --
--- and hence `GroupLike`/`GradedFib` below -- never consults it, so the
--- obstruction is a statement about the SPLITTINGS alone.
+-- costs this instance nothing.
 ℤPoint : LaxPoint ℤFib
 ℤPoint .op zeroOp _   = pos 0
 ℤPoint .op addOp f    = f true + f false
@@ -136,24 +77,13 @@ A ⊗' B = ⊗ˢ addOp (λ b → if b then A else B)
 
 infixr 20 _⊗'_
 
--- ==================================================================
 -- ℤ IS GROUP-LIKE AT THE LEFT SLOT.  This is the whole input to the
 -- obstruction, and it is `refl`: the splitting IS the left summand.
--- ==================================================================
 
 ℤGroupLike : GroupLike ℤFib addOp true
 ℤGroupLike n h = h , refl
 
--- ==================================================================
 -- THE THEOREM, over an arbitrary grading of `ℤFib`.
---
--- This used to take the four fields of `GradedFib` as separate module
--- parameters and reassemble the record by hand, because the bundled
--- record could not express "a grading OF `ℤFib`".  `Grading` now can, so
--- the quantification is a single parameter and `graded` does the
--- reassembly.  The statement is unchanged: `G` ranges over EVERY graded
--- promodel whose underlying promodel is `ℤFib`.
--- ==================================================================
 
 module AnyGrading (G : Grading ℤFib) where
 

@@ -1,99 +1,5 @@
-{-
-  DISTRIBUTIVITY IS A LAX MAP, AND IT IS INVERTIBLE EXACTLY ON PRECISE
-  ARGUMENTS.
-
-  The wanted statement is
-
-      distrib :  A ⊗× (B ⊗₊ C)  ⊢  (A ⊗× B) ⊗₊ (A ⊗× C)
-
-  -- the Dirichlet product distributing over the Cauchy product, i.e.
-  the connective form of `x(y+z) = xy + xz`.
-
-  ------------------------------------------------------------------
-  1.  WHY IT DOES NOT COME FROM `eqn→Iso`.
-
-  `TheoryGrammar.Equations` lifts an equation of the theory to an
-  ISOMORPHISM of composite connectives, and the header of that file
-  states the side condition exactly: the terms must be LINEAR, each
-  variable used exactly once.  The mechanism is that for a linear term
-  the nested convolution FLATTENS --
-
-      ⟪ t ⟫ A m  =  Σ (valuation ρ) . (eval ρ t = m) × Π_v A_v (ρ v)
-
-  -- so `⟪ t ⟫` depends on `t` only through the function `eval t`, and
-  equal denotations give equal connectives.
-
-  `x(y + z) = xy + xz` is NOT linear: `x` occurs twice on the right.
-  Concretely, `⟪ x(y+z) ⟫` and `⟪ xy + xz ⟫` are
-
-      Σ (ρx, ρy, ρz) . ρx·(ρy+ρz) = n . A ρx × B ρy × C ρz
-      Σ (ρx, ρy, ρz) . ρx·ρy + ρx·ρz = n . A ρx × B ρy × C ρz
-
-  and these ARE isomorphic -- but only because the flattening already
-  identified the two occurrences of `x` by hand.  The connective we
-  actually want on the right is the NESTED composite
-  `(A ⊗× B) ⊗₊ (A ⊗× C)`, whose flattening has FOUR variables
-  (x₁,y,x₂,z) and does not constrain `x₁ = x₂`.  The flattening theorem
-  gives no map between a three-variable and a four-variable shape, so
-  `eqn→Iso` is simply not applicable.  A `distrib` must be built by
-  hand, and its content is exactly the diagonal `x ↦ (x,x)` that
-  linearity forbids.
-
-  ------------------------------------------------------------------
-  2.  WHAT IS ACTUALLY TRUE, AND A NEGATIVE FINDING ABOUT THE FRAMEWORK.
-
-  The forward map `distrib` exists for EVERY A.  This is worth saying
-  plainly, because the "linear logic" reading predicts otherwise: it
-  needs `A i` twice, and it simply uses the Agda variable twice.  The
-  substructural discipline of this calculus lives entirely in the INDEX
-  -- `_⊢_` preserves it and `⊗ˢ` splits it -- and not at all in the
-  PAYLOAD, which is an ordinary type in a cartesian metatheory.  So
-  "A cannot be duplicated" is false here, and a `Dup A` / ⊗-comonoid
-  hypothesis on the forward map would be vacuous.  The linearity that
-  the framework does enforce is resource-linearity in `m`, which is the
-  half that matters for parsing; contraction on payloads is free.
-
-  What fails is INVERTIBILITY.  Given a point of the right-hand side we
-  have two independent factorisations, `i₁ · p = u` and `i₂ · q = v`,
-  with an `A i₁` and an `A i₂`, and no reason for `i₁ = i₂`.  So
-
-      distrib is a LAX structure map, not an isomorphism,
-
-  and it is the ⊗/⅋ situation of linear logic rather than the ⊗/⊕ one.
-
-  ------------------------------------------------------------------
-  3.  THE MODALITY THAT REPAIRS IT IS PRECISION, NOT DUPLICABILITY.
-
-  To invert, all that is needed is that `A` PINS ITS INDEX:
-
-      Precise A  =  (A i → A j → i ≡ j)  together with  isProp (A i)
-
-  -- the separation-logic notion of a precise predicate, and the
-  internal statement of "A is subterminal in the slice".  Then
-  `i₁ = i₂` is recoverable and the inverse exists.  So the sharp form
-  of the result is
-
-      distributivity holds (as an iso) exactly on PRECISE arguments,
-
-  and `⌈ r ⌉` -- pinned to a single element by construction -- is the
-  motivating instance, giving
-
-      distrib⌈⌉ : ⌈ r ⌉ ⊗× (B ⊗₊ C) ⊢ (⌈ r ⌉ ⊗× B) ⊗₊ (⌈ r ⌉ ⊗× C)
-
-  with an inverse.  Note this is precisely the `□`-modal fragment as
-  the rest of this development uses it: `□` is built from
-  representables, and representables are precise.  The framework
-  expresses the STATEMENT cleanly; see the report for which parts of
-  the proof it made awkward.
-
-  ------------------------------------------------------------------
-  Everything in this file below `distrib` is PHASE 1: these terms match
-  on splittings and on the carrier, and they are the primitives a
-  phase-2 program would compose.  `distrib` cannot be a phase-2 term:
-  building the splitting `i·p + i·q = n` of the result IS the ring
-  axiom, and no combinator of `RulesF` supplies it.  That is the honest
-  reading of "distributivity is extra structure on a promodel".
--}
+{- DISTRIBUTIVITY IS A LAX MAP, AND IT IS INVERTIBLE EXACTLY ON PRECISE
+   ARGUMENTS. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Ring.Distributivity where
 
@@ -112,10 +18,8 @@ open import TheoryGrammar.Equations
 
 open import TheoryGrammar.Instances.Ring.Base public
 
--- ==================================================================
 -- THE LAX DISTRIBUTIVITY MAP.  Phase-1 primitive: it constructs the
 -- additive splitting `i·p + i·q = n` out of the ring axiom.
--- ==================================================================
 
 private
   distribBody : (A B C : Gr) (n i j : ℕ) (e : i · j Eq.≡ n)
@@ -133,6 +37,9 @@ private
       sp : SplitAdd (i · p) (i · q) n
       sp = subst (SplitAdd (i · p) (i · q)) eqn (splitAllAdd (i · p) (i · q))
 
+-- PRIMITIVE (phase 1): the nested `⊗ˢ` payload it rebuilds is a HAND-
+-- ROLLED `Σ`, not a composite of connectives, so there is nothing for
+-- `⊗ˢ-E`/`&-E` to act on and the projection has to be written out.
 distrib : (A B C : Gr) → (A ⊗× (B ⊗₊ C)) ⊢ ((A ⊗× B) ⊗₊ (A ⊗× C))
 distrib A B C n ((i , j , e) , h) =
   distribBody A B C n i j e (h true)
@@ -140,13 +47,7 @@ distrib A B C n ((i , j , e) , h) =
               (h false .fst .snd .snd)
               (h false .snd true) (h false .snd false)
 
--- ==================================================================
 -- PRECISE GRAMMARS: those that pin their index.
---
--- This is the separation-logic notion of precision, and the internal
--- form of "subterminal".  It is what the INVERSE needs; the forward
--- map above needs nothing.
--- ==================================================================
 
 record Precise (A : Gr) : Type₀ where
   field
@@ -162,9 +63,7 @@ open Precise public
 ⌈⌉Precise r .single i =
   subst isProp (Eq.PathPathEq {x = i} {y = r}) (isSetℕ i r)
 
--- ==================================================================
 -- THE INVERSE, on a precise argument.
--- ==================================================================
 
 private
   distribInvBody : (A B C : Gr) (pr : Precise A) (n u v : ℕ)
@@ -187,6 +86,9 @@ private
                        (cong (_· q) same ∙ Eq.eqToPath e₂)
            ∙ splitAdd≡ t
 
+-- PRIMITIVE (phase 1): the nested `⊗ˢ` payload it rebuilds is a HAND-
+-- ROLLED `Σ` rather than a composite of connectives, so there is nothing
+-- for the elim rules to act on.
 distribInv : (A B C : Gr) → Precise A
            → ((A ⊗× B) ⊗₊ (A ⊗× C)) ⊢ (A ⊗× (B ⊗₊ C))
 distribInv A B C pr n ((u , v , t) , g) =
@@ -196,32 +98,12 @@ distribInv A B C pr n ((u , v , t) , g) =
     (g false .fst .fst) (g false .fst .snd .fst) (g false .fst .snd .snd)
     (g false .snd true) (g false .snd false)
 
--- ==================================================================
--- THE HEADLINE, as an Iso.
---
--- HOLES.  Both round trips are true and both are stated; neither is
--- closed.  What they need is that the three proof-carrying components
--- of a splitting are propositional -- `SplitAdd u v n` is a prop by
--- induction, `Eq._≡_` on ℕ is a prop because ℕ is a set, and the
--- payloads agree by `single` -- assembled through a `ΣPathP` over an
--- index that itself moves (`u ≡ i₁ · p`).  That is a transport
--- bookkeeping problem, not a mathematical one, and it is exactly the
--- bookkeeping the internal language was supposed to remove; see the
--- report.
--- ==================================================================
+-- THE HEADLINE, as an Iso. HOLES.
 
--- The three propositional components, and Bool's missing η.  Every
--- splitting in this file is DATA plus a proof, and it is only the proof
--- components that have to be identified -- which is the `Fibered` design
--- paying off: had `Split` carried its equation, these would be paths in
--- the data as well.
+-- The three propositional components, and Bool's missing η.
 private
   -- `isProp (SplitAdd i j n)` CANNOT be matched out directly: the `zl`
-  -- clause needs to eliminate the reflexive equation `j = j`, which is
-  -- K.  Route it through the equation instead -- `SplitAdd i j n` is the
-  -- graph of `+`, hence equivalent to `i + j ≡ n`, which is a prop
-  -- because ℕ is a set.  The canonical splitting transports to any other
-  -- along its own witness:
+  -- clause needs to eliminate the reflexive equation `j = j`, which is K.
   splitAddCanon : {p q w : ℕ} (s : SplitAdd p q w)
                 → PathP (λ κ → SplitAdd p q (splitAdd≡ s κ)) (splitAllAdd p q) s
   splitAddCanon zl     = refl
@@ -242,26 +124,16 @@ private
   isPropEqℕ : {x y : ℕ} → isProp (x Eq.≡ y)
   isPropEqℕ {x} {y} = subst isProp (Eq.PathPathEq {x = x} {y = y}) (isSetℕ x y)
 
-  -- ON THE PAYLOAD PATHS.  `Bool` has no η, so a payload rebuilt
-  -- slotwise is only PROPOSITIONALLY the one it came from -- the tax
-  -- CLAUDE.md records, and the only reason these round trips are not
-  -- `refl`.  It must be discharged INLINE at each use: extended lambdas
-  -- are identified NOMINALLY, so a general `boolη`-style lemma produces
-  -- a different term from the one `⊗×-mk` built and the two do not
-  -- reduce against each other at a variable.
-  --
-  -- `funExt` escapes this, and note it is already the PathP form in
-  -- `Cubical.Foundations.Prelude` -- it takes `(x : A) → PathP (B x) …`
-  -- -- so it serves the moving-index slots too.  What makes it work is
-  -- that the clause-list is checked against the EXPECTED type, which
-  -- splits on the constructors, where both endpoints do reduce.
+  -- ON THE PAYLOAD PATHS. `Bool` has no η, so a payload rebuilt slotwise
+  -- is only PROPOSITIONALLY the one it came from -- the tax CLAUDE.md
+  -- records, and the only reason these round trips are not `refl`.
 
 distrib-Iso : (A B C : Gr) (pr : Precise A) (n : ℕ)
             → Iso ((A ⊗× (B ⊗₊ C)) n) (((A ⊗× B) ⊗₊ (A ⊗× C)) n)
 distrib-Iso A B C pr n .Iso.fun = distrib A B C n
 distrib-Iso A B C pr n .Iso.inv = distribInv A B C pr n
 
--- distrib ∘ distribInv ≡ id.  The index moves in three places: the two
+-- distrib ∘ distribInv ≡ id. The index moves in three places: the two
 -- outer factors (`i₁·p ≡ u`, `i₁·q ≡ v`) and, in the second slot, the
 -- A-index itself (`i₁ ≡ i₂`) -- which is exactly where `Precise` is
 -- consumed, once for the index (`pin`) and once for the payload
@@ -314,10 +186,8 @@ distrib-Iso A B C pr n .Iso.ret ((i , j , e) , h) =
     falseP = ΣPathP ( ΣPathP (refl , ΣPathP (refl , isProp→PathP (λ _ → isPropSplitAdd) _ s))
                     , funExt (λ { true → refl ; false → refl }) )
 
--- ==================================================================
 -- THE REPRESENTABLE CASE.  `⌈ r ⌉` is precise, so distributivity is an
 -- isomorphism there -- distributivity holds on the □-modal fragment.
--- ==================================================================
 
 distrib⌈⌉ : (r : ℕ) (B C : Gr)
           → (⌈ r ⌉ ⊗× (B ⊗₊ C)) ⊢ ((⌈ r ⌉ ⊗× B) ⊗₊ (⌈ r ⌉ ⊗× C))
@@ -331,21 +201,7 @@ distrib⌈⌉-Iso : (r : ℕ) (B C : Gr) (n : ℕ)
               → Iso ((⌈ r ⌉ ⊗× (B ⊗₊ C)) n) (((⌈ r ⌉ ⊗× B) ⊗₊ (⌈ r ⌉ ⊗× C)) n)
 distrib⌈⌉-Iso r B C = distrib-Iso ⌈ r ⌉ B C (⌈⌉Precise r)
 
--- ==================================================================
--- AND THE PRECISION HYPOTHESIS IS NECESSARY.  A proved refutation.
---
--- Take A = ⊤ (maximally imprecise: every index inhabited),
--- B = C = ⌈1⌉, and look at n = 3.
---
---   RIGHT side:  3 = 1 + 2,  1 = 1·1,  2 = 2·1.   INHABITED.
---   LEFT side:   B ⊗₊ C pins its index to 1 + 1 = 2, so the outer
---                Dirichlet splitting must solve i · 2 = 3.   EMPTY.
---
--- The two `⊤`-slots on the right sit at indices 1 and 2 -- the two
--- copies of A that a general A cannot be forced to agree on.  So
--- `distrib` is genuinely lax: there is not merely no canonical
--- inverse, there is NO isomorphism at all.
--- ==================================================================
+-- AND THE PRECISION HYPOTHESIS IS NECESSARY. A proved refutation.
 
 private
   ·2≢1 : (i : ℕ) → i · 2 ≡ 1 → ⊥
@@ -378,17 +234,8 @@ distrib-not-iso :
   Iso ((⊤G ⊗× (⌈ 1 ⌉ ⊗₊ ⌈ 1 ⌉)) 3) (((⊤G ⊗× ⌈ 1 ⌉) ⊗₊ (⊤G ⊗× ⌈ 1 ⌉)) 3) → ⊥
 distrib-not-iso is = lhs-empty (is .Iso.inv rhs-pt)
 
--- ==================================================================
--- POSITIVE CONTROL: a LINEAR equation of the same theory DOES lift,
--- by `eqn→Iso`, with no work at all.
---
--- Commutativity `x · y = y · x` uses each variable once on each side,
--- so the flattening theorem applies and the two composite connectives
--- are isomorphic.  Contrast distributivity above, which needed a
--- hand-built map and a precision hypothesis to invert.  Note these are
--- the connectives of the EQUATIONAL presentation (`⟪_⟫` = `⊗ᶠ` over
--- the model `⌊ natPoint ⌋`), not `⊗ˢ`; `⊗ᶠ≡⊗` relates the two.
--- ==================================================================
+-- POSITIVE CONTROL: a LINEAR equation of the same theory DOES lift, by
+-- `eqn→Iso`, with no work at all.
 
 private
   Two : Type₀

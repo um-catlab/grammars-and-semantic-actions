@@ -1,12 +1,5 @@
 {-# OPTIONS --lossy-unification #-}
-{- The signature of monoids: a nullary unit and a binary product.
-
-   Note this is ALSO the signature of commutative monoids, of groups
-   before inverses are added, and of `(ℕ , +)`.  Commutativity is an
-   EQUATION, so it changes the model and the isomorphisms
-   (`TheoryGrammar.Equations`), never the signature.  Instances over
-   this signature differ only in their `Split` -- which is the design
-   claim, and is why it is worth having exactly one copy of this. -}
+{- The signature of monoids: a nullary unit and a binary product. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Theories.Monoid where
@@ -29,3 +22,8 @@ monoidSig .ops          = MonOp
 monoidSig .arities      = MonAr
 monoidSig .sortOf _ _   = tt
 monoidSig .resultSort _ = tt
+
+-- `boolΠ`, the binary arity's eliminator, is in `TheoryGrammar.Base`: it
+-- is a fact about `Bool`, so a signature that is binary WITHOUT being the
+-- monoid signature (`λSig`, `spanSig`, ...) must not have to import this
+-- file to get it.

@@ -1,7 +1,6 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 {- Listable index sets: membership, and deciding a Σ by searching a
-   complete list.  Used both by the instances (to enumerate splittings)
-   and by the decidability layer (`dec-⊗-enum`, `dec-⊕ᴰ`). -}
+   complete list. -}
 module TheoryGrammar.Enumerable where
 
 open import Cubical.Foundations.Prelude
@@ -22,7 +21,6 @@ data _∈L_ {X : Type ℓM} (x : X) : List X → Type ℓM where
      → x ∈L xs → f x ∈L map f xs
 ∈map f here      = here
 ∈map f (there p) = there (∈map f p)
-
 
 No : {ℓ : Level} → Type ℓ → Type ℓ
 No X = X → ⊥* {ℓ-zero}
@@ -67,20 +65,7 @@ decΠBool (inr k) _        = inr λ f → k (f true)
 decΠBool (inl _) (inr k)  = inr λ f → k (f false)
 decΠBool (inl x) (inl y)  = inl λ { true → x ; false → y }
 
--- ==================================================================
 -- THE SAME SEARCHES, WHEN FAILURE CARRIES NO REFUTATION.
---
--- `decΣ` needs the list COMPLETE, because refuting the Σ means
--- refuting every index and completeness is what turns "none listed
--- works" into that.  A PARSER only has to find one witness, so it needs
--- no completeness at all -- the list is a search SPACE, a parameter of
--- the algorithm, and nothing is claimed when it runs out.
---
--- That asymmetry is the whole difference between `parse` and
--- `derives?`, and stating both here makes it visible in the types
--- rather than in a comment: `findΣ` takes a `List`, `decΣ` takes a list
--- AND a proof about it.
--- ==================================================================
 
 findΣ : {I : Type ℓM} {B : I → Type ℓA} {F : Type ℓ}
       → F → ((i : I) → B i ⊎ F) → List I → (Σ[ i ∈ I ] B i) ⊎ F
@@ -96,14 +81,7 @@ findΠBool e (inr _) _       = inr e
 findΠBool e (inl _) (inr _) = inr e
 findΠBool e (inl x) (inl y) = inl λ { true → x ; false → y }
 
--- ==================================================================
 -- THE Π, DECIDED -- and RETURNING THE OFFENDING INDEX.
---
--- `decΣ`'s dual.  The refuting branch hands back the `i` that failed,
--- not merely a refutation of the product: a caller that has to turn
--- "slot `a` cannot hold" into "the whole splitting is refuted" needs to
--- know WHICH slot, and `No ((i : I) → B i)` has forgotten it.
--- ==================================================================
 
 AllYes' : {I : Type ℓM} (B : I → Type ℓA) → List I → Type (ℓ-max ℓM ℓA)
 AllYes' B []       = Unit*
@@ -113,6 +91,21 @@ lookupYes' : {I : Type ℓM} {B : I → Type ℓA} (is : List I) (i : I)
            → i ∈L is → AllYes' B is → B i
 lookupYes' (i ∷ is) .i here      (b , _) = b
 lookupYes' (_ ∷ is) i  (there p) (_ , r) = lookupYes' is i p r
+
+-- A Π OVER A LISTED INDEX, AS DATA -- and why that is not a no-op.
+
+tabulate' : {I : Type ℓM} {B : I → Type ℓA} (is : List I)
+          → ((i : I) → B i) → AllYes' B is
+tabulate' []       f = tt*
+tabulate' (i ∷ is) f = f i , tabulate' is f
+
+-- ... and "inverse up to completeness", PROVED.
+lookup-tabulate : {I : Type ℓM} {B : I → Type ℓA}
+                  (is : List I) (f : (i : I) → B i)
+                  (i : I) (p : i ∈L is)
+                → lookupYes' is i p (tabulate' is f) ≡ f i
+lookup-tabulate (x ∷ xs) f .x here     = refl
+lookup-tabulate (_ ∷ xs) f i  (there p) = lookup-tabulate xs f i p
 
 walkΠ : {I : Type ℓM} {B : I → Type ℓA}
       → ((i : I) → B i ⊎ No (B i)) → (is : List I)

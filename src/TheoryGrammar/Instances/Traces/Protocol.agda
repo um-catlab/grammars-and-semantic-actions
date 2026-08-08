@@ -1,75 +1,9 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  A PROTOCOL LOG, PARSED AS A SHUFFLE.
-
-  The claim this file exists to test is:
-
-      "this log is a valid interleaving of N concurrent sessions,
-       each individually following the protocol"
-
-  is a CFG parsing problem -- the SAME one CYK solves -- once the
-  decomposition operator of the promodel is interleaving instead of
-  concatenation.  Nothing about the algorithm changes.  What changes is
-  `Fibered .Split`, and it changed once, in `Traces/Base`.
-
-  ==================================================================
-  THE ALPHABET IS A CONCURRENT ALPHABET.
-
-  An event is a session id and an action, and the independence relation
-  is
-
-      Ind (i , a) (j , b)  =  i ≠ j
-
-  -- events of DIFFERENT sessions commute, events of the SAME session do
-  not.  That single line does two jobs at once, and they are the two
-  halves of the specification:
-
-    * ACROSS sessions, `ITr Ind u v w` is full interleaving, so
-      `Session₀ ⊗' Session₁` says exactly "w is some interleaving of a
-      session-0 trace and a session-1 trace".
-
-    * WITHIN a session, no `right` step is licensed, so `ITr Ind` on
-      same-session factors is concatenation and `open ⊗' body` really
-      does force the open to come FIRST.
-
-  So one `⊗ˢ appop` is read as "concurrent composition" at the top of
-  the grammar and as "sequencing" inside a session, and which one it is
-  is decided by the alphabet, not by the grammar.  `ProtocolTests` pins
-  both halves, and the second one is pinned by a CONTROL: `Over` below
-  is parameterised by the independence relation, so `ProtocolTests`
-  can run the identical grammar and the identical decision procedure at
-  `⊤I` and watch it accept a log in which a session closes before it
-  opens (`Control.wrong-at-⊤`).
-
-  ==================================================================
-  THE PROTOCOL.
-
-      Session i  ->  open_i  Body_i
-      Body_i     ->  send_i  Body_i  |  close_i
-      Log        ->  Session_0  Session_1
-
-  in Chomsky normal form, as a `Rule`/`unitR`/`binR` triple -- the
-  identical interface `Instances.Strings.CYK` and `Instances.Spans.CYK`
-  take.  The last production is the whole exercise: over strings it
-  would say "session 0's events all precede session 1's", and over
-  traces it says "the two sessions are interleaved arbitrarily".
-
-  ==================================================================
-  WHAT IS NEW HERE AND WHAT IS NOT.  See the closing note in
-  `ProtocolTests`; briefly, the only genuinely new mathematics is the
-  four length lemmas about `ITr` that make `trGraded` a grading.  The
-  enumeration of splittings -- the expensive part, and the one a
-  hand-written interleaving parser would spend all its effort on -- was
-  already `Traces/Enumeration.shuffles`, written for another purpose.
-
-  DEFINES the concurrent alphabet (`Sid`/`Act`/`Ev`/`Ind`) and, inside
-  `module Over` -- parameterised by the independence relation -- the
-  grading `trGraded`, the resource predicate `NonTrivial` with its
-  probe, the CYK module over the trace promodel, the protocol grammar
-  `NT`, the decision `derives?`, and the specification term
-  `logIsShuffle`.  `Conc` is `Over` at the concurrent alphabet and is
-  re-exported unqualified; `Full` is `Over` at `⊤I`, the control.
--}
+{- A PROTOCOL LOG, PARSED AS A SHUFFLE. The claim this file exists to test
+   is: "this log is a valid interleaving of N concurrent sessions, each
+   individually following the protocol" is a CFG parsing problem -- the
+   SAME one CYK solves -- once the decomposition operator of the `Fibered`
+   is... -}
 module TheoryGrammar.Instances.Traces.Protocol where
 
 open import Cubical.Foundations.Prelude
@@ -98,9 +32,7 @@ open DE using (module DecEnum)
 
 import TheoryGrammar.Instances.Traces.Enumeration as TrEnum
 
--- ==================================================================
 -- THE CONCURRENT ALPHABET.
--- ==================================================================
 
 data Sid : Type₀ where
   s₀ s₁ : Sid
@@ -180,43 +112,19 @@ discreteEv (i , x) (j , y) =
          (λ ¬p → no λ r → ¬p (cong fst r))
          (discreteSid i j)
 
--- ==================================================================
 -- THE WHOLE DEVELOPMENT, OVER AN ARBITRARY INDEPENDENCE RELATION.
---
--- Everything below -- the grading, the resource probe, CYK, the
--- protocol grammar and its decision -- depends on the alphabet's
--- INDEPENDENCE RELATION only through `Traces/Base`'s `Split`.  So it is
--- a module in that relation, and the file ends by instantiating it
--- twice:
---
---     Conc = Over Ind …    events of different sessions commute
---     Full = Over ⊤I  …    EVERYTHING commutes
---
--- `Conc` is the protocol parser.  `Full` is a control: the same grammar,
--- the same decision procedure, one different `Fibered`.  `ProtocolTests`
--- runs both at the same log and gets different answers, which is what
--- turns "the independence relation is doing the work" from a remark
--- into a theorem.
--- ==================================================================
 
 module Over (I : Ev → Ev → Type₀)
             (decI : (e f : Ev) → I e f ⊎ No (I e f))
             (isPropI : (e f : Ev) → isProp (I e f)) where
 
-  -- ==================================================================
-  -- The trace promodel at this alphabet, and the view combinators.
-  -- ==================================================================
+  -- The trace `Fibered` at this alphabet, and the view combinators.
 
   open TrEnum Ev I decI isPropI public
   open Views trFib public
 
-  -- ==================================================================
-  -- THE GRADING.  `deg = length`, and the four length lemmas about the
-  -- shuffle relation.  These four inductions are the ONLY facts this file
-  -- proves that `Instances.Strings.Graded` did not already prove for
-  -- concatenation; the shapes are identical, with the extra `right`
-  -- constructor handled exactly as `left` is on the other side.
-  -- ==================================================================
+  -- THE GRADING. `deg = length`, and the four length lemmas about the
+  -- shuffle relation.
 
   itrLenL : ∀ {u v w} → ITr I u v w → length u ≤ length w
   itrLenL nil         = zero-≤
@@ -239,10 +147,7 @@ module Over (I : Ev → Ev → Type₀)
   itrLenR< (right _ s) pr = suc-≤-suc (itrLenR< s pr)
 
   -- THE RESOURCE PREDICATE, internally: `w` is non-trivial when it
-  -- decomposes with an ATOM on the left.  Character for character
-  -- `Instances.Strings.Graded.NonTrivial` -- it is `⌈_⌉`, `⊗'`, `⊕ᴰ` and
-  -- `⊤` only, so it makes sense at any promodel with atoms, and at THIS
-  -- one it still says "w has at least one event".
+  -- decomposes with an ATOM on the left.
   NonTrivial : Gr
   NonTrivial = ⊕ᴰ Ev (λ e → ⌈ e ∷ [] ⌉ ⊗' ⊤G)
 
@@ -283,14 +188,7 @@ module Over (I : Ev → Ev → Type₀)
   appArComplete true  = here
   appArComplete false = there here
 
-  -- ==================================================================
   -- THE DECOMPOSITION VIEW, and the probe it decides.
-  --
-  -- The one place a word is destructured.  `left (itrNil I w)` is the
-  -- shuffle that takes the head into the left factor and everything else
-  -- into the right, and it needs no independence -- once the left factor
-  -- is exhausted, `itrNil` walks the rest unconditionally.
-  -- ==================================================================
 
   trCase : Cover (⌈ [] ⌉ ⊕ NonTrivial)
   trCase []      _ = inl Eq.refl
@@ -309,33 +207,15 @@ module Over (I : Ev → Ev → Type₀)
       (dec-yes NonTrivial)
 
   -- The level coercion the constant former `⌜_⌝` of a description carries
-  -- (`Inductive.⟦ ⌜ B ⌝ ⟧c A w = Lift _ (B w)`).  Pure bookkeeping;
-  -- `Strings/Connectives` has the same three lines and `Traces/Base` chose
-  -- not to, so they are here.
-  Liftg : Gr → Gr
-  Liftg A w = Lift ℓ-zero (A w)
-
-  liftg : {A : Gr} → A ⊢ Liftg A
-  liftg _ = lift
-
-  lowerg : {A : Gr} → Liftg A ⊢ A
-  lowerg _ = lower
+  -- (`Inductive.⟦ ⌜ B ⌝ ⟧c A w = Lift _ (B w)`).
 
   -- the cut search, and the two abbreviations its hypothesis is stated in
   open DecEnum  trFib    using (⊗at; Refutes; dec-⊗-cuts; slotMiss)
   open DecGuard trGraded using (SortFam; ▷ᴬ; löbᵍ; dec-⊗▷; resourceOf)
 
-  -- ==================================================================
-  -- CYK, OVER THE TRACE PROMODEL.
-  --
-  -- `Instances.Strings.CYK` with `strGraded` replaced by `trGraded` and
-  -- the cut enumeration `cuts` replaced by `shuffles`.  Every other
-  -- token is the same, including `NonTrivial`, `ntProper`, `appAr` and
-  -- the whole of `Decide`.  `Decidable.Guarded`'s closing note says the
-  -- chart cannot yet be assembled generically (an `Ix`-family is not a
-  -- grammar), so this module is the third copy of the same forty lines,
-  -- not a reuse -- see the accounting in `ProtocolTests`.
-  -- ==================================================================
+  -- CYK, OVER THE TRACE `Fibered`. `Instances.Strings.CYK` with
+  -- `strGraded` replaced by `trGraded` and the cut enumeration `cuts`
+  -- replaced by `shuffles`.
 
   module CYK (V : Type₀)
              (unitR : V → Ev → Type₀)          -- P -> e
@@ -386,12 +266,13 @@ module Over (I : Ev → Ev → Type₀)
     binSlots : V → V → Bool → Gr
     binSlots Q T a = G.⟦ binSlot Q T a ⟧c Der
 
-    -- the fixed point, as maps of the calculus
+    -- the fixed point, as maps of the calculus the fixed point, as maps of
+    -- the calculus.
     unrollD : (P : V) → Deriv P ⊢ Layer P
-    unrollD P w t = G.toC (CYKF P) w (G.unroll t)
+    unrollD P = G.unrollg CYKF P
 
     rollD : (P : V) → Layer P ⊢ Deriv P
-    rollD P w t = G.roll (G.fromC (CYKF P) w t)
+    rollD P = G.rollg CYKF P
 
     -- the resource certificate a slot carries -- a term
     neOf : (Q : V) → SlotG Q ⊢ NonTrivial
@@ -413,12 +294,10 @@ module Over (I : Ev → Ev → Type₀)
     ≤binSlot Q T true  = G.≤&e Bool (NEslot Q) (≤NEslot Q)
     ≤binSlot Q T false = G.≤&e Bool (NEslot T) (≤NEslot T)
 
-    -- THE TERMINATION ARGUMENT.  Identical to the string one, and it is
+    -- THE TERMINATION ARGUMENT. Identical to the string one, and it is
     -- worth saying why it survives: a shuffle's two factors are both
     -- SUBWORDS, so both are no longer than the whole, and a factor whose
-    -- complement is non-empty is strictly shorter.  Interleaving reorders
-    -- the events but cannot duplicate them, which is exactly what
-    -- `itrLenL`/`itrLenR` say.
+    -- complement is non-empty is strictly shorter.
     cykGuarded : (P : V) → G.Guarded (CYKF P)
     cykGuarded P = G.<⊕e (Rule P) (ruleF P) alt
       where
@@ -433,12 +312,10 @@ module Over (I : Ev → Ev → Type₀)
         alt (inr (Q , T , _)) =
           G.<⊗e appop (binSlot Q T) (≤binSlot Q T) (pr Q T)
 
-    -- ================================================================
-    -- THE DECISION, as maps of the calculus.  `Instances.Spans.CYK.Decide`
+    -- THE DECISION, as maps of the calculus. `Instances.Spans.CYK.Decide`
     -- and `Instances.Strings.CYK.Decide` verbatim; the ONE argument that
     -- differs from the string version is `shuffles` where that one passes
     -- `cuts`.
-    -- ================================================================
 
     module Decide (allRules    : (P : V) → List (Rule P))
                   (allComplete : (P : V) (r : Rule P) → r ∈L allRules P)
@@ -499,15 +376,9 @@ module Over (I : Ev → Ev → Type₀)
       derivesDec : (P : V) → Decision (Deriv P) (¬G (Deriv P))
       derivesDec P = decDefault (Deriv P) (derives? P)
 
-  -- ==================================================================
-  -- THE PROTOCOL, IN CHOMSKY NORMAL FORM.
-  --
-  --     Log    ->  SessA SessB
-  --     SessA  ->  OpnA BodyA          SessB  ->  OpnB BodyB
-  --     BodyA  ->  MsgA BodyA | 'c₀'   BodyB  ->  MsgB BodyB | 'c₁'
-  --     OpnA   ->  'o₀'   MsgA -> 'm₀'
-  --     OpnB   ->  'o₁'   MsgB -> 'm₁'
-  -- ==================================================================
+  -- THE PROTOCOL, IN CHOMSKY NORMAL FORM. Log -> SessA SessB SessA -> OpnA
+  -- BodyA SessB -> OpnB BodyB BodyA -> MsgA BodyA | 'c₀' BodyB -> MsgB
+  -- BodyB | 'c₁' OpnA -> 'o₀' MsgA -> 'm₀' OpnB -> 'o₁' MsgB -> 'm₁'
 
   data NT : Type₀ where
     log                   : NT
@@ -526,12 +397,10 @@ module Over (I : Ev → Ev → Type₀)
   unitR sessA e = ⊥
   unitR sessB e = ⊥
 
-  -- The binary productions.  Every nonterminal of this grammar has AT
-  -- MOST ONE of them, so the relation is presented as a partial function
-  -- -- `Bin` says whether the production exists and `lhs`/`rhs` name its
-  -- two children.  Nothing about CYK requires this; it is what makes
-  -- `allComplete` nine clauses rather than ninety, because matching
-  -- `Eq.refl` determines both children at once.
+  -- The binary productions. Every nonterminal of this grammar has AT MOST
+  -- ONE of them, so the relation is presented as a partial function --
+  -- `Bin` says whether the production exists and `lhs`/`rhs` name its two
+  -- children.
   Bin : NT → Type₀
   Bin log   = Unit
   Bin sessA = Unit
@@ -615,15 +484,9 @@ module Over (I : Ev → Ev → Type₀)
 
   open Decide allRules allComplete litProbe public
 
-  -- ==================================================================
-  -- THE SPECIFICATION, AS A TERM.
-  --
-  -- A derivation of `log` IS a shuffle of a session-0 derivation and a
-  -- session-1 derivation -- and `⊗'` at this promodel is interleaving.
-  -- So the statement "the log is a valid interleaving of the two
-  -- sessions" is not a comment about what the decision procedure means;
-  -- it is this type, and `logIsShuffle` is its proof.
-  -- ==================================================================
+  -- THE SPECIFICATION, AS A TERM. A derivation of `log` IS a shuffle of a
+  -- session-0 derivation and a session-1 derivation -- and `⊗'` at this
+  -- `Fibered` is interleaving.
 
   private
     logRule : (r : Rule log) → RuleG log r ⊢ ⊗ˢ appop (binSlots sessA sessB)
@@ -643,15 +506,8 @@ module Over (I : Ev → Ev → Type₀)
   sessionOf : (Q : NT) → SlotG Q ⊢ Deriv Q
   sessionOf = derOf
 
--- ==================================================================
--- THE TWO INSTANTIATIONS.
---
--- `Conc` is THE protocol parser and everything it defines is re-exported
--- unqualified.  `Full` is the ⊤-endpoint control -- the free
--- COMMUTATIVE monoid's splittings, which `Traces/Commutative` proves are
--- `Instances.Bags`' interleavings.  Its `derives?` is the same term; it
--- accepts more logs, and `ProtocolTests.wrong-at-⊤` exhibits one.
--- ==================================================================
+-- THE TWO INSTANTIATIONS. `Conc` is THE protocol parser and everything it
+-- defines is re-exported unqualified.
 
 ⊤I : Ev → Ev → Type₀
 ⊤I _ _ = Unit

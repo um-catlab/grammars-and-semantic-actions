@@ -1,18 +1,4 @@
-{-
-  Decidability as a CONNECTIVE, additively.  Needs only a `Model` --
-  nothing here mentions the operations.
-
-  A decision for `A` with complement `A'` is a map `⊤ ⊢ A ⊕ A'` together
-  with the exclusion `(A & A') ⊢ ⊥`, without which `⊕-I₂ ∘ ⊤-I` would
-  "decide" everything at `A' = ⊤`.  `¬G A = A ⇒ ⊥` is proved to be the
-  LARGEST complement (`largest`), so normalising to the default
-  `Dec⟨ A ⟩ = A ⊕ ¬G A` loses nothing -- `toDec` does it.
-
-  Every proof below is a composite of `Rules`' intro/elim except the
-  POINTWISE elimination `⊕-E-at` and its specialisation `dec-elim`.
-  Those ARE elimination rules, so like `Rules.⊕-E` they match the sum;
-  instances never may.  No `Dec`, no `yes`/`no` anywhere.
--}
+{- Decidability as a CONNECTIVE, additively. -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Decidable.Additive where
 
@@ -26,7 +12,6 @@ open import TheoryGrammar.Rules
 
 private variable ℓS ℓ ℓ' ℓX ℓA ℓB ℓC ℓY ℓZ : Level
 
-
 module DecAdd {S : Type ℓS} (Car : S → Type ℓX) where
 
   open CarrierNotation Car public
@@ -38,12 +23,7 @@ module DecAdd {S : Type ℓS} (Car : S → Type ℓX) where
     B : TheoryTy ℓB s
     C : TheoryTy ℓC s
 
-  -- INTERNAL LOGICAL EQUIVALENCE: the two maps, nothing else.  Not a
-  -- decision notion, but it belongs with the additives -- it mentions
-  -- only `_⊢_`, so it needs nothing but the carrier, and every instance
-  -- that states "these two grammars are the same predicate" wants it.
-  -- (It was written out locally in `Instances/Field/Partial`; that copy
-  -- is gone and reads this one.)
+  -- INTERNAL LOGICAL EQUIVALENCE: the two maps, nothing else.
   _⊣⊢_ : ∀ {s} → TheoryTy ℓA s → TheoryTy ℓB s → Type (ℓ-max ℓX (ℓ-max ℓA ℓB))
   A ⊣⊢ B = (A ⊢ B) × (B ⊢ A)
 
@@ -59,39 +39,16 @@ module DecAdd {S : Type ℓS} (Car : S → Type ℓX) where
   Dec⟨_⟩ : TheoryTy ℓA s → TheoryTy ℓA s
   Dec⟨ A ⟩ = A ⊕ ¬G A
 
-  -- The introduction rules, with the grammar NAMED.  Naming it is not
-  -- optional: `Dec⟨ A ⟩` unfolds to `A ⊕ ¬G A`, and a grammar-valued
-  -- implicit cannot be recovered from `?A m ⊎ ?B m` once `m` is already
-  -- in the metavariable's context.
+  -- The introduction rules, with the grammar NAMED.
   dec-yes : (A : TheoryTy ℓA s) → A ⊢ Dec⟨ A ⟩
   dec-yes A = ⊕-I₁ {A = A} {B = ¬G A}
 
   dec-no : (A : TheoryTy ℓA s) → ¬G A ⊢ Dec⟨ A ⟩
   dec-no A = ⊕-I₂ {B = ¬G A} {A = A}
 
-  -- ================================================================
-  -- THE ELIMINATION RULE, AT A POINT.
-  --
-  -- `Rules.⊕-E` eliminates a sum UNIFORMLY in the index: its branches
-  -- are maps of the calculus, given at every `m` at once.  Many uses of
-  -- a decision cannot be uniform, because the data the branches need
-  -- exists only at ONE index -- deciders supplied for the splittings of
-  -- THIS `m`, a refutation transported along unique readability at THIS
-  -- `m`, a recursive call at THIS subterm.  Not even the CONSTANT
-  -- motive helps: `⊕-E`'s branches still quantify over the index.
-  --
-  -- So the elimination has to be available at a point, and that is
-  -- `⊕-E-at`.  It is a genuine ELIMINATION RULE, and like `Rules.⊕-E`
-  -- it is therefore defined by matching `inl`/`inr`; `⊕-E` factors
-  -- through it (`⊕-E f g m = ⊕-E-at _ _ m (f m) (g m)`), so nothing new
-  -- is assumed -- only the quantifier is moved.
-  --
-  -- THE DISCIPLINE, stated here because this is where it is enforced:
-  -- the FRAMEWORK may match a sum, at its own elimination rules, which
-  -- are exactly `Rules.⊕-E`, `⊕-E-at` and `⊕-E-atᴰ`.  INSTANCES may
-  -- not: they call `dec-elim`.  Every `with`-on-a-decision that used to
-  -- appear in an instance is one application of it.
-  -- ================================================================
+  -- THE ELIMINATION RULE, AT A POINT. `Rules.⊕-E` eliminates a sum
+  -- UNIFORMLY in the index: its branches are maps of the calculus, given
+  -- at every `m` at once.
 
   ⊕-E-at : (A : TheoryTy ℓA s) (B : TheoryTy ℓB s) (m : Car s)
            {Z : Type ℓZ}
@@ -126,9 +83,7 @@ module DecAdd {S : Type ℓS} (Car : S → Type ℓX) where
             → (d : Dec⟨ A ⟩ m) → Z d
   dec-elimᴰ A m = ⊕-E-atᴰ A (¬G A) m
 
-  -- ================================================================
   -- The additive lemmas the decision combinators are built from.
-  -- ================================================================
 
   &-swap : (A & B) ⊢ (B & A)
   &-swap = &-I &-E₂ &-E₁
@@ -154,22 +109,14 @@ module DecAdd {S : Type ℓS} (Car : S → Type ℓX) where
              (contra ∘⊢ &-I &-E₁ (&-E₂ ∘⊢ &-E₂))
          ∘⊢ (dist& ∘⊢ &-swap))
 
-  -- ================================================================
-  -- COMPLEMENTS.  A decision is only informative if its two halves
-  -- exclude each other -- without that, `⊕-I₂ ∘⊢ ⊤-I` "decides" every
-  -- A at A' = ⊤G and says nothing at all.  So a decision carries the
-  -- exclusion, and `¬G A` is characterised as the LARGEST complement:
-  -- every other one factors through it, which is why nothing is lost by
-  -- normalising to `Dec⟨ A ⟩`.
-  -- ================================================================
+  -- COMPLEMENTS. A decision is only informative if its two halves exclude
+  -- each other -- without that, `⊕-I₂ ∘⊢ ⊤-I` "decides" every A at A' = ⊤G
+  -- and says nothing at all.
 
   Complement : TheoryTy ℓA s → TheoryTy ℓB s → Type (ℓ-max ℓX (ℓ-max ℓA ℓB))
   Complement A A' = (A & A') ⊢ ⊥G
 
-  -- A `Decision A A'` denotes: `A'` decides `A`.  The two fields are the
-  -- two halves of that, and NEITHER alone is it -- `decide` without
-  -- `exclude` is satisfied by `A' = ⊤G`, and `exclude` without `decide`
-  -- by `A' = ⊥G`.
+  -- A `Decision A A'` denotes: `A'` decides `A`.
   record Decision (A : TheoryTy ℓA s) (A' : TheoryTy ℓB s)
     : Type (ℓ-max ℓX (ℓ-max ℓA ℓB)) where
     field
@@ -199,9 +146,7 @@ module DecAdd {S : Type ℓS} (Car : S → Type ℓX) where
   decDefault A f .decide  = f
   decDefault A f .exclude = ¬G-excludes A
 
-  -- ================================================================
   -- Closure properties of decidability.
-  -- ================================================================
 
   -- along an internal logical equivalence
   dec-map : (A : TheoryTy ℓA s) (B : TheoryTy ℓB s)

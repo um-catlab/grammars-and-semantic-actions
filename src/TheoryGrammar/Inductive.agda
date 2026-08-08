@@ -1,25 +1,4 @@
-{-
-  GENERIC INDUCTIVE TYPES over a promodel.
-
-  The functor language: a `Functor s` is a description built from
-  constants, nonterminal references, indexed sums and products, and the
-  MULTIPLICATIVES OF THE THEORY -- one `⊗e` per operation, of that
-  operation's arity.  So the grammar-functor language is generic in the
-  theory exactly as the connectives are.
-
-  `μ` is presented in CONTAINER form -- shapes, positions, next-index as
-  three mutually-defined functions, rather than as a datatype over the
-  defined interpretation `⟦_⟧`.  That is what buys the absence of
-  pragmas: `Grammar/Inductive/Indexed.agda` needs NO_POSITIVITY_CHECK
-  (its `μ` is over the opaque, defined `⟦_⟧`) and TERMINATING on the
-  recursor; neither is needed here, because `Sh`/`Pos`/`nx` are
-  structural recursions on the description and `μ` is a plain indexed
-  datatype over them.
-
-  Kleene star, list-like grammars, and every other recursive grammar are
-  instances -- see `TheoryGrammar.Instances.Strings.KleeneStar`, where `KL*` is
-  `μ` of `ε ⊕ (A ⊗ Var)` and NOT a hand-written datatype.
--}
+{- GENERIC INDUCTIVE TYPES over a `Fibered`. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Inductive where
 
@@ -47,9 +26,7 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
     ℓF : Level
     ℓF = ℓ-max ℓS (ℓ-max ℓ (ℓ-max ℓ' (ℓ-max ℓV (ℓ-max ℓX (ℓ-suc ℓA)))))
 
-  -- ================================================================
   -- Descriptions.
-  -- ================================================================
 
   data Functor : S → Type ℓF where
     ⌜_⌝  : {s : S} → TheoryTy ℓA s → Functor s          -- constant
@@ -64,9 +41,7 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   ℓPos = ℓ-max ℓ' ℓA
   ℓμ   = ℓ-max ℓSh (ℓ-max ℓV ℓX)
 
-  -- ================================================================
   -- Container semantics: shapes, positions, next index.
-  -- ================================================================
 
   Sh : {s : S} → Functor s → Fib .carrier s → Type ℓSh
   Sh (⌜ A ⌝)   m = Lift (ℓ-max ℓ' ℓP) (A m)
@@ -90,9 +65,7 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   nx (&e Y G) m sh        (y , p) = nx (G y) m (sh y) p
   nx (⊗e o G) m (sp , sh) (a , p) = nx (G a) _ (sh a) p
 
-  -- ================================================================
   -- The least fixed point.  No pragmas.
-  -- ================================================================
 
   data μ (F : (x : X) → Functor (xs x)) : Ix → Type ℓμ where
     sup : {x : X} {m : Fib .carrier (xs x)}
@@ -128,18 +101,8 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
          → (i : Ix) → μ F i → M i
     fold M α (x , m) (sup sh f) = α x m sh (λ p → fold M α _ (f p))
 
-  -- ================================================================
-  -- The description AS AN ENDOFUNCTOR on families over Ix, with
-  -- algebras and coalgebras.  This is what `Functor Fam Fam` needs to
-  -- be fed in ccl's `LocallyContractiveFam`, whose `Fam` is families
-  -- over the objects of a category -- here, over `Ix`.
-  --
-  -- Note the map action does NOT touch shapes: for a container,
-  -- `Fmap h (sh , f) = (sh , h ∘ f)`.  So functoriality is refl, and --
-  -- more importantly -- the strength needed for local contractivity
-  -- has to supply nothing except a proof that each position's next
-  -- index is STRICTLY smaller.  See `Guarded` below.
-  -- ================================================================
+  -- The description AS AN ENDOFUNCTOR on families over Ix, with algebras
+  -- and coalgebras.
 
   ⟦_⟧ : {ℓM : Level} {s : S} → Functor s → (Ix → Type ℓM)
       → Fib .carrier s → Type (ℓ-max ℓSh (ℓ-max ℓPos ℓM))
@@ -180,22 +143,11 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
     μ-coalg : Coalg (μ F)
     μ-coalg x m (sup sh f) = sh , f
 
-  -- ================================================================
-  -- THE CONNECTIVE INTERPRETATION.
-  --
-  -- `⟦_⟧` above is the CONTAINER form: it names the recursive positions,
-  -- which is what lets guardedness be stated, but it is not something a
-  -- user should ever write a term against -- doing so means matching on
-  -- `Sh`/`Pos` and threading `tt*` by hand.
-  --
-  -- `⟦_⟧c` is the same functor spelled in the CONNECTIVES of the
-  -- calculus: a description's ⊕e really is ⊕ᴰ, its ⊗e really is ⊗ˢ.  So
-  -- coalgebras and algebras get written with the intro and elim rules --
-  -- internally -- and `toC`/`fromC` move between the two presentations.
-  --
-  -- Motives sit at ℓSh so that `Var` needs no coercion; only the
-  -- constant former carries a `Lift`, exactly as `Sh` does.
-  -- ================================================================
+  -- THE CONNECTIVE INTERPRETATION. `⟦_⟧` above is the CONTAINER form: it
+  -- names the recursive positions, which is what lets guardedness be
+  -- stated, but it is not something a user should ever write a term
+  -- against -- doing so means matching on `Sh`/`Pos` and threading `tt*`
+  -- by hand.
 
   ⟦_⟧c : {s : S} → Functor s → (Ix → Type ℓSh) → Fib .carrier s → Type ℓSh
   ⟦ ⌜ B ⌝  ⟧c A m = Lift (ℓ-max ℓ' ℓP) (B m)
@@ -231,20 +183,8 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   CoalgC : (F : (x : X) → Functor (xs x)) → (Ix → Type ℓSh) → Type _
   CoalgC F A = (x : X) (m : Fib .carrier (xs x)) → A (x , m) → ⟦ F x ⟧c A m
 
-  -- ================================================================
-  -- THE INTERNAL INTERFACE.
-  --
-  -- `AlgC`/`CoalgC` above are stated pointfully -- they take an element
-  -- of the carrier and an element of the motive.  That is the wrong
-  -- shape for this library: an algebra should be a TERM, `⟦F⟧ A ⊢ A`.
-  --
-  -- Nothing has to change to get it.  A motive `Ix → Type` IS a family
-  -- of grammars, one per nonterminal, merely uncurried -- `Ix` is
-  -- `Σ[ x ∈ X ] carrier (xs x)`, so `⌞_⌟` below is Σ's η and `Algᴳ` is
-  -- `AlgC` DEFINITIONALLY (`Algᴳ≡` witnesses it by `refl`).  What the
-  -- internal form buys is that instances write `⊢` composites instead
-  -- of functions taking `m` and an element.
-  -- ================================================================
+  -- THE INTERNAL INTERFACE. `AlgC`/`CoalgC` above are stated pointfully --
+  -- they take an element of the carrier and an element of the motive.
 
   Fam : Type (ℓ-max ℓV (ℓ-max ℓX (ℓ-suc ℓSh)))
   Fam = (x : X) → TheoryTy ℓSh (xs x)
@@ -278,28 +218,12 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   ⊤ᴳ-I : {s : S} {A : TheoryTy ℓA' s} → A ⊢ ⊤ᴳ
   ⊤ᴳ-I _ _ = tt*
 
-  -- THE RECURSOR, against a connective-form algebra.  `fold` is stated
-  -- with `Sh`/`Pos`, which is not what an algebra should ever be written
-  -- against, so every consumer was re-deriving this one line by hand --
-  -- `Dirichlet.Factorization.foldC`, `Lambda.Passes.Framework.runPass`,
-  -- `Lambda.DeBruijn.toDB`, `SimplyTyped.Unique`.  It is `fold` composed
-  -- with `toC`, and nothing else.
+  -- THE RECURSOR, against a connective-form algebra.
   foldC : {F : (x : X) → Functor (xs x)} (B : Ix → Type ℓSh)
         → AlgC F B → (i : Ix) → μ F i → B i
   foldC {F = F} B α = fold B λ x m sh f → α x m (toC (F x) m (sh , f))
 
-  -- ================================================================
   -- μ IS THE INITIAL ALGEBRA, for every theory.
-  --
-  -- `foldᴳ α` is an algebra map out of μ as a TERM, and `fold-unique`
-  -- says it is the only one.  Together: μ is initial.
-  --
-  -- Note this needs NO pragma, where ν's dual `coind` does.  The
-  -- asymmetry is not incidental: uniqueness for μ recurses structurally
-  -- on the element being folded, so the termination checker sees it;
-  -- uniqueness for ν has to produce an infinite proof and the
-  -- corecursive call ends up under `funExt`, which is not a guard.
-  -- ================================================================
 
   μᴳ : ((x : X) → Functor (xs x)) → (x : X) → TheoryTy ℓμ (xs x)
   μᴳ F x m = μ F (x , m)
@@ -322,10 +246,6 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
            (funExt λ p → fold-unique α h hh _ _ (f p))
 
   -- The shape underlying a connective-form element (the payload erased).
-  -- This is what lets guardedness -- which is stated with Pos/nx -- be
-  -- applied to a term written against the connectives, WITHOUT the
-  -- container round trip (which is not definitionally the identity: the
-  -- ⊗e case rebuilds a function over the arity, and arities have no η).
   shapeOf : {A : Ix → Type ℓSh} {s : S} (F : Functor s) (m : Fib .carrier s)
           → ⟦ F ⟧c A m → Sh F m
   shapeOf ⌜ B ⌝    m b       = b
@@ -334,63 +254,10 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   shapeOf (&e Y G) m h       = λ y → shapeOf (G y) m (h y)
   shapeOf (⊗e o G) m (sp , h) = sp , λ a → shapeOf (G a) _ (h a)
 
+  -- WHY `rollg` / `unrollg` CANNOT BE STATED *HERE* -- and where they are
+  -- stated instead.
 
-  -- ================================================================
-  -- WHY THERE IS NO GENERIC `rollg` / `unrollg`.
-  --
-  -- `roll`/`unroll` are stated at the CONTAINER form `⟦ F ⟧`, which
-  -- names the recursive positions -- necessary for guardedness, but not
-  -- what programs are written against.  The connective-form versions,
-  --
-  --     rollg   : ⟦ F x ⟧c (μ F) m → μ F (x , m)
-  --     unrollg : μ F (x , m) → ⟦ F x ⟧c (μ F) m
-  --
-  -- would remove the hand-written `sup` / `tt*` / `lower` surgery that
-  -- `Instances/Strings/KleeneStar.agda` pays in `nil*` / `cons*` /
-  -- `unroll*`.  They CANNOT be stated here, and the obstruction is the
-  -- level stratification, not anything mathematical:
-  --
-  --     μ F   : Ix → Type ℓμ        ℓμ  = ℓSh ⊔ ℓV ⊔ ℓX
-  --     ⟦_⟧c  : ... → (Ix → Type ℓSh) → ...
-  --
-  -- so `⟦ F x ⟧c (μ F)` is ill-typed unless `ℓV` and `ℓX` are below
-  -- `ℓSh`.  Making `⟦_⟧c` motive-polymorphic would fix it and is NOT
-  -- worth it: the `Var` case would have to become `Lift ℓSh (A (x , m))`,
-  -- reintroducing a coercion at every recursive position -- exactly the
-  -- thing the note above says motives sit at `ℓSh` to avoid.  The cure
-  -- is worse than the disease.
-  --
-  -- So define them per instance, where the levels are concrete.  Every
-  -- instance in this tree has `X = Unit` and a carrier at `ℓ-zero`, hence
-  -- `ℓμ = ℓSh`, and the two definitions are one line each -- see
-  -- `Instances/Nat/Species.agda`, where the Dyck constructors are then
-  -- combinator composites rather than pointful matches.
-  -- ================================================================
-
-  -- ================================================================
-  -- THE GREATEST FIXED POINT.
-  --
-  -- Same container, dualised.  `μ` is a `data` whose constructor packs
-  -- a shape with a function on positions; `ν` is a `record` whose
-  -- fields PROJECT those two.  It lives here rather than in a
-  -- `Coinductive` module for a concrete reason: everything it needs
-  -- (`Functor`, `Sh`, `Pos`, `nx`, `fromC`) is defined inside `Ind`, so
-  -- a separate module would mean a SECOND application of `Ind`, and two
-  -- applications of a parameterised module make every shared name
-  -- ambiguous at any file that sees both.
-  --
-  -- No pragmas here either, and no positivity worry: `ν` is a record,
-  -- so its recursive occurrence is behind a projection by construction.
-  --
-  -- `νout-νinto` is `refl`; `νinto-νout` is NOT, and the asymmetry is worth
-  -- recording.  Agda deliberately withholds η from COINDUCTIVE records
-  -- -- it would let the productivity checker be fooled -- so
-  -- `νinto (νout t) ≡ t` cannot hold definitionally.  It is still one
-  -- line, but as a path built by COPATTERN on the interval rather than
-  -- by `refl`, which is the cubical way of saying "bisimilar at depth
-  -- one".  `μ`'s dual `roll-unroll` needed a pattern match; this needs
-  -- a copattern.
-  -- ================================================================
+  -- THE GREATEST FIXED POINT. Same container, dualised.
 
   record ν (F : (x : X) → Functor (xs x)) (i : Ix) : Type ℓμ where
     coinductive
@@ -438,24 +305,8 @@ module Ind {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                     (γ (i .fst) (i .snd) a)
     νunfold-β M γ i a = refl
 
-    -- ================================================================
     -- UNIQUENESS OF THE CORECURSOR lives in `Hylo` as `ν-η`, because it
     -- needs guardedness -- and it needs NO pragma.
-    --
-    -- Splitting the record into `shOf`/`nxOf` is what makes `νunfold`
-    -- above pass the productivity checker unaided; upstream's `ν` has a
-    -- single field `⟦ F x ⟧ (ν F) w`, burying the recursive occurrence
-    -- under a Σ and a function type, so its `corecHomo` carries
-    -- `{-# TERMINATING #-}`.
-    --
-    -- Uniqueness looks like it needs a second pragma, and upstream's
-    -- `ν-η'` has one: the obvious proof is corecursive and its call
-    -- lands under `funExt`, which is not a guard.  But the recursion
-    -- does not have to be on the ν-element.  For a GUARDED F the INDEX
-    -- is well-founded, so the argument runs as a löb instead -- see
-    -- `Hylo.ν-η` and `Hylo.μ→ν-ν→μ`.  What the upstream pragma actually
-    -- buys is generality in `F` that this tree never uses.
-    -- ================================================================
 
   -- The corecursor against a CONNECTIVE-form coalgebra -- dual to
   -- `foldC`, and `fromC` where that used `toC`.  Same rationale: a

@@ -1,67 +1,7 @@
-{-
-  A VERIFIED PASS, AND A CHAIN OF THEM.
-
-  A compiler is not one map of theories, it is a SEQUENCE, and each link
-  crosses a signature:
-
-      unicode monoid  →  token monoid  →  AST  →  linear usages  →  heap
-
-  Each arrow lands in a slightly richer theory and retains enough data to
-  project back.  `Reindex.Base` supplies the link; this file supplies the
-  spine, and its content is entirely the answer to one question:
-
-      WHICH OF THE THREE DATA OF A LINK SURVIVE COMPOSITION?
-
-  The answer is all three, and they survive independently:
-
-      SigMor              always -- `_⨟σ_`
-      ReindexOver         always -- `_⨟r_`
-      SplitPresAtOver     `presComp`, needs both links
-      ReflectsSplitAtOver `reflComp`, needs both links
-      ArSection           `compArSection`
-
-  so a `Pass` (sig + map + preservation everywhere) composes, and a
-  `Reflective` pass composes with a `Reflective` pass.
-
-  --------------------------------------------------------------------
-  WHY REFLECTION IS OPTIONAL, AND WHAT IS LOST WITHOUT IT.
-
-  A pass that PRESERVES splittings maps a source decomposition to a
-  target one: `push⊗O` -- "the code emitted for a compound is the
-  compound of the code emitted for the pieces".  A pass that also
-  REFLECTS them inverts that: `pull⊗O` -- "every decomposition of the
-  emitted object comes from one of the source, uniquely enough".  It is
-  the discrete Conduche condition, and it is what "project back to an
-  earlier pass" MEANS at the level of the multiplicative fragment: with
-  it, a fact proved downstream transports upstream (`Codegen.layFrame`,
-  `Codegen.noDupLay`); without it only the additive fragment does.
-
-  Both halves genuinely fail in practice, at different operations, and
-  the framework's job is to say WHERE:
-
-      `Codegen.layPres`/`layRefl`  -- the non-compacting layout: BOTH
-                                      hold, at BOTH operations.
-      `Codegen.noPackPres`         -- the compacting layout: preservation
-                                      FAILS at `appop`.
-      `Scope.¬presLam`/`¬reflLam`  -- named → de Bruijn: BOTH fail, at
-                                      `lamOp` only.
-      `Reindex.LinLam.¬presApp`    -- AST → usages: preservation fails at
-                                      `appOp`, and its failure AT A POINT
-                                      is exactly non-linearity.
-
-  So `Pass` demands preservation everywhere and leaves reflection to a
-  separate record.  A chain of passes composes; a chain of REFLECTIVE
-  passes composes reflectively, which is the theorem that decides
-  whether the back-projection reaches across a whole compiler or only
-  one link.  `chainReflective` is that theorem.
-
-  --------------------------------------------------------------------
-  ON LEVELS.  `Pass` is heterogeneous: source and target may sit at
-  different levels, which is necessary (a glued promodel is at the max of
-  its factors').  `Chain`, being a list, is homogeneous -- a chain whose
-  theories change level has to be built with `_⨟P_` by hand.  That is a
-  limitation of Agda's lists, not of the notion.
--}
+{- A VERIFIED PASS, AND A CHAIN OF THEM. A compiler is not one map of
+   theories, it is a SEQUENCE, and each link crosses a signature: unicode
+   monoid → token monoid → AST → linear usages → heap Each arrow lands in a
+   slightly richer theory and retains enough data to project back. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Reindex.Pass where
 
@@ -79,11 +19,9 @@ private variable
   ℓS ℓS' ℓS'' ℓ ℓ' ℓ2 ℓ2' ℓ3 ℓ3' : Level
   ℓX ℓX' ℓX'' ℓP ℓP' ℓP'' : Level
 
--- ==================================================================
--- A THEORY: a signature together with a promodel of it.  Bundled ONLY
+-- A THEORY: a signature together with a `Fibered` of it.  Bundled ONLY
 -- so that a chain can be a list; every construction below could be
 -- written unbundled.
--- ==================================================================
 
 record Theory ℓS ℓ ℓ' ℓX ℓP
   : Type (ℓ-max (ℓ-suc ℓS) (ℓ-max (ℓ-suc ℓ)
@@ -101,11 +39,9 @@ theory σ F .Sorts = _
 theory σ F .sig   = σ
 theory σ F .fib   = F
 
--- ==================================================================
 -- A PASS.  Source theory, target theory, the signature morphism, the
 -- carrier map, and preservation at EVERY operation.  Reflection is NOT
 -- here -- see the header.
--- ==================================================================
 
 record Pass (T : Theory ℓS ℓ ℓ' ℓX ℓP) (U : Theory ℓS' ℓ2 ℓ2' ℓX' ℓP')
   : Type (ℓ-max ℓS (ℓ-max ℓ (ℓ-max ℓ' (ℓ-max ℓS' (ℓ-max ℓ2 (ℓ-max ℓ2'
@@ -117,14 +53,8 @@ record Pass (T : Theory ℓS ℓ ℓ' ℓX ℓP) (U : Theory ℓS' ℓ2 ℓ2' �
 
 open Pass public
 
--- ==================================================================
 -- A BRIDGE: the same thing with NO verification -- a signature morphism
--- and a carrier map over it.  Bridges always compose; a `Pass` is a
--- bridge one has PAID for.  The distinction is not bureaucratic: the
--- AST → linear-usage bridge of `Reindex.LinLam` is a genuine bridge
--- whose preservation fails at `appOp`, and the linearity checker is
--- exactly the term-by-term decision of whether it is a pass there.
--- ==================================================================
+-- and a carrier map over it.
 
 record Link (T : Theory ℓS ℓ ℓ' ℓX ℓP) (U : Theory ℓS' ℓ2 ℓ2' ℓX' ℓP')
   : Type (ℓ-max ℓS (ℓ-max ℓ (ℓ-max ℓ' (ℓ-max ℓS' (ℓ-max ℓ2 (ℓ-max ℓ2'
@@ -154,9 +84,7 @@ record Reflective {T : Theory ℓS ℓ ℓ' ℓX ℓP} {U : Theory ℓS' ℓ2 �
 
 open Reflective public
 
--- ==================================================================
 -- THE IDENTITY PASS, and it reflects.
--- ==================================================================
 
 idPass : (T : Theory ℓS ℓ ℓ' ℓX ℓP) → Pass T T
 idPass T .sigOf  = idSigMor (T .sig)
@@ -167,9 +95,7 @@ idReflective : (T : Theory ℓS ℓ ℓ' ℓX ℓP) → Reflective (idPass T)
 idReflective T .reflectsAt = idReflects (T .fib)
 idReflective T .secOf      = idArSection (T .sig)
 
--- ==================================================================
 -- COMPOSITION.  THE SPINE.
--- ==================================================================
 
 module _ {T : Theory ℓS ℓ ℓ' ℓX ℓP} {U : Theory ℓS' ℓ2 ℓ2' ℓX' ℓP'}
          {V : Theory ℓS'' ℓ3 ℓ3' ℓX'' ℓP''} where
@@ -198,9 +124,7 @@ module _ {T : Theory ℓS ℓ ℓ' ℓX ℓP} {U : Theory ℓS' ℓ2 ℓ2' ℓX'
     compArSection (P .sigOf) (Q .sigOf) o
                   (RP .secOf o) (RQ .secOf (P .sigOf .onOp o))
 
--- ==================================================================
 -- A CHAIN OF PASSES, and its composite.
--- ==================================================================
 
 data Chain {ℓS ℓ ℓ' ℓX ℓP}
   : Theory ℓS ℓ ℓ' ℓX ℓP → Theory ℓS ℓ ℓ' ℓX ℓP
@@ -223,11 +147,9 @@ Reflects : {T U : Theory ℓS ℓ ℓ' ℓX ℓP} → Chain T U
 Reflects done    = Unit*
 Reflects (P ◅ c) = Reflective P × Reflects c
 
--- ==================================================================
 -- THE THEOREM.  A chain of reflective passes is a reflective pass -- so
 -- "keep enough data to project back to earlier passes" holds across the
 -- WHOLE compiler, not one link at a time.
--- ==================================================================
 
 chainReflective : {T U : Theory ℓS ℓ ℓ' ℓX ℓP} (c : Chain T U)
                 → Reflects c → Reflective (composite c)

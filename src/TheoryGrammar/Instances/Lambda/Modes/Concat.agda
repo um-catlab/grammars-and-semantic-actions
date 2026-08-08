@@ -1,20 +1,4 @@
-{-
-  ORDERED CONTEXTS: the free monoid.  `Split` is concatenation.
-
-  DENOTES: `Split3 u v Γ` is "Γ is u followed by v", so a context of
-  length n splits in exactly n+1 ways -- the cuts.  `Strings.Base`
-  supplies the relation unchanged and `Modes.Substrate` everything not
-  specific to it, leaving three things here --
-
-    splitNilJ  only `nil` lands at the empty context
-    decTen     PRIMITIVE (1 of 1): the tensor, by induction on Γ.  `nil`
-               is available at EVERY context, so the cut before the head
-               is a case of its own and the recursion follows `cons`.
-    dec        those two, packaged as `DecSplittings`
-
-  Splittings are NOT unique, so `DecReadable`, `dec-⊗` and `Precise`'s
-  `⊗-refute` are out of reach: refuting one cut refutes nothing.
--}
+{- ORDERED CONTEXTS: the free monoid. `Split` is concatenation. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Modes.Concat where
 
@@ -42,10 +26,8 @@ module Concat (Name : Type₀) where
 
   open Substrate Name Split3 nil splitAll splitNilJ public
 
-  -- PRIMITIVE (1 of 1 for this promodel).  The cuts of a list are
-  -- enumerable: `nil` is the cut before the head, `cons` recurses.  The
-  -- recursive call is forced only once the nil cut has been refuted,
-  -- which is what keeps that cut a short circuit.
+  -- PRIMITIVE (1 of 1 for this `Fibered`). The cuts of a list are
+  -- enumerable: `nil` is the cut before the head, `cons` recurses.
   decTen : (A : Fam) (Γ : Ctx)
          → ((sp : CSplit mul Γ) (b : CtxAr mul) → Dec⟨ A b ⟩ (CParts mul Γ sp b))
          → Dec⟨ ⊗ˢ mul A ⟩ Γ

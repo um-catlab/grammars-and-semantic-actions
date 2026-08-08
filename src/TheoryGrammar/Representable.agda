@@ -1,23 +1,7 @@
-{-
-  A REPRESENTABLE AT A COMPOSITE IS THE TENSOR OF REPRESENTABLES.
-
-      ⌈ op o m⃗ ⌉  ⊣⊢  ⊗ˢ o (λ a → ⌈ m⃗ a ⌉)
-
-  Both directions -- `⌈⌉-into` and `⌈⌉-from` -- but NOT an `Iso`: the
-  round trips are not proved here, and no consumer has needed them.
-
-  `Fibered` gives `parts-split`: every tuple splits its own composite.
-  The converse -- a splitting's parts reassemble to the whole -- is what
-  the `from` direction needs and is NOT a field (it is refuted for
-  quotient substrates), so it is a module parameter, `unsplit`; for a
-  syntax promodel every clause of it is `Eq.refl`.
-
-  Two consequences, both used to decide equality of a carrier without
-  leaving the calculus: `dec-⊗` decides a representable through the iso,
-  and the operations are INJECTIVE (`op-inj`) given unique readability.
-  So `Discrete` on a sort is not an input to an instance -- it is
-  decidability of `⌈_⌉`, built by the generic tensor rule.
--}
+{- A REPRESENTABLE AT A COMPOSITE IS THE TENSOR OF REPRESENTABLES. ⌈ op o
+   m⃗ ⌉ ⊣⊢ ⊗ˢ o (λ a → ⌈ m⃗ a ⌉) Both directions -- `⌈⌉-into` and `⌈⌉-from`
+   -- but NOT an `Iso`: the round trips are not proved here, and no
+   consumer has needed them. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Representable where
 
@@ -54,9 +38,7 @@ module Repr {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX �
       Eq.pathToEq (sym (Eq.eqToPath (unsplit o m sp))
                    ∙ cong (P .op o) (funExt λ a → Eq.eqToPath (h a)))
 
-  -- ================================================================
   -- Unique readability makes the operations injective.
-  -- ================================================================
 
   module _ (splitProp : Prec.SplitProp Fib) where
 

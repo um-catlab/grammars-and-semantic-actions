@@ -1,30 +1,4 @@
-{-
-  Residuals for the lifted n-ary operations, and their adjointness.
-
-  Two tiers, because they cost different hypotheses.
-
-  TIER 1 (no hypotheses at all, arbitrary arity including infinite):
-  the CURRYING isomorphism
-
-      (⊗[ o ] A  ⊢  B)   ≅   MultiHom o A B
-
-  where MultiHom is the n-ary hom -- literally the hom-set of the
-  multicategory the theory presents.  So ⊗[ o ] is exactly the
-  internalisation of the multi-ary hom, which is the Melliès–Zeilberger
-  reading.  Both directions are transport-free: matching `Eq.refl` on the
-  convolution's equation applies the solution rule because the index is a
-  variable.
-
-  TIER 2 (needs `Discrete (arities o)`): the genuine RESIDUALS, one per
-  (operation, slot), with
-
-      (⊗[ o ] A  ⊢  B)   ≅   (A i  ⊢  ⊸[ o , i ] A B).
-
-  At a binary operation this recovers ⊸ and ⟜ of LambekD, one for each
-  of the two slots.  Note the asymmetry in cost: the ELIMINATION
-  direction (⊗ ⊢ B from a residual map, i.e. `⊸-app`) is free, and only
-  the INTRODUCTION direction needs to decide which slot it is looking at.
--}
+{- Residuals for the lifted n-ary operations, and their adjointness. -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Multiplicative where
 
@@ -43,9 +17,7 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
 
   open Notation M
 
-  -- ================================================================
   -- TIER 1.  The n-ary hom, and currying.
-  -- ================================================================
 
   MultiHom : (o : σ .ops)
            → ((a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a))
@@ -74,9 +46,7 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (M : Model σ ℓX) where
     ⊗-currying .Iso.sec g = refl
     ⊗-currying .Iso.ret f = funExt λ m → funExt λ { (m⃗ , Eq.refl , h) → refl }
 
-  -- ================================================================
   -- TIER 2.  Slot residuals.
-  -- ================================================================
 
   module _ (o : σ .ops) (i : σ .arities o) where
 

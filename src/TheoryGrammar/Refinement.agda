@@ -44,16 +44,10 @@ module Refine {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX
                        partsPropAt→preciseP; partsPropAt→preciseI;
                        partsProp→merge)
 
-  -- ================================================================
   -- 1.  HOMOGENEITY, as data.
-  -- ================================================================
 
   -- A `HomOp s` denotes an operation all of whose slots AND whose result
-  -- live at the single sort `s` -- an operation on `Fib .carrier s`
-  -- alone.  That is what lets a cell of the matrix below be read both
-  -- along its row and along its column.  Concatenation, bag union and
-  -- heap composition are `HomOp`s; `lamOp`, whose binder slot sits at a
-  -- different sort, is not.
+  -- live at the single sort `s` -- an operation on `Fib .carrier s` alone.
   record HomOp (s : S) : Type (ℓ-max ℓS (ℓ-max ℓ ℓ')) where
     field
       -- the operation itself
@@ -86,20 +80,11 @@ module Refine {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX
     Whole : (o : HomOp s) (m : Fib .carrier s) → SplitH o m → Slots o → Type ℓX
     Whole o m sp i = partsH o m sp i Eq.≡ m
 
-    -- ==============================================================
-    -- 2.  THE MATRIX.
-    --
-    -- `rowSplit i` is a splitting of the i-th part of `p` under `o'`;
-    -- `colSplit j` a splitting of the j-th part of `q` under `o`; and
-    -- the two agree entrywise, which is `cell`.
-    -- ==============================================================
+    -- 2. THE MATRIX.
 
     -- A `Refinement o o' m p q` denotes a common refinement of the two
     -- splittings `p`, `q` of `m`: a matrix of pieces of `m` that
-    -- recomposes to `p` when read by rows and to `q` when read by
-    -- columns.  The two `-Cell` laws are the whole content -- they force
-    -- the row and column readings to agree ENTRYWISE, which is what
-    -- makes the matrix a single object rather than two families.
+    -- recomposes to `p` when read by rows and to `q` when read by columns.
     record Refinement (o o' : HomOp s) (m : Fib .carrier s)
                       (p : SplitH o m) (q : SplitH o' m)
       : Type (ℓ-max ℓ' (ℓ-max ℓX ℓP)) where
@@ -138,14 +123,7 @@ module Refine {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX
     refinableSym : {o o' : HomOp s} → Refinable o o' → Refinable o' o
     refinableSym r m q p = transpose (r m p q)
 
-    -- ==============================================================
-    -- 3.  DIAGONALITY, and `sameParts` GENERICALLY.
-    --
-    -- The string development proves `sameSplit`/`sameParts` by Levi
-    -- plus "the middle piece is empty".  Both halves are here: the
-    -- refinement is the first, and the second is exactly that every
-    -- row and every column is concentrated on its own diagonal cell.
-    -- ==============================================================
+    -- 3. DIAGONALITY, and `sameParts` GENERICALLY.
 
     -- every row is concentrated on its own diagonal cell ...
     DiagonalRows : {o : HomOp s} {m : Fib .carrier s} {p q : SplitH o m}
@@ -208,21 +186,7 @@ module Refine {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX
                     → partsH o m p i Eq.≡ partsH o m q i
     rigid→sameParts ref rg m p q i = diag→sameParts (ref m p q) (rg m p q) i
 
-  -- ================================================================
-  -- 4.  ... AND PRECISION.
-  --
-  -- At `resH = Eq.refl` the homogeneous whole IS the carrier of the
-  -- result sort, so `Rigid` is `Precision.PartsPropAt` up to the slot
-  -- coercions -- which `coeEqInj` undoes -- and everything downstream of
-  -- it (the merge rule, `PreciseP`, `PreciseI` for EVERY grammar)
-  -- follows.  So the implication that holds is
-  --
-  --     refinable + rigid  ⟹  precise,
-  --
-  -- and it is rigidity, not refinability, that does the work: a
-  -- refinement monoid whose refinements are non-trivial (bags, traces)
-  -- is exactly one where no grammar is automatically precise.
-  -- ================================================================
+  -- 4. ... AND PRECISION.
 
   module AtResult (ho : σ .ops)
                   (argH⋆ : (a : σ .arities ho) → σ .sortOf ho a Eq.≡ σ .resultSort ho)

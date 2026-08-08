@@ -1,58 +1,7 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  WEAKEST PRECONDITIONS, AND THE FRAME RULE.
-
-  Everything up to here is the ASSERTION logic -- `Gr = Heap → Type` with
-  `&`/`⇒` pointwise and `∗`/`─∗` from the promodel, i.e. a model of BI.
-  What was missing is the PROGRAM logic, and the point of this file is
-  that it needs no new category.
-
-  A command is a relation `c : Heap → Heap → Type`, ordinary metalanguage
-  data.  The weakest precondition
-
-      wp c Q h  =  (h' : Heap) → c h h' → Q h'
-
-  is again a `Heap → Type`, hence again a `Gr`.  So a Hoare triple is an
-  ENTAILMENT of the logic we already have:
-
-      ⟪ P ⟫ c ⟪ Q ⟫   =   P ⊢ wp c Q
-
-  and the frame rule becomes an internal theorem rather than a
-  meta-level soundness argument.
-
-  ------------------------------------------------------------------
-  WHY THIS IS REINDEXING (and `wp` a Cartesian lift)
-  ------------------------------------------------------------------
-
-  `TheoryTy ℓ s = carrier s → Type ℓ` is a DISPLAYED presentation: a
-  grammar is a family over the carrier, and the whole development is
-  fibred over it -- which is what `Fibered.agda` is named for.  In that
-  reading:
-
-    * a command `c` is a profunctor `Heap ⇸ Heap` (both discrete);
-    * `sp c` is its direct image, `wp c` its right adjoint;
-    * for a FUNCTION `f`, `wp (fn f) Q` is `Q ∘ f` -- reindexing along
-      `f`, i.e. the CARTESIAN LIFT of `f` in the family fibration.
-
-  `wp-fn` below is exactly that statement, and it is the Yoneda lemma
-  (`⌈⌉-UP`) in disguise.  So `wp` generalises `ChangeOfTheory.pull` from
-  functions to relations: `pull` reindexes along a `ModelHom`, `wp`
-  reindexes along a span.
-
-  That analogy predicts the shape of the frame rule, and the prediction
-  holds.  `ChangeOfTheory` proves the additive fragment reindexes
-  DEFINITIONALLY and the multiplicative fragment only LAXLY, with
-  invertibility exactly when the map REFLECTS SPLITTINGS.  Here `wp`'s
-  interaction with `∗` is likewise lax, and the side condition that makes
-  it hold is LOCALITY -- which is the same shape as reflecting
-  splittings: a decomposition downstream must come from one upstream.
-
-  ------------------------------------------------------------------
-  PHASE.  `wp`, `sp`, the adjunction, `wp-fn` and `frame-wp` are phase 2
-  up to three marked primitives (`mkSplit`, `split-Ilv`, and `split-#`
-  from `Connectives`), which are the interface to `HeapSplit`'s
-  components.  No heap is matched in any theorem.
--}
+{- WEAKEST PRECONDITIONS, AND THE FRAME RULE. Everything up to here is the
+   ASSERTION logic -- `Gr = Heap → Type` with `&`/`⇒` pointwise and
+   `∗`/`─∗` from the `Fibered`, i.e. a model of BI. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Heap.Hoare where
@@ -68,68 +17,31 @@ import Cubical.Data.Equality as Eq
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.RulesFib
+open import TheoryGrammar.Hoare
 
 open import TheoryGrammar.Instances.Heap.Precise public
 
--- ==================================================================
--- Commands, and the two images.
--- ==================================================================
+-- COMMANDS AND THE TWO IMAGES, FROM THE GENERIC LAYER.
 
+-- `Endo` is `Hoare Fib Fib` plus the endo-only maps (`skip` and its
+-- three rules), which is exactly the shape a heap command has.
+private module H = Endo heapFib
+
+open H public
+  using (wp; sp; sp⊣wp; ⟪_⟫_⟪_⟫; wp-map; consequence; fn; wp-fn;
+         skip; wp-skip; skip-I; skip-E)
+
+-- the generic `Cmd` is level- and sort-indexed; at one sort and ℓ-zero
+-- it is exactly the relation this file used to define
 Cmd : Type₁
-Cmd = Heap → Heap → Type₀
+Cmd = H.Cmd ℓ-zero tt tt
 
--- WEAKEST PRECONDITION -- reindexing along the relation.
-wp : Cmd → Gr → Gr
-wp c Q h = (h' : Heap) → c h h' → Q h'
-
--- STRONGEST POSTCONDITION -- the direct image.
-sp : Cmd → Gr → Gr
-sp c P h' = Σ[ h ∈ Heap ] (P h × c h h')
-
--- THE ADJUNCTION `sp c ⊣ wp c`.  Currying and swapping; both round
--- trips are `refl`, because Σ and Π both have η.
-sp⊣wp : (c : Cmd) (P Q : Gr) → Iso (sp c P ⊢ Q) (P ⊢ wp c Q)
-sp⊣wp c P Q .Iso.fun f h p h' r = f h' (h , p , r)
-sp⊣wp c P Q .Iso.inv g h' (h , p , r) = g h p h' r
-sp⊣wp c P Q .Iso.sec _ = refl
-sp⊣wp c P Q .Iso.ret _ = refl
-
--- ==================================================================
--- HOARE TRIPLES are entailments.  Nothing new is introduced.
--- ==================================================================
-
-⟪_⟫_⟪_⟫ : Gr → Cmd → Gr → Type₀
-⟪ P ⟫ c ⟪ Q ⟫ = P ⊢ wp c Q
-
--- the rule of consequence, from `∘g` alone
-consequence : {P P' Q Q' : Gr} (c : Cmd)
-            → P' ⊢ P → Q ⊢ Q' → ⟪ P ⟫ c ⟪ Q ⟫ → ⟪ P' ⟫ c ⟪ Q' ⟫
-consequence c pre post tr h p h' r = post h' (tr h (pre h p) h' r)
-
--- ==================================================================
 -- A DETERMINISTIC COMMAND IS A FUNCTION, AND `wp` AT ONE IS THE
 -- CARTESIAN LIFT.  `wp (fn f) Q` really is `Q ∘ f` -- reindexing.
 -- The proof is the Yoneda lemma, exactly as `⌈⌉-UP` is.
--- ==================================================================
 
-fn : (Heap → Heap) → Cmd
-fn f h h' = f h Eq.≡ h'
-
-wp-fn : (f : Heap → Heap) (Q : Gr) (h : Heap)
-      → Iso (wp (fn f) Q h) (Q (f h))
-wp-fn f Q h .Iso.fun w = w (f h) Eq.refl
-wp-fn f Q h .Iso.inv q .(f h) Eq.refl = q
-wp-fn f Q h .Iso.sec _ = refl
-wp-fn f Q h .Iso.ret w = funExt λ _ → funExt λ { Eq.refl → refl }
-
--- ==================================================================
--- LOCALITY.  Running `c` on a heap split as `u ⊎ v` touches only `u`:
--- the result splits as `u' ⊎ v` with the SAME `v`, and `c u u'`.
---
--- This is the frame property, and note its shape -- a decomposition of
--- the OUTPUT must come from one of the INPUT.  That is `ReflectsSplit`
--- from `ChangeOfTheory`, transposed from a function to a relation.
--- ==================================================================
+-- LOCALITY. Running `c` on a heap split as `u ⊎ v` touches only `u`: the
+-- result splits as `u' ⊎ v` with the SAME `v`, and `c u u'`.
 
 Local : Cmd → Type₀
 Local c = (u v h : Heap) → Ilv u v h → u # v
@@ -146,15 +58,8 @@ split-Ilv : (h : Heap) (sp : heapFib .Split appop h)
                 (heapFib .parts appop h sp false) h
 split-Ilv h (u , v , il , d) = il
 
--- ==================================================================
--- THE FRAME RULE.  Internal: `⊗ˢ-E` consumes the `∗`, locality moves
--- the split across the command, `⊗ˢ-I` rebuilds it.
---
--- Compare `frame` in `Connectives`, which is `⊗ˢ-map` and needs no
--- hypothesis at all.  That is the ASSERTION frame rule -- free, because
--- functoriality is free.  This is the COMMAND frame rule, and the whole
--- difference is `Local`.
--- ==================================================================
+-- THE FRAME RULE. Internal: `⊗ˢ-E` consumes the `∗`, locality moves the
+-- split across the command, `⊗ˢ-I` rebuilds it.
 
 frame-wp : (c : Cmd) → Local c → (Q R : Gr)
          → ((wp c Q) ∗ R) ⊢ wp c (Q ∗ R)
@@ -173,15 +78,8 @@ frame-wp c loc Q R =
                                 (heapFib .parts appop h' (mkSplit il' d') a)}
                    (k true u' cu) (k false)))
 
--- ==================================================================
 -- `skip`, as a sanity check: it is local, and its `wp` is the identity.
--- ==================================================================
-
-skip : Cmd
-skip = fn (λ h → h)
 
 skipLocal : Local skip
 skipLocal u v h il d .(h) Eq.refl = u , il , d , Eq.refl
 
-wp-skip : (Q : Gr) (h : Heap) → Iso (wp skip Q h) (Q h)
-wp-skip Q = wp-fn (λ h → h) Q

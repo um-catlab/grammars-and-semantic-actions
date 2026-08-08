@@ -1,18 +1,4 @@
-{-
-  THE CARRIER IS THE INITIAL ALGEBRA:  `⊤G ≅ Everything Γ = μ AllF`.
-
-  `AllF` is the shape functor of `λSig` in the generic description
-  language -- one alternative per operation, recursive slots at `Var`,
-  name slots constant.  `readback` is the ONE definition that recurses on
-  `Raw`: it IS initiality, and `Modes/Fold.agda` derives `indRaw` from it.
-
-  Both directions are proved -- `forget-readback`, `readback-unique`,
-  paired as the `Iso` `⊤≅Everything`.  The nonterminal index never moves
-  (`lam` recurses at the SAME scope): a moving index would cost `indRaw`
-  its definitional equation under a binder.  `VarA`/`AppA`/`LamA` are the
-  three tensors level-polymorphically, eliminated via `along-unsplit`;
-  `AllAlg` and `size!` are what downstream folds run.
--}
+{- THE CARRIER IS THE INITIAL ALGEBRA: `⊤G ≅ Everything Γ = μ AllF`. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Initial where
 
@@ -48,9 +34,7 @@ module Initial (Name : Type₀) where
 
   private variable ℓM : Level
 
-  -- ================================================================
   -- The shape functor of λSig.
-  -- ================================================================
 
   data AllTag : Type₀ where
     aVar aApp aLam : AllTag
@@ -72,11 +56,9 @@ module Initial (Name : Type₀) where
   Everything : Scope → TmG
   Everything Γ t = μ AllF (Γ , t)
 
-  -- ================================================================
   -- The same functor in the CONNECTIVES.  `Lambda.Base`'s `VarG`/
   -- `AppG`/`LamG` are fixed at ℓ-zero and `indRaw`'s motive is not, so
   -- these are the same three tensors taken level-polymorphically.
-  -- ================================================================
 
   ⊤* : {s : LSort} → TheoryTy ℓM s
   ⊤* _ = Unit*
@@ -90,8 +72,7 @@ module Initial (Name : Type₀) where
   -- NAMED, not an extended lambda: `lamOp`'s slot family is the one that
   -- is a match on the arity, and two syntactically distinct pattern
   -- lambdas over `LAr lamOp` are never convertible (the same fact
-  -- `readback-unique` pays `lamJ` for).  So the family has to be a
-  -- definition, or `LamA-E` cannot even be stated at `LamA`'s own `A`.
+  -- `readback-unique` pays `lamJ` for).
   LamSlots : TheoryTy ℓM tm → (a : LAr lamOp) → TheoryTy ℓM (LSortOf lamOp a)
   LamSlots M true  = ⊤*
   LamSlots M false = M
@@ -102,23 +83,10 @@ module Initial (Name : Type₀) where
   AllStep : (Scope → TheoryTy ℓM tm) → Scope → TheoryTy ℓM tm
   AllStep {ℓM} M Γ = VarA ℓM ⊕ (AppA (M Γ) ⊕ LamA (M Γ))
 
-  -- ================================================================
-  -- ... AND THEIR ELIMINATORS, at an arbitrary motive.  `Lambda.Base`'s
-  -- `var-elim`/`app-elim`/`lam-elim` invert the splitting BY MATCHING;
-  -- these do not.  What replaces the match is `λ-unsplit`, the substrate
-  -- soundness law: `⊗ˢ-E` hands back the parts, and `λ-unsplit` says
-  -- reassembling them IS the index, so the motive transports onto it.
-  --
-  -- `Eq.transport` and not `subst`: it reduces on `Eq.refl`, which every
-  -- clause of `λ-unsplit` is, so these eliminators still compute.  The
-  -- cubical transport would leave the tests green but inert -- the trap
-  -- `DeBruijn.agda`'s header records for `⌈⌉-E`.
-  -- ================================================================
+  -- ... AND THEIR ELIMINATORS, at an arbitrary motive.
 
-  -- `along-unsplit P o m sp` DENOTES: "a `P` of the reassembled parts is
-  -- a `P` of the thing they came from".  Not `private`: it is the whole
-  -- content of `λ-unsplit` as a rule, and it is what every eliminator
-  -- below is built from.
+  -- `along-unsplit P o m sp` DENOTES: "a `P` of the reassembled parts is a
+  -- `P` of the thing they came from".
   along-unsplit : (P : TheoryTy ℓM tm) (o : LOp) (m : Raw) (sp : LSplit o m)
                 → P (Op o (LParts o m sp)) → P m
   along-unsplit P o m sp = Eq.transport P (λ-unsplit o m sp)
@@ -175,9 +143,7 @@ module Initial (Name : Type₀) where
   all-lam : (Γ : Scope) → LamA (Everything Γ) ⊢ Everything Γ
   all-lam Γ = all-roll Γ ∘g (⊕-I₂ ∘g ⊕-I₂)
 
-  -- ================================================================
   -- INITIALITY.
-  -- ================================================================
 
   -- PRIMITIVE (2 of 2): every element of the carrier is uniquely built
   -- from the operations.  The only recursion on `Raw` in the tree.
@@ -199,27 +165,20 @@ module Initial (Name : Type₀) where
                   → forget Γ t (readback Γ t u) ≡ u
   forget-readback Γ t u = refl
 
-  -- ================================================================
   -- The other half: nothing else inhabits `μ AllF`.  That is a
   -- statement ABOUT an element, so it is proved by `indμ` -- the
   -- dependent eliminator, taken from `TheoryGrammar.Induction`.
-  -- ================================================================
 
-  -- PRIVATE, and deliberately so: unlike `along-unsplit`, none of these
-  -- is a lemma anyone could reuse.  `LamMot` mentions `readback` and
-  -- `supf` and states nothing outside the lam case of `readback-unique`;
-  -- `shLam0` is one particular shape; `supf` is `sup` eta-expanded.
+  -- PRIVATE, and deliberately so: unlike `along-unsplit`, none of these is
+  -- a lemma anyone could reuse.
   private
     supf : {Γ : Scope} {m : Raw} (sh : Sh (AllF Γ) m)
          → ((p : Pos (AllF Γ) m sh) → μ AllF (nx (AllF Γ) m sh p))
          → μ AllF (Γ , m)
     supf sh f = sup sh f
 
-    -- MEASUREMENT.  `varOp`/`appOp` are `refl`: their slot families are
-    -- constant, so the shape has η.  `lamOp`'s slot family is a match on
-    -- the arity, so it does not -- exactly the `funExt λ {true;false}`
-    -- that `λFib .parts-split` already pays, and the reason the lam case
-    -- needs `J` to move the shape before the positions compute.
+    -- MEASUREMENT. `varOp`/`appOp` are `refl`: their slot families are
+    -- constant, so the shape has η.
     ShLam : (Γ : Scope) (n : Name) (t : Raw) → Type₀
     ShLam Γ n t = (a : LAr lamOp)
                 → Sh (Glam Γ a) (LParts lamOp (lam n t) (mkLam n t) a)
@@ -271,15 +230,11 @@ module Initial (Name : Type₀) where
   ⊤≅Everything Γ t .Iso.sec = readback-unique Γ t
   ⊤≅Everything Γ t .Iso.ret = forget-readback Γ t
 
-  -- ================================================================
   -- The algebra `fold` is applied to: unique readability at an
   -- ARBITRARY motive level.
-  -- ================================================================
 
-  -- DERIVED: `⟦All⟧` respells the container as `VarA ⊕ (AppA ⊕ LamA)`,
-  -- and the three tensors are then eliminated by the rules above.  So
-  -- this is `⊕-E`, `⊕-E`, and one substrate law -- no match on a
-  -- splitting, no match on a `Raw`, and no recursion.
+  -- DERIVED: `⟦All⟧` respells the container as `VarA ⊕ (AppA ⊕ LamA)`, and
+  -- the three tensors are then eliminated by the rules above.
   AllAlg : (P : Raw → Type ℓM)
          → ((n : Name) → P (var n))
          → ((u v : Raw) → P u → P v → P (app u v))
@@ -290,17 +245,8 @@ module Initial (Name : Type₀) where
     ⊕-E (VarA-E pv) (⊕-E (AppA-E pa) (LamA-E pl))
         m (⟦All⟧ {M = λ i → P (i .snd)} Γ m (sh , rc))
 
-  -- ================================================================
-  -- `readback` is a MAP OUT OF `⊤` at the shape `Result ⊥G` -- it
-  -- cannot fail.  Observing it needs a semantic action out of
-  -- `Everything Γ`, which is a `Δ`-valued algebra run by the generic
-  -- `recA` -- exactly as the CYK parse tree is read in
-  -- `Strings.Examples`.
-  --
-  -- Counting nodes is the smallest action that visits every
-  -- alternative, so running it says `readback` really does traverse the
-  -- whole term.
-  -- ================================================================
+  -- `readback` is a MAP OUT OF `⊤` at the shape `Result ⊥G` -- it cannot
+  -- fail.
 
   module AI = ActInd λFib ℓ-zero Scope (λ _ → tm)
 

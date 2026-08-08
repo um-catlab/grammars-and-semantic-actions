@@ -1,53 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  THE ISA PROMODEL, AND HOARE LOGIC AS ITS CONNECTIVES.
-
-  Given
-
-    * a RESOURCE promodel `Fib`      (machine state, splitting disjointly)
-    * a PROGRAM-TEXT promodel `PFib` (program text, splitting as
-                                      concatenation)
-    * a STEP RELATION `Run : Prog → Res → Res → Type`
-
-  this file builds ONE `Fibered` over `TheoryGrammar.Machine.Signature`'s
-  two-sorted `isaSig`, and then reads the whole of separation-logic Hoare
-  reasoning off its connectives.  Nothing below is defined; everything is
-  an instance of a generic former.
-
-      A ∗ B      =  ⊗ˢ sepop                separating conjunction
-      P ⍮ Q      =  ⊗ˢ seqop                program-text composition
-      sp P A     =  ⊗ˢ runop  (P , A)       strongest postcondition
-      wp P B     =  ⊸ᶠ  at the res slot     weakest precondition
-      ⟪ A ⟫P⟪ B ⟫ =  A ⊢ wp P B              the Hoare triple
-
-  ------------------------------------------------------------------
-  THE STEP RELATION IS SPLITTING DATA, NOT A SEMANTIC ACTION.
-
-  `ISplit runop h'` is `Σ p, Σ h, Run p h h'` -- "h' is what you get by
-  running p on h".  So the operational semantics of the machine enters
-  the framework the same way concatenation enters `Instances.Strings`:
-  as the `Split` field of an operation.  Consequences, all of them
-  structural rather than proved here:
-
-    * `⊗ˢ runop` is `sp` and its residual at the resource slot is `wp`,
-      so `sp ⊣ wp` is the multiplicative currying isomorphism.
-    * `wp` has DEFINITIONAL β and η (`⊸ᶠ-β`, `⊸ᶠ-η` in
-      `TheoryGrammar.Fibered`) because the `Focus` below supplies the
-      focused splittings as data.  The unfocused `⊸ˢ` would not.
-    * A Hoare triple is a `⊢`-term at the sort `res`, so `pullTerm`
-      transports it along any morphism of ISAs -- see `Machine.Morphism`.
-
-  ------------------------------------------------------------------
-  WHAT IS ASSUMED, AND WHY IT IS EXACTLY TWO THINGS.
-
-  `runSeq` and `runNil` below are `ISA.Interp.Interp`'s two fields,
-  restated for a relation indexed by program text.  They say `Run` is a
-  LAX MONOID ACTION of program text on resource.  Everything else in the
-  file is a composite.  In particular the two operations `seqop` and
-  `sepop` do not interact at all until `Local` is assumed, which is the
-  precise sense in which the frame rule -- and only the frame rule -- is
-  where the temporal and the spatial theory meet.
--}
+{- THE ISA `Fibered`, AND HOARE LOGIC AS ITS CONNECTIVES. -}
 open import Cubical.Foundations.Prelude
 open import Cubical.Data.Unit using (Unit; tt; Unit*)
 
@@ -72,9 +24,7 @@ open import TheoryGrammar.Machine.Signature
 
 private variable ℓA ℓB ℓC : Level
 
--- ==================================================================
 -- The carriers.
--- ==================================================================
 
 Res : Type₀
 Res = Fib .carrier tt
@@ -86,10 +36,8 @@ ICar : ISort → Type₀
 ICar prog = Prog
 ICar res  = Res
 
--- ==================================================================
--- THE PROMODEL.  Three operations, three kinds of splitting; the third
+-- THE `Fibered`.  Three operations, three kinds of splitting; the third
 -- one IS the operational semantics.
--- ==================================================================
 
 ISplit : (o : ISAOp) → ICar (ISAResult o) → Type₀
 ISplit seqop p  = PFib .Split appop p
@@ -117,10 +65,8 @@ Asrt ℓ = TheoryTy ℓ res
 Spec : (ℓ : Level) → Type (ℓ-suc ℓ)
 Spec ℓ = TheoryTy ℓ prog
 
--- ==================================================================
 -- THE TWO MONOIDAL CONNECTIVES.  Both are `⊗ˢ`; only the operation
 -- differs, and with it the sort.
--- ==================================================================
 
 _∗_ : Asrt ℓA → Asrt ℓA → Asrt _
 A ∗ B = ⊗ˢ sepop (boolΠ {M = λ _ → Asrt _} A B)
@@ -136,21 +82,12 @@ P ⍮ Q = ⊗ˢ seqop (boolΠ {M = λ _ → Spec _} P Q)
 
 infixr 20 _⍮_
 
--- ==================================================================
 -- STRONGEST POSTCONDITION = `⊗ˢ runop`.
--- ==================================================================
 
 spost : Spec ℓA → Asrt ℓA → Asrt _
 spost P A = ⊗ˢ runop (boolΠ {M = λ a → TheoryTy _ (ISASortOf runop a)} P A)
 
--- ==================================================================
 -- WEAKEST PRECONDITION = the RESIDUAL of `runop` at the resource slot.
---
--- The `Focus` record supplies the focused splittings -- a splitting seen
--- from the resource slot, indexed by the INPUT resource -- so `⊸ᶠ` is a
--- plain Π and both β and η are `refl` (proved once, generically, in
--- `TheoryGrammar.Fibered`).
--- ==================================================================
 
 runFocus : Focus isaFib runop rslot
 runFocus .SplitAt h            = Σ[ p ∈ Prog ] Σ[ h' ∈ Res ] Run p h h'
@@ -172,14 +109,8 @@ wpre {ℓA = ℓA} P B =
 ⟪_⟫_⟪_⟫ : Asrt ℓA → Spec ℓB → Asrt ℓC → Type _
 ⟪ A ⟫ P ⟪ B ⟫ = A ⊢ wpre P B
 
--- ==================================================================
--- `sp ⊣ wp`, BY HAND ONCE.
---
--- Both hom-sets curry to the same six-argument function.  The two
--- directions are transpositions; the round trips cost exactly one
--- `boolΠ`-η, which is the documented "arities have no η" tax and the
--- only thing standing between this and `refl`.
--- ==================================================================
+-- `sp ⊣ wp`, BY HAND ONCE. Both hom-sets curry to the same six-argument
+-- function.
 
 module _ (P : Spec ℓA) (A : Asrt ℓA) (B : Asrt ℓB) where
 
@@ -214,10 +145,8 @@ module _ (P : Spec ℓA) (A : Asrt ℓA) (B : Asrt ℓB) where
   sp⊣wp .Iso.sec = sp⊣wp-β
   sp⊣wp .Iso.ret = sp⊣wp-η
 
--- ==================================================================
 -- THE RULE OF CONSEQUENCE.  Functoriality of `⊸ᶠ`, and therefore free:
 -- no hypothesis on `Run` is used.
--- ==================================================================
 
 wpre-map : (P : Spec ℓA) {B B' : Asrt ℓB} → B ⊢ B' → wpre P B ⊢ wpre P B'
 wpre-map P f h w sa k = f _ (w sa k)
@@ -229,10 +158,8 @@ consequence : {A A' : Asrt ℓA} {B B' : Asrt ℓB} (P : Spec ℓC)
             → A' ⊢ A → B ⊢ B' → ⟪ A ⟫ P ⟪ B ⟫ → ⟪ A' ⟫ P ⟪ B' ⟫
 consequence P pre post t = wpre-map P post ∘g t ∘g pre
 
--- ==================================================================
 -- THE ASSERTION-LEVEL FRAME RULE.  `⊗ˢ-map`, i.e. functoriality of the
 -- spatial tensor.  Free, exactly as in `ISA.Machine`.
--- ==================================================================
 
 ∗-map : {A B : Asrt ℓA} (C : Asrt ℓA) → A ⊢ B → (A ∗ C) ⊢ (B ∗ C)
 ∗-map {A = A} {B = B} C f =
@@ -240,13 +167,8 @@ consequence P pre post t = wpre-map P post ∘g t ∘g pre
          (boolΠ {M = λ a → boolΠ {M = λ _ → Asrt _} A C a
                          ⊢ boolΠ {M = λ _ → Asrt _} B C a} f idg)
 
--- ==================================================================
--- §  THE TWO LAWS OF THE ACTION.
---
--- These are `ISA.Interp.Interp`'s two fields, restated.  They are the
--- ONLY hypotheses beyond the three promodels, and each is used exactly
--- once below.
--- ==================================================================
+-- § THE TWO LAWS OF THE ACTION. These are `ISA.Interp.Interp`'s two
+-- fields, restated.
 
 -- `Run` is a LAX ACTION: running a program that splits is running the
 -- two halves in turn.
@@ -261,16 +183,14 @@ UnitAction : Type₀
 UnitAction =
   (p : Prog) → PFib .Split nilop p → (h h' : Res) → Run p h h' → h Eq.≡ h'
 
--- ==================================================================
--- SEQUENCING, IN THE POSTCONDITION FORM.
---
--- PRIMITIVE (phase 1): the one place a `runop`-splitting is
--- destructured.  It is the content of the action law and nothing else --
--- observe that no assertion, no `wp` and no Hoare triple appears.
--- ==================================================================
+-- SEQUENCING, IN THE POSTCONDITION FORM. PRIMITIVE (phase 1): the one
+-- place a `runop`-splitting is destructured.
 
 module _ (act : LaxAction) where
 
+  -- PRIMITIVE (phase 1). NOT for the reason the other hand-written clauses
+  -- in this sweep had: `spost P A` IS `⊗ˢ runop (boolΠ P A)`, a connective
+  -- composite already.
   spost-⍮ : (P Q : Spec ℓA) (A : Asrt ℓA)
           → spost (P ⍮ Q) A ⊢ spost Q (spost P A)
   spost-⍮ P Q A h' ((p , h , r) , pay) =
@@ -313,9 +233,7 @@ module _ (act : LaxAction) where
                   idg (wpre⇒spost P A M t₁))
       ∘g spost-⍮ P Q A )
 
--- ==================================================================
 -- THE EMPTY PROGRAM.
--- ==================================================================
 
 module _ (uni : UnitAction) where
 
@@ -326,13 +244,8 @@ module _ (uni : UnitAction) where
     coe : {x y : Res} → x Eq.≡ y → A x → A y
     coe Eq.refl z = z
 
--- ==================================================================
--- §  THE FRAME RULE.  The one place the spatial and the temporal
--- operation interact, and it needs a hypothesis: LOCALITY.
---
--- `Local p` is `ChangeOfTheory`'s "reflects splittings" transposed from
--- a function to a relation, stated purely in `Fib .Split`/`parts`.
--- ==================================================================
+-- § THE FRAME RULE. The one place the spatial and the temporal operation
+-- interact, and it needs a hypothesis: LOCALITY.
 
 Local : Prog → Type₀
 Local p =
@@ -362,16 +275,5 @@ module _ (P : Spec ℓA) (loc : (p : Prog) → P p → Local p) where
             → ⟪ A ⟫ P ⟪ B ⟫ → ⟪ A ∗ R ⟫ P ⟪ B ∗ R ⟫
   frameRule {A = A} {B = B} R t = frame-wpre B R ∘g ∗-map R t
 
--- ==================================================================
--- §  WHAT THE SIGNATURE DOES NOT HAVE.
---
--- There is no `emp` and no `skip` above.  The honest nullary unit of the
--- spatial theory is `⊗ˢ` at a NULLARY operation, and `isaSig` has none: its
--- three operations are all binary.  Adding `nilop : () → res` and
--- `skipop : () → prog` is routine (`monoidSig` has exactly that shape)
--- and would make `emp` and `skip` connectives rather than definitions.
--- It is omitted here only to keep the arity uniformly `Bool`, which is
--- what makes `boolΠ` the sole eliminator.  `nilRule` above therefore
--- takes the "is the empty program" predicate as a hypothesis instead of
--- reading it off `⊗ˢ skipop`.
--- ==================================================================
+-- § WHAT THE SIGNATURE DOES NOT HAVE. There is no `emp` and no `skip`
+-- above.

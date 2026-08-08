@@ -50,10 +50,8 @@ binR _   _   _   = ⊥
 
 open Parser NT unitR binR
 
--- The two leaves and the node, built from the DESCRIPTION'S intro
--- rules (`leaf`, `node`).  Nothing here mentions `sup`, shapes,
--- positions, or absurd position patterns -- that is phase-1 vocabulary
--- and an example has no business with it.
+-- The two leaves and the node, built from the DESCRIPTION'S intro rules
+-- (`leaf`, `node`).
 leafA : Deriv ntA (true ∷ [])
 leafA = leaf true Eq.refl Eq.refl
 
@@ -68,9 +66,7 @@ parseAB = node tt (cons nil)
                (literalNN false _ Eq.refl)
                leafA leafB
 
--- ==================================================================
 -- ... and the parser, as a term.
--- ==================================================================
 
 allRules : (P : NT) → List (Rule P)
 allRules ntS = inr (ntA , ntB , tt) ∷ []
@@ -126,12 +122,10 @@ allComplete ntB (inr (_ , _ , ()))
 -- equality test.  One primitive (`decEqS`), two consumers.
 open Decide allRules allComplete litProbe
 
--- Observing the parser.  `okA` (TheoryGrammar.SemanticAction) is the
--- generic observer: it reads a `Result E A` at ANY error grammar, so
--- the very same combinator observes `parse` here (error `⊤G`) and
--- `derives?` below (error `¬G _`).  The result is a TERM `⊤G ⊢ Δ Bool`;
--- `run` appears only in the `refl` line, and cases are batched with
--- `passes … at …` so the term under test is written once.
+-- Observing the parser. `okA` (TheoryGrammar.SemanticAction) is the
+-- generic observer: it reads a `Result E A` at ANY error grammar, so the
+-- very same combinator observes `parse` here (error `⊤G`) and `derives?`
+-- below (error `¬G _`).
 
 parses? : (P : NT) → ⊤G ⊢ Δ Bool
 parses? P = okA (Deriv P) ⊤G ∘g parse P
@@ -145,10 +139,8 @@ _ = refl
 _ : passes (run (parses? ntA) at ((true ∷ []) ↦ true ∷ []))
 _ = refl
 
--- ==================================================================
 -- ... and the DECISION.  `decide` returns a parse or a proof that none
 -- exists -- not merely a failure to find one.
--- ==================================================================
 
 -- ... and observing the DECISION with the SAME combinator, only at a
 -- different error grammar: `Dec⟨ A ⟩` is `Result (¬G A) A`, so
@@ -167,20 +159,8 @@ _ = refl
 _ : passes (run (derives! ntA) at ((true ∷ []) ↦ true ∷ []))
 _ = refl
 
--- ==================================================================
--- THE WITNESS, not just the decision.
---
--- A `Bool` throws away everything the parser proved.  What we actually
--- want out is the parse TREE, and reading one out is a SEMANTIC ACTION
--- `Deriv P ⊢ Δ Tree` -- the generic notion, from
--- `TheoryGrammar.SemanticAction`.
---
--- The algebra below is written entirely in the connectives: the
--- description's `⊕e` IS `⊕ᴰ`, its `⊗e` IS `⊗ˢ` and its `&e` IS `&ᴰ`, so
--- the three branches are `⊕ᴰ-E`, `⊗A` and `&ᴰA` and there is not one
--- match on a shape.  `Tree` cannot be fabricated: the action's source is
--- the derivation, so a tree comes out only where a parse went in.
--- ==================================================================
+-- THE WITNESS, not just the decision. A `Bool` throws away everything the
+-- parser proved.
 
 data Tree : Type₀ where
   leafT : Bool → Tree
@@ -199,11 +179,8 @@ cykAlg P = ⊕ᴰ-E branch
     branch (inl (c , pf))     = pureA Tree (leafT c)
     branch (inr (Q , T , pf)) =
       -- `⊗A` reads both slots of the splitting; `&ᴰA … true` picks the
-      -- recursive occurrence out of the (occurrence, non-triviality)
-      -- pair that guardedness put there, and `idA` is the subtree.
-      -- The `λ { true → … ; false → … }` matches on the ARITY, never on
-      -- a term: `binSlot Q T a` is stuck at a variable `a`, and this is
-      -- the same use of finiteness that `Readable.λ-decSlots` makes.
+      -- recursive occurrence out of the (occurrence, non-triviality) pair
+      -- that guardedness put there, and `idA` is the subtree.
       mapA (λ f → nodeT (f true) (f false))
            (⊗A appop {A = λ a → G.⟦ binSlot Q T a ⟧c TreeMot} (λ _ → Tree)
                (λ { true  → &ᴰA Bool true idA
@@ -238,11 +215,9 @@ _ : passes (runΔ Tree _ (derivT ntS) at
              ∷ [] ))
 _ = refl
 
--- ==================================================================
 -- The remaining maps out of `⊤` in this instance.  A VIEW is a
 -- `Cover (P ⊕ Q)`, which is a `Result Q P` -- so `accepts?` reads which
 -- branch it took, with no new combinator.
--- ==================================================================
 
 -- ---- `charCase` / `decNT` : "is this word empty?", the decomposition
 -- ---- axiom and its swap.  They are each other's complement, and the
@@ -286,20 +261,9 @@ _ = refl
 _ : passes (run (litM? false) at ((false ∷ []) ↦ true ∷ []))
 _ = refl
 
--- ==================================================================
--- THE REJECTIONS, AS THEOREMS -- and the CONTRAST, which this instance
--- is the only one that can show, because it has BOTH shapes of the same
+-- THE REJECTIONS, AS THEOREMS -- and the CONTRAST, which this instance is
+-- the only one that can show, because it has BOTH shapes of the same
 -- algorithm.
---
--- `refute` is uniform in the error grammar, so it applies to `parse`
--- and to `derives?` alike.  What comes back is not alike:
---
---     derives?  E = ¬G (Deriv P)   ⟹  Deriv P w → ⊥   -- a theorem
---     parse     E = ⊤G             ⟹  tt              -- nothing
---
--- Both tests above read `↦ false`.  Only one of them says anything
--- about the LANGUAGE; the other says something about the algorithm.
--- ==================================================================
 
 noDeriv : (P : NT) (w : String) → run (derives! P) w ≡ false
         → (¬G Deriv P) w
@@ -318,10 +282,8 @@ yes-parse-ab : Deriv ntS (true ∷ false ∷ [])
 yes-parse-ab = witness (Deriv ntS) (¬G Deriv ntS) (derives? ntS)
                        (true ∷ false ∷ []) refl
 
--- THE CONTRAST.  The same combinator at `parse`, whose error grammar is
--- `⊤G`, yields `Unit` -- there is nothing to hand back.  This is the
--- honest content of an incomplete parser, and it is why `Search` is
--- weaker than `Decide` even though both compute the same booleans.
+-- THE CONTRAST. The same combinator at `parse`, whose error grammar is
+-- `⊤G`, yields `Unit` -- there is nothing to hand back.
 nothing-from-parse : ⊤G (false ∷ true ∷ [])
 nothing-from-parse = refute (Deriv ntS) ⊤G (parse ntS) (false ∷ true ∷ []) refl
 

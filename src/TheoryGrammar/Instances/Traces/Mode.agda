@@ -1,19 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  A PARTIALLY COMMUTATIVE substructural mode.
-
-  `Modes/Concat` is `Uses` at the free monoid (ordered) and
-  `Modes/Interleave` is `Uses` at the free commutative monoid (linear).
-  This is the same grammar at the trace substrate, so it sits strictly
-  between them: exchange is licensed exactly on independent names.
-
-  Only `Split` changes -- `Uses`, `check` and `accepts` are inherited
-  from `Modes/Core` unmodified, which is the whole claim.
-
-  DEFINES `Ctx`, `CSplit`/`CParts`, the promodel `fib` and point
-  `point`, the decision `decEnum`/`dec`, and the module `Trace` -- the
-  mode itself, with leaf `Lf n = ⌈n⌉` and no modality.
--}
+{- A PARTIALLY COMMUTATIVE substructural mode. -}
 open import Cubical.Foundations.Prelude
 
 open import Cubical.Data.Sum using (_⊎_; inl; inr)

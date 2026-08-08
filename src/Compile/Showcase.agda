@@ -235,15 +235,46 @@ _ = refl
 --     Compile.LinToRust.Codegen.compileRust
 --       : {u : Usage} → Tm u → RExpr        -- TERM-directed
 --
--- which is why it distinguishes the two terms below, and why
--- `LinToRust.Codegen.Simulates` is genuinely provable rather than
--- vacuous.  The goal it unlocks is `Simulation.adequacy`:
+-- which is why it distinguishes the two terms below.  Being
+-- term-directed is NECESSARY and it is not sufficient: the on-the-nose
+-- square `LinToRust.Codegen.Simulates` is ALSO false, for an
+-- unrelated second reason, and `Compile.Relational.Refutation` proves
+-- it.  `compileE` names a binder by its absolute depth; source
+-- substitution moves the residual body one binder shallower while
+-- `substE` plants the argument verbatim; so on
+-- `(λf. λx. f x) (λy. y)` the two answers are α-equivalent and
+-- syntactically distinct.
 --
---     Strong → Separating → exec t ≡ exec t' → nf t ≡ nf t'
+-- The two failures are worth keeping apart.  The heap family fails at
+-- INJECTIVITY -- the compiler cannot see the term -- and no statement
+-- repairs that.  The Rust backend fails only at the EQUALITY in the
+-- conclusion, and replacing it with the relation the compiler is a
+-- section of repairs it completely:
 --
--- i.e. execution DECIDES β-equivalence.  That is the theorem worth
--- having, and the pure functional backend is the only one positioned
--- to deliver it.
+--     Compile.Relational.Square.square
+--       :  t ⇓ₛ v  →  Rel ν t e  →  Σ[ w ] (e ⇓ w) × Rel ν v w
+--
+-- -- PROVED, with `squareDet` upgrading it via `⇓-det` to "EVERY
+-- target run realises the source's value".  That is the theorem worth
+-- having.
+--
+-- `Compile.ArithToARM` takes the other road out of the same
+-- impossibility, and the contrast is the useful part.  It is likewise
+-- TERM-directed --
+--
+--     ArithToARM.Codegen.compile : Exp u → Prog
+--
+-- -- but its source is FIRST-ORDER, so its square is an honest `Eq.≡`:
+--
+--     correct : exec (compile e) σ s  Eq.≡  eval e σ ∷ s
+--
+-- with no relation and no side condition.  The α-equivalence that
+-- forced `Rel` above is a cost of compiling BINDING STRUCTURE, and a
+-- target with no binders simply does not pay it.  In exchange that
+-- backend gets all the way to AArch64 that assembles and runs, and
+-- linearity buys it a second theorem the λ-side has no analogue of:
+-- `readsDisjoint`, "the two operands of an addition load DISJOINT
+-- memory", whose entire content is `Use⊎`'s missing constructor.
 -- ==================================================================
 
 _ : ASM.compileU [] ≡ []

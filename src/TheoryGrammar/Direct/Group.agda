@@ -1,53 +1,5 @@
-{-
-  `NoGrading` RE-READ: THE DIVISIBILITY CATEGORY OF A GROUP IS
-  INDISCRETE, HENCE NOT DIRECT, HENCE THERE IS NO INDUCTION.
-
-  `Instances/Group/NoGrading.agda` proves the rigidity theorem -- every
-  grading of a group-like promodel has constant degree, so no splitting
-  is proper and no description is guarded.  It closes by NAMING the
-  general criterion:
-
-      inductive grammars exist exactly when the DIVISIBILITY PREORDER
-      of the theory is well-founded.
-
-  `Direct/Divisibility.agda` builds that preorder.  This file completes
-  the circuit: it shows that the preorder of a group-like promodel is
-  INDISCRETE (`chaotic₁` -- every element is an immediate factor of every
-  element, in ONE step, no closure needed), and reads every conclusion of
-  `NoGrading` off the categorical structure.
-
-  NOTHING HERE IS RE-PROVED.  `GroupLike`, `GroupObstruction.deg-const`
-  and `Degenerate.no-proper` / `no-guarded` are imported from
-  `TheoryGrammar.Instances.Group.NoGrading` and cited.  The content added
-  is only the translation:
-
-      NoGrading                     here
-      ---------                     ----
-      GroupLike o a                 `_◃₁_` is the total relation
-      deg-const                     the degree functor is constant
-      no-proper                     no map of Div is ≺-strict
-      (new)                         ↡x is EMPTY at every object x
-      no-guarded                    ▷ is terminal, löb is the identity
-
-  The last line is the sharp form.  `Direct/StrictDownset.agda`'s `▷Psh`
-  is "sections over ↡"; when ↡ is empty, every family has exactly one
-  section over it, so `▷ A` is terminal and a step `▷ A x → A x` is just
-  an element of `A x`.  löb then reads: from `∀ x. A x` conclude
-  `∀ x. A x`.  That is not a defect of the construction, it is the
-  construction reporting honestly that there is nothing to recurse on.
-
-  ------------------------------------------------------------------
-  A REMARK THE TWO FILES TOGETHER MAKE POSSIBLE.
-
-  `Direct/Later.agda` separates two modalities -- the graded `▷ᵍ`
-  (indexed by lower DEGREE) and the sieve `▷ᵈ` (indexed by lower
-  degree AND divisibility).  They differ in general, and `▷ᵍ` is
-  strictly stronger.  At a group they COINCIDE, because both are
-  terminal: `▷ᵈ` because ↡ is empty, `▷ᵍ` because the degree is constant.
-  So the group obstruction is invisible to the distinction -- it kills
-  both modalities at once, which is why `NoGrading` never had to choose
-  between them.
--}
+{- `NoGrading` RE-READ: THE DIVISIBILITY CATEGORY OF A GROUP IS INDISCRETE,
+   HENCE NOT DIRECT, HENCE THERE IS NO INDUCTION. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Direct.Group where
 
@@ -78,15 +30,7 @@ module _ {σ : SortedSig Unit ℓ ℓ'} (Fib : Fibered σ ℓX ℓP)
 
   open Div Fib
 
-  -- ================================================================
-  -- THEOREM.  `Div Fib` is INDISCRETE.
-  --
-  -- `GroupLike` says slot `a` of the splittings of `m` ranges over the
-  -- whole carrier -- in a group, `m = h · (h⁻¹ m)`.  So the one-step
-  -- relation is total, no reflexive-transitive closure is needed, and
-  -- the preorder has a single equivalence class: it "collapses to a
-  -- point" in the precise sense that its poset reflection is Unit.
-  -- ================================================================
+  -- THEOREM. `Div Fib` is INDISCRETE.
 
   chaotic₁ : (n m : Elt) → n ◃₁ m
   chaotic₁ n m =
@@ -114,9 +58,7 @@ module _ {σ : SortedSig Unit ℓ ℓ'} (Fib : Fibered σ ℓX ℓP)
     deg-const : (n m : Elt) → degE n ≡ degE m
     deg-const n m = GO.deg-const (n .snd) (m .snd)
 
-    -- ==============================================================
     -- Every consequence, read off the category.
-    -- ==============================================================
 
     -- the degree functor is constant, so NO map is ≺-strict
     no-strict : (n m : Elt) → ¬ (n ≺ m)

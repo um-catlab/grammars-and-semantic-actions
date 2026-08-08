@@ -1,17 +1,4 @@
-{-
-  DISTRIBUTIVITY OF THE INDEXED SUM, internally.
-
-  `⊕ᴰ Y` commutes with `⊕` and with `&` on both sides.  Every proof is a
-  composite of `Rules`' intro/elim; the direction that has to move an
-  index OUT of a conjunct is the same trick `dist&` uses -- eliminate
-  under a `⇒` and uncurry -- so no case split on a sum appears anywhere.
-
-  This is what lets a synthesis grammar `⊕ᴰ Ty (λ A → ...)` be pushed
-  through the unfolding of a judgment without ever matching on it.
-
-  MAIN: `⊕ᴰ-map`, `⊕ᴰ-swap`, the four `⊕ᴰ-⊕-`/`⊕ᴰ-&-` distributions,
-  and `dist&r`/`dist&₂`, `dist&`'s mirror and its square.
--}
+{- DISTRIBUTIVITY OF THE INDEXED SUM, internally. -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Distributive where
 

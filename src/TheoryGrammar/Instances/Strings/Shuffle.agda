@@ -1,21 +1,5 @@
 {-# OPTIONS -WnoUnsupportedIndexedMatch #-}
-{-
-  TWO THEORIES ON ONE CARRIER: concatenation and interleaving on `List A`.
-
-  This is the instance `TheoryGrammar/Splitting.agda` was built for, and
-  the pair is not contrived: `Strings` and `Bags` are the SAME signature
-  at the SAME carrier, differing only in `Split` -- which is that file's
-  design claim.  `⊎Spl` puts both on one promodel, so `⊗ᵒ` (ordered) and
-  `⊗ᶜ` (commutative) are two connectives over one set of grammars.
-
-  What that buys is a COMPARISON of theories as a term.  `shuffle` is
-  `A ⊗ᵒ B ⊢ A ⊗ᶜ B`, and its proof is one splitting-level map with the
-  payload reused verbatim -- because both theories present `parts` the
-  same way.  `noUnshuffle` refutes the converse, so the two operations
-  are genuinely distinct and not merely renamed.
-  PRIMITIVE: `ordIlv`, `cross`, `noSwap`.
-  (`ilvNilL` was one and is not: it is `Bags/Base.ilvApp` at `[]`.)
--}
+{- TWO THEORIES ON ONE CARRIER: concatenation and interleaving on `List A`. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Strings.Shuffle (A : Type₀) where
@@ -44,12 +28,12 @@ import TheoryGrammar.Instances.Bags.Refinement as BgR
 module BR = BgR A
 import TheoryGrammar.Instances.Strings.Recompose as Rc
 module Rec = Rc A
+import TheoryGrammar.Instances.Strings.Levi as SLv
+module SL = SLv A
 
--- ==================================================================
 -- ONE CARRIER, TWO SPLITTINGS.  Note what is NOT written: an equation
--- between two carriers.  `splittingOf` forgets each promodel's carrier
+-- between two carriers.  `splittingOf` forgets each `Fibered`'s carrier
 -- and `⊎Spl` puts the remainders side by side.
--- ==================================================================
 
 bothSpl : Splitting (monoidSig ⊎Sig monoidSig) (λ _ → List A) ℓ-zero
 bothSpl = splittingOf S.strFib ⊎Spl splittingOf B.bagFib
@@ -77,9 +61,7 @@ P ⊗ᵒ Q = M.⊗ˢ (inl appop) (pair P Q)
 _⊗ᶜ_ : Gr → Gr → Gr
 P ⊗ᶜ Q = M.⊗ˢ (inr appop) (pair P Q)
 
--- ==================================================================
 -- THE COMPARISON.
--- ==================================================================
 
 -- DERIVABLE, not primitive: `Bags/Base.ilvApp u v : Ilv u v (u ++ v)`
 -- at `u = []` already is this, since `[] ++ v` reduces to `v`.
@@ -98,9 +80,7 @@ ordIlv (S.cons p) = B.left (ordIlv p)
 shuffle : (P Q : Gr) → (P ⊗ᵒ Q) M.⊢ (P ⊗ᶜ Q)
 shuffle P Q w ((u , v , p) , h) = (u , v , ordIlv p) , h
 
--- ==================================================================
 -- ... AND IT HAS NO INVERSE, so the two operations are distinct.
--- ==================================================================
 
 private
   hd : A → List A → A
@@ -139,10 +119,8 @@ module _ (x y : A) (ne : x Eq.≡ y → ⊥) where
     go : u Eq.≡ (y ∷ []) → v Eq.≡ (x ∷ []) → S.Split3 u v w2 → ⊥
     go Eq.refl Eq.refl q = noSwap x y ne q
 
--- ==================================================================
 -- TESTS.  The comparison computes: an ordered cut becomes the
 -- corresponding interleaving, on the nose.
--- ==================================================================
 
 module _ (x y : A) where
 
@@ -173,22 +151,14 @@ module _ (x y : A) where
   _ : shuffled .fst .snd .snd ≡ B.left (B.right B.nil)
   _ = refl
 
--- ==================================================================
--- THE TENSOR OF THE TWO THEORIES.
---
--- `Refinement.Refinable o o'` is the interchange law between two
--- operations on one carrier -- the 2x2 matrix whose rows recompose to
--- one splitting's parts and whose columns to the other's.  That is the
--- Kronecker/tensor product of theories, and with both operations here
--- it can finally be ASKED.  The answer is yes, and it needs no
--- decidable equality: the matrix is driven by the two splittings'
--- structure, never by comparing letters (contrast `Strings/Refinement`,
--- which takes `decChar` because homogeneous Levi must decide which
--- off-diagonal cell vanishes).
--- ==================================================================
+-- THE TENSOR OF THE TWO THEORIES. `Refinement.Refinable o o'` is the
+-- interchange law between two operations on one carrier -- the 2x2 matrix
+-- whose rows recompose to one splitting's parts and whose columns to the
+-- other's.
 
 module R  = Refine bothFib
 module RB = Refine B.bagFib
+module RS = Refine S.strFib
 
 ordOp : R.HomOp tt
 ordOp .R.op⋆    = inl appop
@@ -259,10 +229,6 @@ mixedRefinable w (u₁ , u₂ , p) (v₁ , v₂ , q) = res
   res .R.colCell false false = Eq.refl
 
 -- The COMMUTATIVE homogeneous law, transported from `Bags/Refinement`.
--- Field by field, with no coercion: `bothFib .Split (inr appop)` REDUCES
--- to `bagFib .Split appop`, so the two `Refinement`s hold the same data
--- and only the record they sit in differs.  That is `inlSig`'s
--- `Eq.refl` coherences cashed out at the level of a whole theorem.
 comRefinable : R.Refinable comOp comOp
 comRefinable w p q = res
   where
@@ -275,23 +241,28 @@ comRefinable w p q = res
   res .R.colSplit = Z .RB.colSplit
   res .R.colCell  = Z .RB.colCell
 
--- ==================================================================
--- PRECISION SEPARATES THE TWO THEORIES.
---
--- `Refinable` above says the two operations INTERCHANGE.  This says
--- they are still not interchangeable: the same grammar is precise for
--- one and provably not for the other, on the same carrier and at the
--- same slot.  Precision is "fixing this slot determines the rest", and
--- a cut is determined by its left block while a shuffle is not.
--- ==================================================================
+-- The ORDERED homogeneous law, transported from `Strings/Levi` the same
+-- way.
+ordRefinable : R.Refinable ordOp ordOp
+ordRefinable w p q = res
+  where
+  Z = SL.strRefinable w p q
+
+  res : R.Refinement ordOp ordOp w p q
+  res .R.cell     = Z .RS.cell
+  res .R.rowSplit = Z .RS.rowSplit
+  res .R.rowCell  = Z .RS.rowCell
+  res .R.colSplit = Z .RS.colSplit
+  res .R.colCell  = Z .RS.colCell
+
+-- PRECISION SEPARATES THE TWO THEORIES. `Refinable` above says the two
+-- operations INTERCHANGE.
 
 module P = Prec bothFib
 
 -- (`appCancel` and `ordDetermines` are in `Strings/Recompose`.)
 
--- ==================================================================
 -- POSITIVE: every representable is precise for CONCATENATION.
--- ==================================================================
 
 ordPrecise : (r : List A) → P.PreciseI ℓ-zero (inl appop) true (M.⌈ r ⌉)
 ordPrecise r Bs Cs m ((( u₁ , v₁ , p) , Eq.refl , h₁)
@@ -306,11 +277,9 @@ ordPrecise r Bs Cs m ((( u₁ , v₁ , p) , Eq.refl , h₁)
   k true  = h₁ true  , h₂ true
   k false = h₁ false , coeEq (Cs false) (Eq.sym same) (h₂ false)
 
--- ==================================================================
 -- NEGATIVE: it fails for INTERLEAVING.  `x ∷ y ∷ x ∷ []` shuffles with
 -- `x ∷ []` removed in two places, and the two remainders are different
 -- LISTS -- which is exactly what a cut cannot do.
--- ==================================================================
 
 module _ (x y : A) (ne : x Eq.≡ y → ⊥) where
 
@@ -347,17 +316,7 @@ module _ (x y : A) (ne : x Eq.≡ y → ⊥) where
   ... | _ , _ , k = ne (Eq.sym (Eq.ap (hd x) (Eq.sym (k false .fst)
                                                Eq.∙ k false .snd)))
 
--- ==================================================================
 -- THE SAME FACT IN THE SUBSTRATE'S OWN VOCABULARY.
---
--- `SlotDet o i` -- slot `i` determines every slot -- is what
--- `Heap/Precision.slotDet` PROVES for disjoint interleaving, and the
--- comment there says why: "the left part of a DISJOINT split determines
--- the right one".  Plain interleaving has no disjointness, and the same
--- counterexample refutes it.  So the discriminator between the two
--- commutative theories is DISJOINTNESS, not commutativity -- ordered
--- versus unordered was never the axis.
--- ==================================================================
 
 module _ (x y : A) (ne : x Eq.≡ y → ⊥) where
 

@@ -1,17 +1,4 @@
-{-
-  The signature of annotated lambda ASTs: THREE sorts, six operations.
-
-  `nm` and `tm` are as in the two-sorted Lambda instance; `ty` is new,
-  and the types get their OWN operations (`baseOp`, `arrOp`) in the SAME
-  signature rather than living outside the theory.  Two things are new
-  as a result:
-
-    * `annOp` has slots in DIFFERENT sorts that are neither `nm` nor a
-      binder -- `tm` and `ty` -- so `sortOf` is non-constant for a reason
-      unrelated to binding;
-    * `baseOp` has EMPTY arity, so `⊗ˢ baseOp` is the representable
-      `⌈ base ⌉` up to iso, and `decSlots` at it is vacuous.
--}
+{- The signature of annotated lambda ASTs: THREE sorts, six operations. -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Instances.SimplyTyped.Signature where
 

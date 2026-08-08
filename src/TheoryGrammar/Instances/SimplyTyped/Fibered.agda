@@ -1,14 +1,5 @@
-{-
-  The promodel: raw annotated terms AND simple types, with splittings
-  as output-indexed data.
-
-  The carrier is now a three-element family; `Ty` is a carrier, not a
-  parameter, so `⌈ A ⌉` at sort `ty` is a grammar of types in exactly
-  the sense `⌈ n ⌉` is a grammar of names.
-
-  Each `Is*` family has exactly one constructor -- unique readability,
-  now at two different sorts at once.
--}
+{- The `Fibered`: raw annotated terms AND simple types, with splittings as
+   output-indexed data. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.SimplyTyped.Fibered where
 
@@ -127,10 +118,8 @@ module Terms (Name : Type₀) where
   stlcPoint .parts-split baseOp f = funExt λ ()
   stlcPoint .parts-split arrOp  f = funExt λ { true → refl ; false → refl }
 
-  -- The extra promodel law the representables need: a splitting is
-  -- FAITHFUL -- reassembling its parts gives the whole back.  `Fibered`
-  -- has `parts-split` (tuple ↦ splitting ↦ tuple) but not this
-  -- (splitting ↦ tuple ↦ whole); every clause is `Eq.refl`.
+  -- The extra `Fibered` law the representables need: a splitting is
+  -- FAITHFUL -- reassembling its parts gives the whole back.
   unsplit : (o : TOp) (m : Carrier (TResult o)) (sp : TSplit o m)
           → Op o (TParts o m sp) Eq.≡ m
   unsplit varOp  _ (mkVar n)   = Eq.refl

@@ -1,5 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- Permutation, built from the promodel's own insertion relation. -}
+{- Permutation, built from the `Fibered`'s own insertion relation. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Bags.Permutation (A : Type₀) where
@@ -30,19 +30,9 @@ ilvNilL nil = Eq.refl
 ilvNilL (right s) with ilvNilL s
 ... | Eq.refl = Eq.refl
 
-ilvAssoc : ∀ {p q r u w} → Ilv p u w → Ilv q r u
-         → Σ[ y ∈ Bag ] (Ilv q y w × Ilv p r y)
-ilvAssoc nil       nil        = [] , nil , nil
-ilvAssoc (left s)  t          =
-  let (y , e1 , e2) = ilvAssoc s t in _ , right e1 , left e2
-ilvAssoc (right s) (left t)   =
-  let (y , e1 , e2) = ilvAssoc s t in _ , left e1 , e2
-ilvAssoc (right s) (right t)  =
-  let (y , e1 , e2) = ilvAssoc s t in _ , right e1 , right e2
-
 -- Permutations merge along an interleaving.  The only lemma the
 -- intrinsic proof needs, and it is discharged by `ilvAssoc` + `ilvSwap`
--- -- i.e. entirely by the promodel's own structure.
+-- -- i.e. entirely by the `Fibered`'s own structure.
 permMerge : ∀ {a u b v w} → Perm a u → Perm b v → Ilv u v w → Perm (a ++ b) w
 permMerge nil q s with ilvNilL s
 ... | Eq.refl = q
@@ -54,11 +44,9 @@ permMerge (cons p ins) q s =
 
 -- (1) DECOMPOSITION.  Every bag is empty or has a distinguished
 
--- ==================================================================
 -- The permutation theory `merge` needs.  `permMerge` above handles
 -- CONCATENATION; making `merge` internal additionally needs that
 -- permutations compose and that an insertion survives one.
--- ==================================================================
 
 permRefl : (m : Bag) → Perm m m
 permRefl []      = nil
@@ -86,3 +74,28 @@ permTrans nil        nil = nil
 permTrans (cons p i) q   =
   let (v' , pv , iv) = permInsert i q
   in cons (permTrans p pv) iv
+
+-- LISTINGS, AND THEIR MONOID. `SpecG m` is "a listing of the bag `m`" --
+-- the specification both sorters are written against.
+
+SpecG : Gr
+SpecG m = Σ[ out ∈ Bag ] Perm out m
+
+Spec : Ix → Type₀
+Spec (_ , m) = SpecG m
+
+-- the multiplication is `permMerge`; the two units are `⌈⌉-E`
+appendSpec : (SpecG ⊗' SpecG) ⊢ SpecG
+appendSpec w ((u , v , s) , h) =
+  (h true .fst ++ h false .fst) , permMerge (h true .snd) (h false .snd) s
+
+nilSpec : ⌈ [] ⌉ ⊢ SpecG
+nilSpec = ⌈⌉-E ([] , nil)
+
+unitSpec : (a : A) → ⌈ a ∷ [] ⌉ ⊢ SpecG
+unitSpec a = ⌈⌉-E ((a ∷ []) , permRefl (a ∷ []))
+
+-- the constant carrier, for contrast: nothing indexes it, so a term
+-- into it may return any bag at all
+CBag : Gr
+CBag _ = Bag

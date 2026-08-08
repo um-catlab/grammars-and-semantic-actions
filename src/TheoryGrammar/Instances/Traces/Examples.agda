@@ -1,17 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  Three letters, ONE independent pair, and the interpolation measured.
-
-  The same word `abc` is enumerated at the three relations.  4 < 5 < 8:
-  strictly more factorisations than concatenation allows, strictly fewer
-  than full interleaving.  The endpoint counts are forced -- `Ordered`
-  and `Commutative` prove the enumerated types are `Split3` and `Ilv`.
-
-  DEFINES the alphabet `L3` with its `Ind`/`decInd`/`isPropInd`, the
-  three members `Ord`/`Part`/`Full` of the family, the counts (`refl`),
-  the strictness witnesses `swap-ab`/`no-swap-ac`, and the two endpoint
-  isos run on data.
--}
+{- Three letters, ONE independent pair, and the interpolation measured. -}
 module TheoryGrammar.Instances.Traces.Examples where
 
 open import Cubical.Foundations.Prelude
@@ -84,12 +72,9 @@ module Full = TrDec L3 ComI.⊤I dec⊤   isProp⊤I
 w3 : List L3
 w3 = a ∷ b ∷ c ∷ []
 
--- ==================================================================
--- THE INTERPOLATION, COUNTED.  `abc` has
---   4 concatenations       (the |w|+1 cuts)
---   5 I-shuffles           (`b` may cross `a`, nothing may cross `c`)
---   8 interleavings        (2^|w|)
--- ==================================================================
+-- THE INTERPOLATION, COUNTED. `abc` has 4 concatenations (the |w|+1 cuts)
+-- 5 I-shuffles (`b` may cross `a`, nothing may cross `c`) 8 interleavings
+-- (2^|w|)
 
 _ : length (Ord.shuffles w3) ≡ 4
 _ = refl
@@ -108,11 +93,9 @@ _ = refl
 _ : length (Part.shuffles (a ∷ c ∷ [])) ≡ 3
 _ = refl
 
--- ==================================================================
 -- THE POINT IS ONLY LAX, STRICTLY SO.  `ba` splits as `a` and `b`
 -- although `a ++ b = ab`; and the same swap is REFUTED at the pair
 -- that is not independent.
--- ==================================================================
 
 -- `ba` IS a shuffle of `a` and `b` ...
 swap-ab : Part.ITr Ind (a ∷ []) (b ∷ []) (b ∷ a ∷ [])
@@ -127,9 +110,7 @@ _ = refl
 no-swap-ac : Part.ITr Ind (a ∷ []) (c ∷ []) (c ∷ a ∷ []) → ⊥
 no-swap-ac (Part.right (() , _) t)
 
--- ==================================================================
 -- The endpoint isos compute.
--- ==================================================================
 
 ex⊥ : OrdI.ITr OrdI.⊥I (a ∷ []) (b ∷ []) (a ∷ b ∷ [])
 ex⊥ = OrdI.left (OrdI.right tt OrdI.nil)

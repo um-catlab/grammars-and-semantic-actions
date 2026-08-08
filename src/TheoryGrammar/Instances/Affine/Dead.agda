@@ -5,7 +5,6 @@
   This is the point of the whole instance, so it is worth stating with
   the linear proof beside it.
 
-  ------------------------------------------------------------------
   1.  THE LINEAR THEOREM.
 
   `Instances/LinLam/Opt.agda` §4 proves that dead-code elimination is
@@ -23,7 +22,6 @@
 
   and `suc n ≡ n` is absurd.  Hence `deadBinder : DeadBinder ⊢ ⊥G`.
 
-  ------------------------------------------------------------------
   2.  THE EQUATION SPLITS IN TWO, AND AFFINE KEEPS ONE HALF.
 
   An equation of naturals is two inequalities, and they say different
@@ -44,7 +42,6 @@
   the syntax to `tvar`/`tapp`/`tlam` over `Use⊎` and the ≥ half returns,
   because that is `LinLam`.
 
-  ------------------------------------------------------------------
   3.  ... AND THE DEAD-CODE PROOF USES EXACTLY THE HALF THAT IS LOST.
 
   Read the linear chain again with the two halves separated:
@@ -66,7 +63,6 @@
   using it.  So the failure is not diffuse -- it is the single bit that
   `adrop` was added to un-pin.
 
-  ------------------------------------------------------------------
   4.  AND THE CONCLUSION IS FALSE, NOT MERELY UNPROVED.
 
       deadWitness : DeadBinder []
@@ -84,7 +80,6 @@
   optimiser acquires content, and with it the obligation to be correct,
   which the index does not supply (see `Opt`'s "BOUGHT NOTHING").
 
-  ------------------------------------------------------------------
   WHAT SURVIVES IS NOT NOTHING.  `budgetLe` is a real theorem with the
   same shape as the linear one, and it still forbids duplication: no
   affine term has more occurrences than it has owned variables plus
@@ -112,16 +107,9 @@ open import TheoryGrammar.RulesFib
 
 open import TheoryGrammar.Instances.Affine.Syntax public
 
--- ==================================================================
--- §1  THE BUDGET, as an INEQUALITY.
---
--- The motive of the fold IS the statement being proved -- the
--- Quicksort idiom, and `Opt.agda`'s -- so the algebra produces the
--- invariant as it computes the counts.  The only change from the
--- linear version is `≡` becoming `≤`, and it is forced in exactly one
--- branch (`budgetApp`, via `liveSplit≤`) plus the new one
--- (`budgetWk`).
--- ==================================================================
+-- §1 THE BUDGET, as an INEQUALITY. The motive of the fold IS the statement
+-- being proved -- the Quicksort idiom, and `Opt.agda`'s -- so the algebra
+-- produces the invariant as it computes the counts.
 
 Budget : Ctx
 Budget u = Σ[ oc ∈ ℕ ] Σ[ lm ∈ ℕ ] (oc ≤ live u + lm)
@@ -184,9 +172,7 @@ lamOf {u} t = budget u t .snd .fst
 budgetLe : (u : Usage) (t : ATm u) → occOf t ≤ live u + lamOf t
 budgetLe u t = budget u t .snd .snd
 
--- ==================================================================
 -- §2  THE HALF THAT DOES NOT SURVIVE.
--- ==================================================================
 
 -- the counts of the K combinator, by `refl` -- one occurrence, two
 -- binders, nothing owned
@@ -196,28 +182,24 @@ _ = refl
 _ : lamOf constAff ≡ 2
 _ = refl
 
--- THEOREM.  THE `≥` HALF OF THE LINEAR BUDGET IS FALSE.
---
--- `λx. λy. x` owns nothing, binds twice, and mentions a variable once.
--- Linearly `occ ≡ live + lam` would demand `1 ≡ 2`.
+-- THEOREM. THE `≥` HALF OF THE LINEAR BUDGET IS FALSE.
 noBudgetGe : ((u : Usage) (t : ATm u) → live u + lamOf t ≤ occOf t) → ⊥
 noBudgetGe ge = ¬m<m (ge [] constAff)
 
--- ==================================================================
--- §3  THE LINEAR PROOF, WITH ITS MISSING STEP MADE EXPLICIT.
---
--- Everything `Opt.deadBinder` does, except the ONE inequality that
--- affinity refutes -- which is taken as a premise.  So the theorem is
--- not lost through some diffuse weakening of the framework: it is one
--- application of `≥` at the λ-body, and `noBudgetGe` says that
--- application is unavailable.
--- ==================================================================
+-- §3 THE LINEAR PROOF, WITH ITS MISSING STEP MADE EXPLICIT.
 
+-- `DeadBinder` IS a connective composite, via the DEPENDENT additive `&ᵈ`
+-- (TheoryGrammar.Rules): the invariant relates the two witnesses at ONE
+-- world, which is exactly what `&` cannot say and `&ᵈ` can.
 DeadBinder : Ctx
-DeadBinder u =
-  Σ[ b ∈ Own ATmG u ] Σ[ c ∈ ATmG u ]
-    ((occOf b ≡ occOf c) × (lamOf b ≡ lamOf c))
+DeadBinder =
+  Own ATmG &ᵈ λ u b →
+    (ATmG &ᵈ λ _ c → (occOf b ≡ occOf c) × (lamOf b ≡ lamOf c)) u
 
+-- PRIMITIVE (phase 1): a REFUTATION. Its content is arithmetic on the
+-- budget ending in `E.rec`, and `⊥-E` is the only combinator that produces
+-- a map out of the absurd -- getting TO the absurd is what has to be done
+-- by hand.
 deadBinderFromGe :
     ((u : Usage) (t : ATm u) → live u + lamOf t ≤ occOf t)
   → DeadBinder ⊢ ⊥G
@@ -231,13 +213,7 @@ deadBinderFromGe ge u (b , c , eo , el) = E.rec (¬m<m chain)
         (≤-trans (budgetLe u c)
                  (≤-reflexive (cong (live u +_) (sym el)))))
 
--- ==================================================================
--- §4  ... AND THE CONCLUSION IS REFUTED OUTRIGHT.
---
--- `λ_. λx. x`: the body owns the bound variable and drops it, and the
--- term DCE would substitute has the same occurrence profile -- by
--- `refl`, not by an argument.
--- ==================================================================
+-- §4 ... AND THE CONCLUSION IS REFUTED OUTRIGHT.
 
 deadWitness : DeadBinder []
 deadWitness = deadBody , idAff , refl , refl
@@ -247,9 +223,8 @@ deadWitness = deadBody , idAff , refl , refl
 noDeadEmpty : (DeadBinder ⊢ ⊥G) → ⊥
 noDeadEmpty f = E.rec* (f [] deadWitness)
 
--- COROLLARY.  A dead-code eliminator's rewriting branch is a real
--- choice, not `⊥-E`.  `Opt.dceUnique` proves any two agree linearly;
--- here they do not.
+-- COROLLARY. A dead-code eliminator's rewriting branch is a real choice,
+-- not `⊥-E`.
 stripDead : DeadBinder ⊢ ATmG
 stripDead u (b , c , _) = c
 
@@ -267,9 +242,7 @@ dceNotUnique : ((f g : DeadBinder ⊢ ATmG) → f ≡ g) → ⊥
 dceNotUnique h =
   false≢true (cong (λ k → isDrop (k [] deadWitness)) (h stripDead stripDeadOwned))
 
--- ==================================================================
 -- §5  IT COMPUTES.
--- ==================================================================
 
 _ : occOf deadBody ≡ 1
 _ = refl

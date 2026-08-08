@@ -1,24 +1,4 @@
-{-
-  THE RESIDUAL EVERY POINTED SUBSTRATE ALREADY HAS.
-
-  A promodel with a `LaxPoint` owns one family of splittings for free:
-  `split o m⃗`, of a tuple's own composite.  Fixing a slot `i` and NAMING
-  the complement (`Assembly`) turns those into a `Focus`, so
-
-      (A ⊸ B) x  =  (rest) → A(rest) → B (op o (tuple x rest)).
-
-  NO FURTHER HYPOTHESIS: `focus`, `plug` (⊸-elim at a chosen rest-tuple).
-  ONE -- `restJ`/`restJ-pt`, the rest argument is singleton-inductive at
-  `(a⃗ , pt)`, i.e. holding one NAMES its own tuple -- gives `unplug`,
-  `⊸-β` (refl), `⊸-η` (funExt) and the `Iso`.  Freeness, `unsplit` and
-  `Fib .Split` are UNUSED, so the laws hold over a quotient substrate.
-
-  THE POINT IS THE PRICE.  A PARTIAL algebra has none, so heaps cannot
-  use `Canon` and must refocus `Split` directly.
-
-  NOT proved: that this focus computes the residual of `⊗ˢ`.  Stated
-  with its refuted hypothesis as `CONJECTURE` below.
--}
+{- THE RESIDUAL EVERY POINTED SUBSTRATE ALREADY HAS. -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.CanonicalFocus where
 
@@ -31,16 +11,8 @@ open import TheoryGrammar.Fibered
 
 private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓB : Level
 
--- ==================================================================
--- SINGLETON INDUCTION IN Eq-WORLD.
---
--- `Eq.J` eliminates the RIGHT endpoint of `_Eq.≡_`; a representable,
--- `⌈ a ⌉ y = y Eq.≡ a`, varies the LEFT one.  Symmetrising costs one
--- `sym-invol` -- and, the whole point, costs it in Eq-world, so
--- `singJ M m a Eq.refl` still reduces to `m` DEFINITIONALLY
--- (`singJ-refl` is `refl`).  A cubical `subst` here would not reduce,
--- and every `refl` test downstream would go inert.
--- ==================================================================
+-- SINGLETON INDUCTION IN Eq-WORLD. `Eq.J` eliminates the RIGHT endpoint of
+-- `_Eq.≡_`; a representable, `⌈ a ⌉ y = y Eq.≡ a`, varies the LEFT one.
 
 singJ : ∀ {ℓM} {X : Type ℓ} {a : X} (M : (y : X) → y Eq.≡ a → Type ℓM)
       → M a Eq.refl → (y : X) (e : y Eq.≡ a) → M y e
@@ -52,10 +24,8 @@ singJ-refl : ∀ {ℓM} {X : Type ℓ} {a : X} (M : (y : X) → y Eq.≡ a → T
 singJ-refl M m = refl
 
 -- An `Assembly Fib o i` denotes a NAMING of the slots other than `i`,
--- together with the way a full argument tuple is rebuilt from the
--- focused element and a filling of those.  It is the only datum the
--- whole file takes: no law is imposed, and `Canon` below turns any
--- `Assembly` into a `Focus`.
+-- together with the way a full argument tuple is rebuilt from the focused
+-- element and a filling of those.
 record Assembly {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                 (Fib : Fibered σ ℓX ℓP) (o : σ .ops) (i : σ .arities o)
   : Type (ℓ-max ℓS (ℓ-max ℓ (ℓ-max (ℓ-suc ℓ') ℓX))) where
@@ -105,22 +75,8 @@ module Canon {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
        → ⊸ᶠ A B ⊢ (λ x → B (P .op o (As .tuple x a⃗)))
   plug a⃗ pt _ h = h a⃗ pt
 
-  -- ================================================================
-  -- ⊸-INTRO AND THE TWO ROUND TRIPS.
-  --
-  -- THE HYPOTHESIS, in full: the rest argument is singleton-inductive
-  -- at `(a⃗ , pt)`.  Reading it as an eliminator, "to prove something of
-  -- an arbitrary rest-bundle it suffices to prove it of `(a⃗ , pt)`" --
-  -- i.e. holding a rest argument NAMES the tuple it was taken at, which
-  -- is what "the other slots are representable" means.  Nothing weaker
-  -- can do: `unplug` must move `B` across `tuple x f` vs `tuple x a⃗`.
-  --
-  -- Note the shape: the identification is of the tuple AS A WHOLE.  A
-  -- slotwise hypothesis would have to be glued by function
-  -- extensionality for `Eq`, which does not reduce, and the transport
-  -- in `unplug` would then be inert.  When `Rest` is a unit type the
-  -- whole-tuple form is free (η), which is the case `Modes/` is in.
-  -- ================================================================
+  -- ⊸-INTRO AND THE TWO ROUND TRIPS. THE HYPOTHESIS, in full: the rest
+  -- argument is singleton-inductive at `(a⃗ , pt)`.
 
   module Residual
     {A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a)}
@@ -162,29 +118,4 @@ module Canon {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
       ⊸-UP x .Iso.sec = ⊸-β x
       ⊸-UP x .Iso.ret = ⊸-η x
 
--- ==================================================================
 -- CONJECTURE (not proved; stated so it can be attacked or refuted).
---
--- `Canon.focus` never mentions `Fib .Split`, so nothing above compares
--- `⊸ᶠ` with the residual of the substrate's OWN tensor `⊗ˢ`.  That
--- comparison is the claim
---
---     (A i ⊢ ⊸ᶠ A B)  ≅  (⊗ˢ o A ⊢ B),
---
--- and it needs three data this file does not have:
---
---   (1) cover   : (a : arities o) → (a Eq.≡ i) ⊎ (Σ[ r ] restOf r Eq.≡ a)
---                 -- i and restOf between them reach every slot;
---   (2) unsplit : op o (parts o m sp) Eq.≡ m       (as in Representable);
---   (3) gen     : every `sp : Split o m` is `split o (parts o m sp)`,
---                 modulo (2) -- "the splittings are generated by split".
---
--- MEASUREMENT, and the reason the conjecture is stated rather than
--- proved: (2) is FALSE for the quotient substrates.  For `Interleave`,
--- `op mul = _++_` while `Split mul` is `Ilv`, which is strictly bigger
--- than the graph of `++`; `Modes/Laws.agda`'s `no-unsplit` exhibits a
--- splitting of `y ∷ x ∷ []` whose parts concatenate to `x ∷ y ∷ []`.
--- So the conjecture is not merely open there, its hypothesis fails --
--- while `Residual`'s β and η hold at that same substrate, being proved
--- without it.  The two claims are genuinely independent.
--- ==================================================================

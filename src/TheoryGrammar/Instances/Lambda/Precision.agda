@@ -1,18 +1,4 @@
-{-
-  PRECISION OVER A SYNTAX -- THE OTHER SIDE OF THE DIVIDE.
-
-  Heaps refute `splitProp` and keep precision for the representables.
-  Raw terms are the degenerate case: `splitProp` holds
-  (`Readable.Split-isProp`), so EVERY grammar is precise at every
-  operation and slot -- `λ-splitProp`, `λ-partsProp`, `λ-preciseP`,
-  `λ-preciseI`, `λ-preciseI-⊤`, `λ-preciseApp`, none checked per grammar.
-
-  And the converse: a syntax splitting is determined by its parts, so
-  `splitProp`, `partsProp` and "⊤ is precise" are ONE condition
-  (`λ-merge→splitProp` and back).  Over heaps they are three, and the
-  middle one is what separation logic means.  The trailing `private`
-  block MEASURES that `λ-preciseApp` reduces, so it cannot drift.
--}
+{- PRECISION OVER A SYNTAX -- THE OTHER SIDE OF THE DIVIDE. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Precision where
 
@@ -36,9 +22,7 @@ module LamPrecision (Name : Type₀) where
   open FibNotation λFib
   open Prec λFib public
 
-  -- ================================================================
   -- 1.  `splitProp` HOLDS, so precision is free.
-  -- ================================================================
 
   λ-splitProp : SplitProp
   λ-splitProp = Split-isProp
@@ -58,23 +42,16 @@ module LamPrecision (Name : Type₀) where
   λ-preciseI-⊤ : (o : LOp) (i : LAr o) → PreciseI ℓ-zero o i ⊤G
   λ-preciseI-⊤ o i = λ-preciseI o i ⊤G
 
-  -- ================================================================
   -- 2.  THE BINARY READING at `appOp`, whose arity is `Bool` and whose
   -- eliminator is `B.elim` -- the same two computation rules the heap
   -- instance discharges with `boolΠ`.
-  -- ================================================================
 
   open Binary appOp true false B.elim (λ _ _ → Eq.refl) (λ _ _ → Eq.refl) public
 
   λ-preciseApp : (A : TheoryTy ℓ-zero tm) → PreciseB A
   λ-preciseApp A = preciseI→preciseB A (λ-preciseI appOp true A)
 
-  -- ================================================================
-  -- 3.  AND THE CONVERSE, which needs `PartsFaithful`.  Over a syntax
-  -- it is free -- there is at most one splitting to be faithful about
-  -- -- so the three conditions collapse to one.  This is exactly the
-  -- step heaps cannot take.
-  -- ================================================================
+  -- 3. AND THE CONVERSE, which needs `PartsFaithful`.
 
   λ-faithful : (o : LOp) → PartsFaithfulAt o
   λ-faithful o m p q _ = Split-isProp o m p q
@@ -87,13 +64,7 @@ module LamPrecision (Name : Type₀) where
   λ-splitProp→merge ℓB o sp =
     partsProp→merge ℓB o (splitPropAt→partsPropAt o sp)
 
--- ==================================================================
--- 4.  AND IT COMPUTES.  The generic merge, read at `appOp`: two
--- payloads over the same application survive it, exactly as
--- `Heap/Tests` reports for `∗`.  (`true`/`false` below are the two
--- SLOTS of the arity; the payloads are numbers, so nothing is
--- ambiguous.)
--- ==================================================================
+-- 4. AND IT COMPUTES.
 
 private
   open Terms ℕ

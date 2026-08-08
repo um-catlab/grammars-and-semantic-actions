@@ -1,30 +1,4 @@
-{-
-  WHERE THE OBSTRUCTION IS -- and where it is NOT.
-
-  `Connectives.noHeapPoint` refutes every total point.  Two
-  localisations, each sharper than `Field/NoPoint`'s ring fragment:
-
-    empPoint           restrict to `nilop`: the UNIT of the separation
-                       algebra is perfectly total.
-    cellFragmentPoint  same carrier, same `parts`, same `Ilv` -- delete
-                       only the `u # v` CONJUNCT of `HeapSplit`
-                       (`Base.cellFib`) -- and the point reappears.  One
-                       conjunct of one splitting.
-
-  AND WHERE IT IS NOT.  The SLOTWISE grammars of `Field/Domain` are
-  blind to it: `Domˢ appop` is `⊤G` at both slots (h = h ∗ emp and
-  h = emp ∗ h) and `Imgˢ appop` is `⊤G` too, so `Covering` holds.  Every
-  slot totally defined, the operation surjective, and still no point;
-  `no-slotwise-L/R` prove no refutation of `Domain.no-point`'s shape
-  exists here at any heap.  For a partial COMMUTATIVE monoid the
-  partiality is JOINT, and `Heap/Joint` carries the form that works --
-  a tensor of REPRESENTABLES rather than of `⊤`.
-
-  DEFINES `cellFragmentPoint`; the restricted fragment `EmpOp`/`ιE`/
-  `empSig`/`empFib`/`empPoint`; the three positive facts `img-total`,
-  `dom-total-L`, `dom-total-R`; and the three refutations of the
-  slotwise shape `no-slotwise-L`, `no-slotwise-R`, `no-img-obstruction`.
--}
+{- WHERE THE OBSTRUCTION IS -- and where it is NOT. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 open import Cubical.Foundations.Prelude
 
@@ -44,22 +18,13 @@ open import TheoryGrammar.Domain using (module DomainOf)
 
 open import TheoryGrammar.Instances.Heap.Connectives public
 
--- ==================================================================
--- 1.  DELETE THE DISJOINTNESS CONJUNCT AND THE POINT APPEARS.
---
--- `cellFib` is `heapFib` with `u # v` dropped from `Split appop`; the
--- carrier, `parts` and `Ilv` are literally the same.  `cellPoint` is
--- its lax point (list concatenation), so the whole of `noHeapPoint`
--- lives in that one conjunct.
--- ==================================================================
+-- 1. DELETE THE DISJOINTNESS CONJUNCT AND THE POINT APPEARS.
 
 cellFragmentPoint : LaxPoint cellFib
 cellFragmentPoint = cellPoint
 
--- ==================================================================
 -- 2.  RESTRICT TO `nilop` AND THE POINT APPEARS.  So the unit is
 --     total; only the join fails.
--- ==================================================================
 
 data EmpOp : Type₀ where
   emponly : EmpOp
@@ -78,14 +43,12 @@ empPoint .op emponly _          = []
 empPoint .split emponly _       = tt
 empPoint .parts-split emponly _ = funExt λ ()
 
--- ==================================================================
 -- 3.  THE SLOTWISE GRAMMARS ARE BLIND.
--- ==================================================================
 
--- `Imgˢ o`   DENOTES "this heap IS an o-composite"          (`⊗ˢ o ⊤`)
--- `Domˢ o i` DENOTES "this heap OCCURS in slot i of one"
--- Both are indexed by ONE slot, which is precisely why they are blind
--- to a failure that lives in the PAIR.
+-- `Imgˢ o` DENOTES "this heap IS an o-composite" (`⊗ˢ o ⊤`) `Domˢ o i`
+-- DENOTES "this heap OCCURS in slot i of one" Both are indexed by ONE
+-- slot, which is precisely why they are blind to a failure that lives in
+-- the PAIR.
 open DomainOf heapFib using (Imgˢ; Domˢ; ¬G_)
 
 -- every heap IS a composite: h = h ∗ emp.  So `Covering` holds and

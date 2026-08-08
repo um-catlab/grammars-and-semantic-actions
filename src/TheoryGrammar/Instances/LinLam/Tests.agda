@@ -1,37 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  THE CHECKER COMPUTES, and its negative answers are REFUTATIONS.
-
-  Two things are being demonstrated, and the second is the one that
-  matters.
-
-  (1) `linear?` reduces.  It is `runAut`, i.e. `hyloC`, i.e. `löb` over
-  the suffix-style order given by `dbGrading`; nothing in the chain is
-  postulated or opaque, so the whole decision procedure evaluates and a
-  test is one `refl`.  `sizeA` is the same coalgebra at a different
-  algebra, and evaluates too.
-
-  (2) A NEGATIVE test is not an observation, it is a theorem.  Per the
-  repository's rule, `run f m ≡ false` on its own says only that the
-  algorithm answered no.  `refute` (TheoryGrammar.SemanticAction) turns
-  that `refl` into the content of the ERROR branch, and the error branch
-  of `Dec⟨ Lin ⟩` is `¬G Lin`.  So `noLin` below yields a genuine
-  internal refutation `Lin m → ⊥*`: there is NO linear term whose
-  skeleton is `λx. x x`.  Nothing was re-proved to get it -- the
-  exclusion came with `Dec⟨_⟩`.
-
-  THE THREE CASES are chosen to separate the two halves of linearity:
-
-      λx. x        linear
-      λx. x x      rejected -- DUPLICATION, refuted by the absent
-                   `(true,true)` constructor of `Use⊎`
-      λx. λy. x    rejected -- WEAKENING, refuted by `tlam` demanding
-                   `Tm (true ∷ u)`
-
-  An affine checker would accept the third; that it is rejected is the
-  evidence that `LinLam/Syntax`'s `Tm` really is linear and not merely
-  affine.
--}
+{- THE CHECKER COMPUTES, and its negative answers are REFUTATIONS. -}
 module TheoryGrammar.Instances.LinLam.Tests where
 
 open import Cubical.Foundations.Prelude
@@ -61,9 +29,7 @@ dropT = dlam (dlam (dvar (fsuc fzero)))
 openT : DBTm 1
 openT = dapp (dvar fzero) (dvar fzero)
 
--- ==================================================================
 -- The suite.  One `refl`, with the term under test written once.
--- ==================================================================
 
 decisions : passes (run linearB at ( (0 , idT)   ↦ true
                                    ∷ (0 , dupT)  ↦ false
@@ -78,9 +44,7 @@ sizes : passes (run sizeA at ( (0 , idT)   ↦ 2
                              ∷ []))
 sizes = refl
 
--- ==================================================================
 -- ... and the negative answers, as refutations.
--- ==================================================================
 
 noLin : (m : Term•) → run linearB m ≡ false → (¬G Lin) m
 noLin = refute Lin (¬G Lin) linear?

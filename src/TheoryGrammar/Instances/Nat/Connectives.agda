@@ -1,33 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  THE CONNECTIVES AT (ℕ, +): ε, ⊗, the generator x, and the residual ⟜.
-
-  Read as power series (see the header of `Base.agda`):
-
-      ε'      =  1
-      A ⊗' B  =  A(x) · B(x)      -- the Cauchy product
-      x       =  x                -- the representable at 1
-      ⊤'      =  1/(1-x)          -- one point at every degree
-      C ⟜' A  =  C(x) / A(x)      -- as a RIGHT ADJOINT, not as a
-                                     coefficientwise inverse
-
-  Everything in this file is phase 1: these are the primitives and the
-  intro/elim rules.  Each pointful definition below is a named rule with
-  a `⊢`-type (or is an intro/elim of one), and nothing after this file is
-  allowed to look at an `Add3` again.
-
-  One remark on `_⊗'_` that is invisible in the string instance.  For
-  strings, `(A ⊗' B) w` sums over splittings of a FIXED w, and there are
-  |w|+1 of them.  Here `(A ⊗' B) n` sums over `Add3 i j n`, of which
-  there are again n+1: `add3→+` / `+→add3` below show `Add3 i j n` is
-  precisely the equation `i + j = n`.  So the coefficient of the product
-  really is
-
-      Σ_{i+j=n} |A i| · |B j|
-
-  with no over- or under-counting, which is the precise sense in which ⊗
-  is the Cauchy product and not merely something like it.
--}
+{- THE CONNECTIVES AT (ℕ, +): ε, ⊗, the generator x, and the residual ⟜. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Nat.Connectives where
@@ -47,13 +19,15 @@ open import TheoryGrammar.Fibered
 
 open import TheoryGrammar.Instances.Nat.Base public
 
--- ==================================================================
 -- The multiplicative unit and product.
--- ==================================================================
 
 ε' : Gr
 ε' = ⊗ˢ nilop (λ ())
 
+-- NOT `MonSep._∗_`, and the reason is measured rather than assumed: this
+-- file spells the slot family `λ b → if b then A else B`, `MonSep` uses
+-- `boolΠ`, and arities have no η -- both are stuck on `b`, at different
+-- definitions, so the two are NOT definitionally equal.
 _⊗'_ : Gr → Gr → Gr
 A ⊗' B = ⊗ˢ appop (λ b → if b then A else B)
 
@@ -67,10 +41,8 @@ x = ⌈ 1 ⌉
 ⊤' : Gr
 ⊤' = ⊤G
 
--- ==================================================================
 -- ⊗ intro and elim.  These two are the only places below that mention
 -- an `Add3`; everything after composes them.
--- ==================================================================
 
 -- PRIMITIVE (phase 1): ⊗-intro.
 ⊗-mk : {A B : Gr} {i j n : ℕ} → Add3 i j n → A i → B j → (A ⊗' B) n
@@ -101,11 +73,9 @@ x = ⌈ 1 ⌉
 ⊗-map : {A A' B B' : Gr} → A ⊢ A' → B ⊢ B' → (A ⊗' B) ⊢ (A' ⊗' B')
 ⊗-map f g n ((i , j , a) , h) = ⊗-mk a (f i (h true)) (g j (h false))
 
--- ==================================================================
 -- Additive combinators.  `RulesF` already supplies `idg`, `_∘g_`,
 -- `⊕-E`, `⊕ᴰ-I`, `⊕ᴰ-E`, `&-I`, `⊤-I`, `⌈⌉-E`; these are the aliases
 -- the `Bags` instance uses, kept so the two read alike.
--- ==================================================================
 
 ⊕-elim : {A B C : Gr} → A ⊢ C → B ⊢ C → (A ⊕ B) ⊢ C
 ⊕-elim = ⊕-E
@@ -117,28 +87,10 @@ x = ⌈ 1 ⌉
         → ((y : Y) → A y ⊢ B) → ⊕ᴰ Y A ⊢ B
 ⊕ᴰ-elim = ⊕ᴰ-E
 
--- PRIMITIVE (phase 1): the universe shuffle.  `⟦ ⌜ A ⌝ ⟧c` in
--- `TheoryGrammar.Inductive` wraps constants in a `Lift`, so a term that
--- crosses the description/connective boundary needs these two.  They are
--- the identity on points; naming them is what keeps `Species.agda` from
--- having to mention `lift` inline.
-liftg : {A : Gr} → A ⊢ (λ n → Lift ℓ-zero (A n))
-liftg _ p = lift p
+-- PRIMITIVE (phase 1): the universe shuffle.
 
-lowerg : {A : Gr} → (λ n → Lift ℓ-zero (A n)) ⊢ A
-lowerg _ = lower
-
--- ==================================================================
 -- `Add3 i j n` IS the equation `i + j = n` -- the Cauchy-product
 -- coefficient count.
---
--- These two maps say the splittings of `n` are exactly the n+1 pairs
--- (i, n-i), so the coefficient of `A ⊗' B` at n is Σ_{i+j=n} |A i|·|B j|
--- with no over- or under-counting.  (`Add3` is in fact a PROPOSITION,
--- which pins the count exactly; that proof needs Hedberg on ℕ rather
--- than a direct split -- pattern matching two `Add3 zero j j`'s against
--- each other is blocked without K -- and is not needed below.)
--- ==================================================================
 
 add3→+ : {i j n : ℕ} → Add3 i j n → i + j Eq.≡ n
 add3→+ z     = Eq.refl
@@ -147,10 +99,8 @@ add3→+ (s a) = Eq.ap suc (add3→+ a)
 +→add3 : (i j : ℕ) {n : ℕ} → i + j Eq.≡ n → Add3 i j n
 +→add3 i j Eq.refl = addAll i j
 
--- ==================================================================
 -- The residual, at slot `false` (the right factor), exactly as
 -- Strings/Connectives.  `C ⟜' A` is "C divided by A on the left".
--- ==================================================================
 
 focR : Focus natFib appop false
 focR .SplitAt j  = Σ[ i ∈ ℕ ] Σ[ n ∈ ℕ ] Add3 i j n

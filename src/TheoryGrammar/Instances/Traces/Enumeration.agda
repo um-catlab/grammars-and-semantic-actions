@@ -1,19 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  The shuffles of `w` are finitely many, enumerated and proved complete.
-
-  `splitProp` is FALSE here, as it is for bags -- a word splits in many
-  ways -- so `DecReadable` is unavailable and `fromEnumerable` is the
-  route.  Two side hypotheses, both about the independence relation and
-  neither about the calculus: it must be DECIDABLE (to know which
-  `right` steps exist) and PROP-VALUED (so that the enumerated proof of
-  a `right` step is THE proof, and completeness can name it).
-
-  DEFINES `decAll`/`isPropAll` (the side condition, decided and
-  propositional), `TrSp` and the enumeration `shuffles`, its
-  completeness `complete`, and the pair `enumSplit`/`enumComplete` that
-  is the ONLY interface `Traces/Decidable` consumes.
--}
+{- The shuffles of `w` are finitely many, enumerated and proved complete. -}
 open import Cubical.Foundations.Prelude
 
 open import Cubical.Data.Sum using (_⊎_; inl; inr)
@@ -37,9 +23,7 @@ open import TheoryGrammar.Enumerable
 
 open import TheoryGrammar.Instances.Traces.Base Letter Ind public
 
--- ==================================================================
 -- The side condition, decided and shown to be a proposition.
--- ==================================================================
 
 decAll : (u : Word) (x : Letter) → IndepAll Ind u x ⊎ No (IndepAll Ind u x)
 decAll []      x = inl tt
@@ -56,11 +40,9 @@ isPropAll : (u : Word) (x : Letter) → isProp (IndepAll Ind u x)
 isPropAll []      x = isPropUnit
 isPropAll (y ∷ u) x = isProp× (isPropInd y x) (isPropAll u x)
 
--- ==================================================================
 -- The enumeration.  A shuffle of `x ∷ w` either gives `x` to the left
 -- factor (always available) or to the right factor (available exactly
 -- when `x` is independent of everything the left factor still owes).
--- ==================================================================
 
 TrSp : Word → Type₀
 TrSp w = Σ[ u ∈ Word ] Σ[ v ∈ Word ] ITr Ind u v w
@@ -86,9 +68,7 @@ shuffles : (w : Word) → List (TrSp w)
 shuffles []      = ([] , [] , nil) ∷ []
 shuffles (x ∷ w) = leftsOf x (shuffles w) ++ rightsOf x (shuffles w)
 
--- ==================================================================
 -- Completeness.
--- ==================================================================
 
 -- Generic facts about `_∈L_`, owing nothing to traces; they belong
 -- beside `∈map` in `TheoryGrammar.Enumerable`, and are here only
@@ -104,8 +84,6 @@ shuffles (x ∷ w) = leftsOf x (shuffles w) ++ rightsOf x (shuffles w)
 
 -- The one place a Path is transported: the enumeration stores the proof
 -- the DECISION produced, and completeness is handed an arbitrary one.
--- `isPropAll` identifies them.  Nothing downstream reduces through this
--- -- it lives entirely on the refutation side of `dec-⊗-enum`.
 pickIn : {w : Word} (x : Letter) (u v : Word) (s : ITr Ind u v w)
          (d : IndepAll Ind u x ⊎ No (IndepAll Ind u x)) (pf : IndepAll Ind u x)
        → (u , x ∷ v , right pf s) ∈L pick x u v s d
@@ -129,9 +107,7 @@ complete (left {x} s) =
 complete (right {x} {w = w} pf s) =
   ∈L-++ʳ (leftsOf x (shuffles w)) (rightsIn x (shuffles w) (complete s) pf)
 
--- ==================================================================
 -- In the shape `DecEnumerable` asks for.
--- ==================================================================
 
 enumSplit : (o : MonOp) (m : Word) → List (MonSplit o m)
 enumSplit nilop []      = tt ∷ []

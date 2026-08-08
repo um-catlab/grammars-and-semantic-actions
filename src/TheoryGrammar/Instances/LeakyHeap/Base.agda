@@ -29,7 +29,6 @@
   new is that on the separation-logic side the monad HAS A NAME --
   see `LeakyHeap/Intuitionistic.agda`.
 
-  ------------------------------------------------------------------
   THREE RELAXATIONS, THREE DIFFERENT AXES.
 
   `HeapSplit appop h = Σ u, Σ v, Ilv u v h × (u # v)` is a conjunction of
@@ -58,7 +57,6 @@
   point at the cost of separation, `leakyFib` buys weakening at the cost
   of exactness, and neither implies the other.
 
-  ------------------------------------------------------------------
   THE TABLE.  Each cell names the theorem that backs it.
 
                    EXACT (`Ilv`)          LEAKY (`SubIlv`)       NO-DISJOINTNESS
@@ -97,7 +95,6 @@
   exact has both, leaky has neither in the same place, and cellFib has
   both but for a different reason.
 
-  ------------------------------------------------------------------
   WHY THE GRADING SURVIVES, AND WHY THAT IS NOT AUTOMATIC.
 
   `Heap/Graded` grades a heap by its cell count and gets
@@ -119,9 +116,8 @@
   and the slogan is the same: leaking makes the degree drop FASTER, and
   a well-founded recursion is never harmed by losing resources, only by
   gaining them.  So `Ind`/`Guard`/`hyloC`/`löb` remain available over
-  the leaky promodel.
+  the leaky `Fibered`.
 
-  ------------------------------------------------------------------
   PRIMITIVE (matching the representation): `SubIlv`, `LeakySplit`,
   `LeakyParts`, the `∗`-interface (`∗-mk`, `∗-E'`, `∗-map`), `emp-mk`,
   `split-#`, and the length lemmas of §5.  `boolΠ`, `Ilv`, `_#_`,
@@ -146,6 +142,7 @@ import Cubical.Data.Equality as Eq
 open import TheoryGrammar.Base
 open import TheoryGrammar.Fibered
 open import TheoryGrammar.RulesFib
+open import TheoryGrammar.Theories.MonoidSep
 open import TheoryGrammar.Grading
 open import TheoryGrammar.Precision using (coeEq)
 
@@ -154,18 +151,7 @@ open import TheoryGrammar.Precision using (coeEq)
 -- `cellFib`, `cellPoint`, and `monoidSig`.  Read-only.
 open import TheoryGrammar.Instances.Heap.Base public
 
--- ==================================================================
--- §1  THE LEAKY SPLITTING.
---
--- `Ilv` plus `leak`.  Read the three inherited constructors as the exact
--- discipline and `leak` as the garbage one: the whole is responsible for
--- a cell that NEITHER premise claims, so it is leaked at this node.
---
--- Still absent: any clause putting one cell into BOTH parts.  That
--- absence is what `_#_` also enforces at the level of locations, and it
--- is why §7 goes through: leaking is a way to LOSE a cell, not to share
--- one.
--- ==================================================================
+-- §1 THE LEAKY SPLITTING. `Ilv` plus `leak`.
 
 data SubIlv : Heap → Heap → Heap → Type₀ where     -- PRIMITIVE
   snil   : SubIlv [] [] []
@@ -212,13 +198,8 @@ leakAll : (h : Heap) → SubIlv [] [] h
 leakAll []      = snil
 leakAll (c ∷ h) = leak (leakAll h)
 
--- ==================================================================
--- §2  THE PROMODEL.
---
--- Note what is NOT changed: `LeakySplit nilop` is still `IsNil`, and
--- the `u # v` conjunct of `appop` is still there in full.  Exactly one
--- thing moved.
--- ==================================================================
+-- §2 THE `Fibered`. Note what is NOT changed: `LeakySplit nilop` is still
+-- `IsNil`, and the `u # v` conjunct of `appop` is still there in full.
 
 LeakySplit : (o : MonOp) → Heap → Type₀              -- PRIMITIVE
 LeakySplit nilop h = IsNil h
@@ -233,14 +214,14 @@ leakyFib .carrier _ = Heap
 leakyFib .Split     = LeakySplit
 leakyFib .parts     = LeakyParts
 
--- the promodel inclusion, at the level of splittings
+-- the `Fibered` inclusion, at the level of splittings
 heapSplit→leakySplit : (o : MonOp) (h : Heap)
                      → heapFib .Split o h → leakyFib .Split o h
 heapSplit→leakySplit nilop h e = e
 heapSplit→leakySplit appop h (u , v , i , d) = u , v , ilv→subIlv i , d
 
 -- ... and it preserves the parts DEFINITIONALLY, which is the honest
--- statement that `heapFib` is a sub-promodel of `leakyFib` on the nose
+-- statement that `heapFib` is a sub-`Fibered` of `leakyFib` on the nose
 -- rather than up to a transport.
 heapSplit→leakySplit-parts :
   (o : MonOp) (h : Heap) (sp : heapFib .Split o h) (a : MonAr o)
@@ -249,14 +230,7 @@ heapSplit→leakySplit-parts :
 heapSplit→leakySplit-parts nilop h sp ()
 heapSplit→leakySplit-parts appop h (u , v , i , d) = boolΠ refl refl
 
--- ==================================================================
--- §3  GENERIC: a partiality located at a TUPLE refutes every total
--- point.  Copied from `Heap/Connectives.Generic` (which may not be
--- edited, and whose module opens `RulesF heapFib` publicly, so it cannot
--- be imported here without a name clash).  Placed BEFORE `RulesF` is
--- opened, so that `FibNotation Fib` for an abstract `Fib` does not
--- collide with the leaky heap's own connectives.
--- ==================================================================
+-- §3 GENERIC: a partiality located at a TUPLE refutes every total point.
 
 module Generic {S : Type₀} {σ : SortedSig S ℓ-zero ℓ-zero}
                (Fib : Fibered σ ℓ-zero ℓ-zero) where
@@ -277,16 +251,8 @@ open RulesF leakyFib public
 Gr : Type₁
 Gr = TheoryTy ℓ-zero tt
 
--- ==================================================================
--- §4  THE SEPARATING CONJUNCTION AND THE EMPTY HEAP, and the
--- `∗`-interface, written ONCE.
---
--- `Heap/Connectives` writes these for the exact promodel and may not be
--- edited, so they are re-derived here.  Writing them once is the point:
--- every extended lambda over `Bool` would otherwise be a fresh nominal
--- function failing to reduce against the others -- which is exactly the
--- trap `boolΠ` exists to avoid, and `boolΠ` here IS `Heap/Base`'s.
--- ==================================================================
+-- §4 THE SEPARATING CONJUNCTION AND THE EMPTY HEAP, and the `∗`-interface,
+-- written ONCE.
 
 emp : Gr
 emp = ⊗ˢ nilop (λ ())
@@ -316,11 +282,8 @@ infixr 20 _∗_
   (λ h sp k → f h (sp .fst) (sp .snd .fst)
                 (sp .snd .snd .fst) (sp .snd .snd .snd) (k true) (k false))
 
-∗-map : {A A' B B' : Gr} → A ⊢ A' → B ⊢ B' → (A ∗ B) ⊢ (A' ∗ B')
-∗-map {A} {A'} {B} {B'} f g =
-  ⊗ˢ-map appop {A = boolΠ A B} {B = boolΠ A' B'}
-    (boolΠ {M = λ a → boolΠ {M = λ _ → Gr} A  B  a
-                    ⊢ boolΠ {M = λ _ → Gr} A' B' a} f g)
+-- `∗-map` -- and `frame`/`frameL` below -- come from `Theories.MonoidSep`.
+open MonSep leakyFib public using (∗-map)
 
 -- the unit, as a payload.  `MonAr nilop` is `⊥`, so `emp h` really is
 -- `IsNil h` with a vacuous slot family attached.
@@ -330,28 +293,18 @@ emp-mk e = e , λ ()
 emp-IsNil : {h : Heap} → emp h → IsNil h
 emp-IsNil = fst
 
--- ==================================================================
--- §5  THE GRADING.  QUESTION 1, ANSWERED.
---
--- The degree is still the cell count.  The additivity EQUATION of
--- `Heap/Graded` degrades to an INEQUALITY -- and the equation is not
--- merely unproved but REFUTED -- and that is exactly enough.
--- ==================================================================
+-- §5 THE GRADING. QUESTION 1, ANSWERED.
 
--- what `Ilv` gives, and `cellFib` keeps: the EQUATION.  (`Heap/Graded`
--- states the two one-sided halves; this is the sharp form, and it is
--- proved here so that the first and third columns of the table have a
--- theorem of their own rather than a citation.)
+-- what `Ilv` gives, and `cellFib` keeps: the EQUATION.
 ilvLen≡ : ∀ {u v w} → Ilv u v w → length u + length v ≡ length w
 ilvLen≡ nil                        = refl
 ilvLen≡ (left s)                   = cong suc (ilvLen≡ s)
 ilvLen≡ (right {u = u} {v = v} s)  =
   +-suc (length u) (length v) ∙ cong suc (ilvLen≡ s)
 
--- PRIMITIVE (phase 1): THE REPLACEMENT.  `leak` is the one clause where
--- the two sides genuinely differ, and it is exactly the clause that
--- turns the equation into an inequality: the whole gained a cell that no
--- part has.  Compare `Affine/Base.liveSplit≤`, clause for clause.
+-- PRIMITIVE (phase 1): THE REPLACEMENT. `leak` is the one clause where the
+-- two sides genuinely differ, and it is exactly the clause that turns the
+-- equation into an inequality: the whole gained a cell that no part has.
 subIlvLen≤ : ∀ {u v w} → SubIlv u v w → length u + length v ≤ length w
 subIlvLen≤ snil                       = ≤-refl
 subIlvLen≤ (sleft s)                  = suc-≤-suc (subIlvLen≤ s)
@@ -404,56 +357,17 @@ leakyGrading .deg< appop h (u , v , s , _) =
                   (subIlvLen≤ s))
 
 -- ... bundled, so `Ind` / `Guard` / `hyloC` / `löb` apply over the
--- LEAKY promodel too.  Recursion does not notice the leak: it only ever
+-- LEAKY `Fibered` too.  Recursion does not notice the leak: it only ever
 -- asked that slots not GROW.
 leakyGraded : GradedFib monoidSig ℓ-zero ℓ-zero
 leakyGraded = graded leakyFib leakyGrading
 
--- ==================================================================
--- §6  THE FRAME RULE.  QUESTION 2, ANSWERED: IT SURVIVES, AND IT WAS
--- NEVER GOING TO DO ANYTHING ELSE.
---
--- `Heap/Connectives` builds it as `⊗ˢ-map`, and `⊗ˢ-map` is
---
---     ⊗ˢ-map f m (sp , h) = sp , λ a → f a _ (h a)
---
--- -- generic in `Fib`, and it PASSES THE SPLITTING THROUGH UNTOUCHED.
--- The frame rule is the functoriality of `⊗ˢ` in its slot arguments;
--- functoriality is a statement about the PAYLOADS at a fixed splitting,
--- and says nothing whatever about which splittings exist.  So it is
--- insensitive to every change of `Split`, which is worth stating
--- honestly in both directions:
---
---   * it is why the frame rule is free here, and free at `cellFib`, and
---     free at any relaxation anyone cares to write;
---   * it is therefore also why "the frame rule holds" carries NO
---     information about a promodel.  The content of separation logic is
---     never in `⊗ˢ-map`; it is in `Split`, i.e. in §7's refutation and
---     in the unit law of `Intuitionistic.agda`.
---
--- Phase 2: `⊗ˢ-map` and `boolΠ`, nothing else.
--- ==================================================================
+-- §6 THE FRAME RULE. QUESTION 2, ANSWERED: IT SURVIVES, AND IT WAS NEVER
+-- GOING TO DO ANYTHING ELSE.
 
-frame : {A B : Gr} (C : Gr) → A ⊢ B → (A ∗ C) ⊢ (B ∗ C)
-frame {A} {B} C f = ∗-map {A} {B} {C} {C} f idg
+open MonSep leakyFib public using (frame; frameL)
 
-frameL : {A B : Gr} (C : Gr) → A ⊢ B → (C ∗ A) ⊢ (C ∗ B)
-frameL {A} {B} C f = ∗-map {C} {C} {A} {B} idg f
-
--- ==================================================================
--- §7  STILL NO LAX POINT.  QUESTION 4, ANSWERED.
---
--- Everything here is `Heap/Connectives.apart-self`/`noHeapPoint` with
--- `heapFib` replaced by `leakyFib`, and the reason it goes through
--- unedited is exactly the reason the axes are different: the refutation
--- reads the `u # v` conjunct and NOTHING ELSE, and that conjunct is what
--- `leak` did not touch.  Leaking is a way to lose a cell, not to share
--- one, so it cannot help a total point exist.
---
--- The honest reading of the cost, then: the leak buys weakening and pays
--- for it with the unit law, NOT with the point.  `cellFib` pays the
--- other way round.
--- ==================================================================
+-- §7 STILL NO LAX POINT. QUESTION 4, ANSWERED.
 
 -- PRIMITIVE (phase 1): a splitting entails disjointness of its parts.
 split-# : (h : Heap) (sp : leakyFib .Split appop h)
@@ -482,21 +396,8 @@ noLeakyPoint =
                     {B = boolΠ ⌈ s ⌉ ⌈ s ⌉} respell )
   where s = single 0 v0
 
--- ==================================================================
--- §8  THE THIRD COLUMN, so the table is backed and not merely asserted:
--- `cellFib`, `Heap/Base`'s OTHER relaxation, along the DISJOINTNESS
--- axis.
---
--- It keeps `Ilv`, so the unit law is available and the additivity
--- equation is `ilvLen≡` unchanged; and it has a lax point,
--- `Heap/Base.cellPoint`.  What it loses is `apart-self`: two parts may
--- claim the same cell, which is precisely what `_#_` forbade.  So the
--- two relaxations move DISJOINT cells of the table, and neither is a
--- special case of the other.
---
--- Kept as a qualified submodule (`module C = RulesF cellFib`) so that
--- opening it does not shadow the leaky connectives above.
--- ==================================================================
+-- §8 THE THIRD COLUMN, so the table is backed and not merely asserted:
+-- `cellFib`, `Heap/Base`'s OTHER relaxation, along the DISJOINTNESS axis.
 
 module Cell where
 
@@ -505,11 +406,15 @@ module Cell where
   Grᶜ : Type₁
   Grᶜ = C.TheoryTy ℓ-zero tt
 
+  -- the same two formers again, at the third `Fibered` in this file --
+  -- and again from `Theories.MonoidSep` rather than respelled.
+  private module Sᶜ = MonSep cellFib
+
   empᶜ : Grᶜ
-  empᶜ = C.⊗ˢ nilop (λ ())
+  empᶜ = Sᶜ.empS
 
   _∗ᶜ_ : Grᶜ → Grᶜ → Grᶜ
-  A ∗ᶜ B = C.⊗ˢ appop (boolΠ A B)
+  _∗ᶜ_ = Sᶜ._∗_
 
   -- `Ilv u v w` with `v` nil is `u ≡ w` on the nose -- the fact `leak`
   -- destroys, and the whole reason the unit law splits the columns.

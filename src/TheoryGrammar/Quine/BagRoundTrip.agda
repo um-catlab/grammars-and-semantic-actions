@@ -71,9 +71,7 @@ open import TheoryGrammar.Instances.Bags.Permutation Chr
   using (Perm; permRefl; permMerge; ilvNilL)
   renaming (nil to permNil; cons to permCons)
 
--- ==================================================================
 -- §1  THE STRING PRINTER'S PRIMITIVE, REFUTED.
--- ==================================================================
 
 headIsK : Bag → Bool
 headIsK (k0 ∷ _) = true
@@ -85,9 +83,7 @@ notCat = (k0 ∷ []) , (q0 ∷ []) , (q0 ∷ k0 ∷ [])
        , right (left nil)
        , λ p → true≢false (cong headIsK p)
 
--- ==================================================================
 -- §2  THE TARGET, and the two things that build it.
--- ==================================================================
 
 -- "a text, and my world is a rearrangement of it"
 PermG : Bag → Gr
@@ -96,10 +92,10 @@ PermG s w = Perm s w
 Printed : Gr
 Printed = ⊕ᴰ Bag PermG
 
--- PRIMITIVE (phase 1).  A one-letter world prints itself; the only
--- place `⌈_⌉`'s `Eq.refl` is taken apart.
+-- PRIMITIVE (phase 1). A one-letter world prints itself; the only place
+-- `⌈_⌉`'s `Eq.refl` is taken apart.
 litPerm : (s : Bag) → ⌈ s ⌉ ⊢ PermG s
-litPerm s w Eq.refl = permRefl s
+litPerm s = ⌈⌉-E {a = s} {B = PermG s} (permRefl s)
 
 -- ... and the binary rule, which at strings was concatenation and here
 -- is `permMerge`.  Note NO `Eq.refl` is matched: the two slots'
@@ -110,10 +106,8 @@ catAt s (s₁ , p₁) (s₂ , p₂) = (s₁ ++ s₂) , permMerge p₁ p₂ s
 catRep : ⊗ˢ appop (λ _ → Printed) ⊢ Printed
 catRep w ((u , v , sp) , h) = catAt sp (h true) (h false)
 
--- ==================================================================
 -- §3  THE PRINTER, one clause per production.  Line for line
 --     `Quine.RoundTrip`'s -- only the two primitives above differ.
--- ==================================================================
 
 PMot : G.Ix → Type₀
 PMot i = Printed (i .snd)
@@ -133,11 +127,9 @@ printAlg P = ⊕ᴰ-E branch
 print : (P : NT) → Deriv P ⊢ Printed
 print P w t = G.foldC PMot printAlg (P , w) t
 
--- ==================================================================
 -- §4  THE ROUND TRIP, as a theorem about EVERY derivation -- and it is
 --     a PERMUTATION, which is all this theory can say.  Nothing is
 --     checked at a particular text here.
--- ==================================================================
 
 printed : (P : NT) (w : Bag) → Deriv P w → Bag
 printed P w t = print P w t .fst
@@ -145,13 +137,7 @@ printed P w t = print P w t .fst
 printOK : (P : NT) (w : Bag) (t : Deriv P w) → Perm (printed P w t) w
 printOK P w t = print P w t .snd
 
--- ==================================================================
--- §5  ... AND IT IS EXACT ON MULTISETS.  The weakening of §4 costs
---     nothing at the level the quine equation lives at, and this is the
---     bridge: `count` is invariant under `Perm`.  The one induction in
---     the file, and it is `⊎M-swap` -- commutativity of the value
---     algebra -- doing the work at every step.
--- ==================================================================
+-- §5 ... AND IT IS EXACT ON MULTISETS.
 
 -- an insertion moves the inserted letter's count out front
 countIns : {x : Chr} {v w : Bag} → Ilv (x ∷ []) v w
@@ -170,13 +156,8 @@ printCount : (P : NT) (w : Bag) (t : Deriv P w)
            → count (printed P w t) ≡ count w
 printCount P w t = countPerm (printOK P w t)
 
--- ==================================================================
--- §6  ... and it COMPUTES.  These add nothing to §4 logically; they
---     are the evidence that the whole pipeline evaluates.  Note the
---     third line: the printer, run on a PERMUTED text, gives back a
---     permutation of THAT text -- some member of the class, chosen by
---     whichever parse tree the search happened to find.
--- ==================================================================
+-- §6 ... and it COMPUTES. These add nothing to §4 logically; they are the
+-- evidence that the whole pipeline evaluates.
 
 printS : (P : NT) → Deriv P ⊢ Δ Bag
 printS P = tagA Bag {A = PermG} ∘g print P

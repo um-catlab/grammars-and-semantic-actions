@@ -1,23 +1,7 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  CYK OVER A COMMUTATIVE THEORY.
-
-  `Instances.Strings.CYK` verbatim, with the free monoid replaced by the
-  free COMMUTATIVE monoid: `bagFib` for `strFib`, `Ilv` for `Split3`.
-  Everything else -- the description, the guardedness, the `löb`, the
-  chart -- is untouched, because none of it ever mentioned the splitting
-  relation.  That is the point of the exercise; the diff is:
-
-      cuts w        n+1 prefixes                allIlv w      2ⁿ subsets
-
-  and nothing else.  So the ONE thing a commutative theory costs is the
-  size of the cut space, and it is paid here, once.
-
-  What it BUYS shows up in the grammar rather than in this file: a
-  binary rule `P → Q T` no longer says "a Q then a T", it says "a Q part
-  and a T part", and `⊗-comm` (`Instances.Bags.Commutativity`) is a term.
-  A parse is a PARTITION of the bag, not a cut of a list.
--}
+{- CYK OVER A COMMUTATIVE THEORY. `Instances.Strings.CYK` verbatim, with
+   the free monoid replaced by the free COMMUTATIVE monoid: `bagFib` for
+   `strFib`, `Ilv` for `Split3`. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Quine.BagCYK (Char : Type₀) where
@@ -49,21 +33,14 @@ open Views bagFib public
 -- The constant former's level coercion (`⟦ ⌜ B ⌝ ⟧c A m = Lift _ (B m)`).
 -- `liftg` already exists (`Bags.Connectives`); these are its type and
 -- its inverse, which the bag instance had never needed before.
-Liftg : Gr → Gr
-Liftg A m = Lift ℓ-zero (A m)
-
-lowerg : {A : Gr} → Liftg A ⊢ A
-lowerg _ = lower
 
 -- the cut search, and the two abbreviations its hypothesis is stated in
 open DecEnum  bagFib    using (⊗at; Refutes; dec-⊗-cuts; slotMiss)
 open DecGuard bagGraded using (SortFam; ▷ᴬ; löbᵍ; dec-⊗▷; resourceOf)
 
--- ==================================================================
 -- §0  THE SPLITTINGS ARE FINITELY ENUMERABLE -- and this is the ONE
 --     place commutativity costs anything.  A bag of `n` elements has
 --     `2ⁿ` interleavings against a string's `n+1` cuts.
--- ==================================================================
 
 allIlv : (w : Bag) → List (Σ[ u ∈ Bag ] Σ[ v ∈ Bag ] Ilv u v w)
 allIlv []      = ([] , [] , nil) ∷ []
@@ -85,10 +62,8 @@ enumComplete : (o : MonOp) (m : Bag) (sp : MonSplit o m) → sp ∈L cuts o m
 enumComplete nilop []            tt        = here
 enumComplete appop w (u , v , s)           = allIlvComplete s
 
--- ==================================================================
 -- §1  THE RESOURCE LAW and the arity's enumeration.  Verbatim
 --     `Strings.Graded`; neither mentions a splitting relation.
--- ==================================================================
 
 ntProper : (w : Bag) (sp : MonSplit appop w)
          → ((a : Bool) → NonTrivial (MonParts appop w sp a))
@@ -103,18 +78,9 @@ appArComplete : (a : Bool) → a ∈L appAr
 appArComplete true  = here
 appArComplete false = there here
 
--- ==================================================================
--- §2  THE DECOMPOSITION AXIOM.  Every bag is empty or has an element
---     pulled off -- and which element is pulled off is arbitrary, which
---     is why every algebra downstream had better be commutative.
---
---     PRIMITIVE (phase 1): matching the carrier is what a `Cover` is
---     for, and its type is internal.
--- ==================================================================
-
-bagCase : Cover (⌈ [] ⌉ ⊕ NonTrivial)
-bagCase []       _ = inl Eq.refl
-bagCase (x ∷ xs) _ = inr (x , ⊗-mk (left (ilvApp [] xs)) Eq.refl tt)
+-- §2 THE DECOMPOSITION AXIOM comes from `Bags.Graded` -- every bag is
+-- empty or has an element pulled off, and which one is arbitrary, so
+-- every algebra downstream had better be commutative.
 
 decNTv : Cover (NonTrivial ⊕ ⌈ [] ⌉)
 decNTv = caseOf bagCase ⊕-I₂ ⊕-I₁
@@ -128,12 +94,7 @@ probe-NT = caseOf decNTv
              (dec-yes NonTrivial)
              (⌈⌉-E {a = []} {B = Dec⟨ NonTrivial ⟩} (dec-no NonTrivial [] ¬NT[]))
 
--- ==================================================================
--- §3  THE GRAMMAR, ITS PARSE TREES, AND ITS DECISION.
---
---     Line for line `Instances.Strings.CYK`.  A "binary rule" `P → Q T`
---     is `⊗ˢ appop`, and at bags that means a PARTITION.
--- ==================================================================
+-- §3 THE GRAMMAR, ITS PARSE TREES, AND ITS DECISION.
 
 module CYK (V : Type₀)
            (unitR : V → Char → Type₀)          -- P → c
@@ -180,11 +141,14 @@ module CYK (V : Type₀)
   binSlots : V → V → Bool → Gr
   binSlots Q T a = G.⟦ binSlot Q T a ⟧c Der
 
+  -- the fixed point, as maps of the calculus.  Both come from
+  -- `Guard` now (`TheoryGrammar.Grading`); they used to be written
+  -- out here, pointfully, in this and three sibling files.
   unrollD : (P : V) → Deriv P ⊢ Layer P
-  unrollD P w t = G.toC (CYKF P) w (G.unroll t)
+  unrollD P = G.unrollg CYKF P
 
   rollD : (P : V) → Layer P ⊢ Deriv P
-  rollD P w t = G.roll (G.fromC (CYKF P) w t)
+  rollD P = G.rollg CYKF P
 
   neOf : (Q : V) → SlotG Q ⊢ NonTrivial
   neOf Q = lowerg ∘g &ᴰ-E Bool {B = λ b → G.⟦ NEslot Q b ⟧c Der} false

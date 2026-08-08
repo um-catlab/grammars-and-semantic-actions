@@ -1,49 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  LINEAR ⊂ AFFINE ⊂ CARTESIAN, machine-checked.
-
-  This is the ONLY file in `Instances/Affine/` that mentions `LinLam`.
-  It is separated for two reasons: the linear side is another agent's,
-  so nothing load-bearing should depend on it; and the comparison is
-  genuinely a different subject from the affine promodel itself.
-
-  What it does:
-
-    * `lin→aff`      -- every linear splitting is affine, and
-      `lin⊊aff`      -- STRICTLY: `adrop` is not one.
-                        Together with `Base.aff→cart` / `Base.aff⊊cart`
-                        this is the chain, each link one constructor.
-
-    * `linTm→aff`    -- the term-level inclusion: every linear term is
-                        an affine term at the same usage.  A `⊢`-map of
-                        grammars, so it neither invents nor discards a
-                        variable.
-
-    * `noWkLin`      -- the WEAKENING row of the table, refuted on the
-                        linear side.  `Base.wkUnit` proves
-                        `⊤G ⊢ 𝟙 ⊛ 𝟙` affinely; here the corresponding
-                        linear grammar is EMPTY at any usage that owns
-                        anything, because `Use⊎` with both slots
-                        `Empty` forces the whole `Empty`.  This is the
-                        internal, `⊗ˢ`-level statement of "linear logic
-                        has no weakening", and it is not a remark about
-                        the syntax.
-
-    * `linDeadVacuous`, `linDceUnique`
-                     -- the DEAD-CODE row on the linear side, by
-                        citation rather than paraphrase: they ARE
-                        `Opt.deadBinder` and `Opt.dceUnique`.  Put
-                        beside `Dead.noDeadEmpty` and
-                        `Dead.dceNotUnique` the row is complete, both
-                        cells checked.
-
-    * `noLinearK`    -- and the concrete separation: no closed LINEAR
-                        term has the occurrence profile of
-                        `Syntax.constAff` (`λx.λy.x`), because
-                        `Opt.budgetEq` at the empty usage says a closed
-                        linear term has as many occurrences as binders,
-                        and K has one and two.
--}
+{- LINEAR ⊂ AFFINE ⊂ CARTESIAN, machine-checked. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Affine.Contrast where
@@ -65,9 +21,7 @@ open import TheoryGrammar.Instances.Affine.Dead public
 -- the linear development, qualified: nothing from it is re-exported
 import TheoryGrammar.Instances.LinLam.Opt as Opt
 
--- ==================================================================
--- §1  THE INCLUSION OF PROMODELS.
--- ==================================================================
+-- §1  THE INCLUSION OF `Fibered`s.
 
 lin→aff : ∀ {u v w} → Opt.Use⊎ u v w → Aff⊎ u v w
 lin→aff Opt.unil       = anil
@@ -81,11 +35,9 @@ lin⊊aff : Aff⊎ (false ∷ []) (false ∷ []) (true ∷ [])
         × (Opt.Use⊎ (false ∷ []) (false ∷ []) (true ∷ []) → ⊥)
 lin⊊aff = adrop anil , λ ()
 
--- ==================================================================
 -- §1.5  THE CONTRACTION ROW, both cells, by citation.  Affinity did
 -- NOT restore the (true,true) clause, so the linear theorem and the
 -- affine one are the same theorem twice.
--- ==================================================================
 
 linNoDup : (u : Usage) → Opt.Use⊎ (true ∷ u) (true ∷ u) (true ∷ u) → ⊥
 linNoDup = Opt.noDupUse
@@ -98,13 +50,10 @@ affNoDup = noDupAff
 _ : ∀ {u w} → Aff⊎ u u w → Empty u
 _ = affDiag
 
--- ==================================================================
--- §2  THE INCLUSION OF TERMS.
---
--- `Opt.Empty`/`Opt.Solo` and `Base.Empty`/`Base.Solo` are the same
--- definitions written twice (the affine directory is deliberately
--- self-contained), so the bridges are pure recursion with no content.
--- ==================================================================
+-- §2 THE INCLUSION OF TERMS. `Opt.Empty`/`Opt.Solo` and
+-- `Base.Empty`/`Base.Solo` are the same definitions written twice (the
+-- affine directory is deliberately self-contained), so the bridges are
+-- pure recursion with no content.
 
 emptyL→A : (u : Usage) → Opt.Empty u → Empty u
 emptyL→A []          e = tt
@@ -131,15 +80,8 @@ linTmG→aff u = linTm→aff
 _ : linTm→aff Opt.idLin ≡ idAff
 _ = refl
 
--- ==================================================================
--- §3  THE WEAKENING ROW, refuted linearly.
---
--- `Base.wkUnit : ⊤G ⊢ 𝟙 ⊛ 𝟙` is the affine statement that anything may
--- be discarded.  Linearly the same grammar is empty wherever anything
--- is owned, and the reason is one lemma: a `Use⊎` with two `Empty`
--- slots has an `Empty` whole.  (`adrop` is exactly the constructor
--- that breaks it, which is why `Base.affDropAll` exists.)
--- ==================================================================
+-- §3 THE WEAKENING ROW, refuted linearly. `Base.wkUnit : ⊤G ⊢ 𝟙 ⊛ 𝟙` is
+-- the affine statement that anything may be discarded.
 
 -- PRIMITIVE (phase 1)
 linUnitEmpty : ∀ {u₁ u₂ u} → Opt.Use⊎ u₁ u₂ u
@@ -161,12 +103,9 @@ noWkLin f =
 _ : ⊤G ⊢ (𝟙 ⊛ 𝟙)
 _ = wkUnit
 
--- ==================================================================
--- §4  THE DEAD-CODE ROW, both cells.
---
--- The linear cells are CITATIONS, not paraphrases: these are literally
--- `Opt`'s theorems, typechecked here so the table cannot drift.
--- ==================================================================
+-- §4 THE DEAD-CODE ROW, both cells. The linear cells are CITATIONS, not
+-- paraphrases: these are literally `Opt`'s theorems, typechecked here so
+-- the table cannot drift.
 
 linDeadVacuous : Opt.DeadBinder Opt.⊢ Opt.⊥G
 linDeadVacuous = Opt.deadBinder
@@ -181,14 +120,8 @@ _ = noDeadEmpty
 _ : ((f g : DeadBinder ⊢ ATmG) → f ≡ g) → ⊥
 _ = dceNotUnique
 
--- ==================================================================
--- §5  THE CONCRETE SEPARATION: K IS NOT LINEAR.
---
--- `Opt.budgetEq` says `occ t ≡ live u + lam t`.  At the empty usage
--- that is `occ ≡ lam`: a closed linear term has exactly as many
--- variable occurrences as it has binders.  `Syntax.constAff` has one
--- and two.
--- ==================================================================
+-- §5 THE CONCRETE SEPARATION: K IS NOT LINEAR. `Opt.budgetEq` says `occ t
+-- ≡ live u + lam t`.
 
 linClosedBalanced : (t : Opt.Tm []) → Opt.occOf t ≡ Opt.lamOf t
 linClosedBalanced t = Opt.budgetEq t

@@ -1,27 +1,7 @@
-{-
-  THE SUBSINGLETON THEOREM.
-
-      synUnique : (Infer Γ A & Infer Γ B) ⊢ Kty A B
-
-  Two synthesis derivations of one term give equal types -- stated with
-  the calculus' own equality of types (`Kty A B = ⌈ B ⌉ A`), proved with
-  the calculus' own rules.  Equivalently: `Syn Γ = ⊕ᴰ Ty (Infer Γ)` is a
-  SUBSINGLETON in its index.  That is the same shape of fact as
-  `Split-isProp` -- at most one splitting -- and it plays the same role,
-  turning a positive answer elsewhere into a REFUTATION here
-  (`Check.dec-at`, which takes it as an explicit hypothesis).
-
-  The proof is the generic `fold` at the motive
-
-      UM (syn , Γ , A , t) = (B : Ty) → Infer Γ B t → TyEq A B
-      UM (chk , Γ , C , t) = ⊤
-
-  so the induction hypothesis arrives already at the right index, and
-  only `app` uses it.  Of the nine cases `dist&₂` produces, six are
-  refuted by `Readable`'s disjointness of the head operations, and
-  `ann/ann` needs no induction at all -- the type is read straight off
-  the `ty` slot.
--}
+{- THE SUBSINGLETON THEOREM. synUnique : (Infer Γ A & Infer Γ B) ⊢ Kty A B
+   Two synthesis derivations of one term give equal types -- stated with
+   the calculus' own equality of types (`Kty A B = ⌈ B ⌉ A`), proved with
+   the calculus' own rules. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.SimplyTyped.Unique where
 
@@ -66,9 +46,7 @@ module StUnique (Name : Type₀) (_≟_ : Discrete Name) where
   UM ((syn , Γ , A) , t) = IHG Γ A t
   UM ((chk , Γ , C) , t) = Unit
 
-  -- ================================================================
   -- The three matching cases.
-  -- ================================================================
 
   -- two `var` derivations: the types agree because the LOOKUP is
   -- unique.  No induction -- this is `lookupUnique` under one tensor.
@@ -100,14 +78,7 @@ module StUnique (Name : Type₀) (_≟_ : Discrete Name) where
               Eq.pathToEq (⇒ᵗ-injʳ A₀ A B₀ B
                             (h true .fst (B₀ ⇒ᵗ B) (h true .snd))))
 
-  -- ================================================================
   -- The six impossible cases, and the dispatch.
-  --
-  -- Each is `Readable`'s disjointness of two head operations, carried
-  -- past the `⊕ᴰ Ty` that the `app` rule guesses over.  That carrying
-  -- is the only content the six have beyond the three lemmas upstream,
-  -- so it is named here once, publicly, in both variances.
-  -- ================================================================
 
   -- a refutation survives a GUESSED index on the right ...
   ⊕ᴰ-⊥ʳ : (X : TmG) (P : Ty → TmG) (K : TmG)
@@ -179,9 +150,7 @@ module StUnique (Name : Type₀) (_≟_ : Discrete Name) where
                      (⊕-E (⊕-E pp pn) (⊕-E np nn) ∘g dist&₂))
             ∘g dist&₂
 
-  -- ================================================================
   -- The theorem, by the generic fold.
-  -- ================================================================
 
   -- the algebra: at `syn`, unroll the SECOND derivation and dispatch;
   -- at `chk` there is nothing to say
@@ -190,8 +159,7 @@ module StUnique (Name : Type₀) (_≟_ : Discrete Name) where
   uAlg (chk , Γ , C) t v = tt
 
   -- `synUnique Γ A B` denotes: two synthesis derivations of one term in
-  -- one context give EQUAL types, in the calculus' own equality of
-  -- types.  Equivalently, `Syn Γ` is a subsingleton in its index.
+  -- one context give EQUAL types, in the calculus' own equality of types.
   synUnique : (Γ : Ctx) (A B : Ty) → (Infer Γ A & Infer Γ B) ⊢ Kty A B
   synUnique Γ A B t (d₁ , d₂) =
     fold UM (λ x m sh rc → uAlg x m (⟦J⟧ x m (sh , rc)))

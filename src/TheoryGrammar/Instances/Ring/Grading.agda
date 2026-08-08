@@ -3,7 +3,6 @@
 
   A negative result, and its repair.
 
-  ------------------------------------------------------------------
   1.  THE ADDITIVE HALF WORKS, with `deg n = n`.
 
   `SplitAdd i j n` gives `i ≤ n` and `j ≤ n` by a direct induction
@@ -11,10 +10,9 @@
   complement is nonzero (`splitAddL<`, `splitAddR<`).  This is the image
   under `length` of the string instance's `split3Len*`, and if the
   signature had only `{zeroOp, addOp}` we would be done: ℕ with the
-  Cauchy product is a graded promodel, and Cauchy-recursive grammars
+  Cauchy product is a graded `Fibered`, and Cauchy-recursive grammars
   (generating functions) exist.
 
-  ------------------------------------------------------------------
   2.  THE MULTIPLICATIVE HALF FAILS, AT n = 0, AND ONLY THERE.
 
   `deg≤` demands that a factor is no bigger than the product.  But
@@ -32,9 +30,8 @@
 
   -- every tuple must split its own composite.  `5 · 0 = 0` is a
   composite, so `(5,0)` MUST be a splitting of `0`.  The zero
-  splittings are forced by the promodel axioms, not chosen.
+  splittings are forced by the `Fibered` axioms, not chosen.
 
-  ------------------------------------------------------------------
   3.  AND THE DAMAGE IS TOTAL, NOT LOCAL.
 
   The natural guess is that ℕ-with-both-products still has SOME grading,
@@ -55,7 +52,6 @@
   A single absorbing element destroys well-foundedness of divisibility,
   exactly as a group's invertibility does.
 
-  ------------------------------------------------------------------
   4.  THE REPAIR: DELETE 0.
 
   On the positive naturals both convolutions are graded, and `posGraded`
@@ -100,10 +96,8 @@ open import TheoryGrammar.Graded
 open import TheoryGrammar.Instances.Group.NoGrading
 open import TheoryGrammar.Instances.Ring.Base public
 
--- ==================================================================
 -- 1.  The additive half: `deg = id` is monotone, and strict at a
 --     nonzero complement.  (Compare `split3Len*` for strings.)
--- ==================================================================
 
 splitAddL : ∀ {i j n} → SplitAdd i j n → i ≤ n
 splitAddL zl     = zero-≤
@@ -121,12 +115,7 @@ splitAddR< : ∀ {i j n} → SplitAdd i j n → 0 < i → j < n
 splitAddR< zl     pr = E.rec (¬-<-zero pr)
 splitAddR< (sl s) pr = suc-≤-suc (splitAddR s)
 
--- ==================================================================
--- 2.  The multiplicative half fails at 0.  PROVED, not assumed.
---
--- `(5 , 0 , Eq.refl) : RingSplit mulOp 0` because `5 · 0` reduces to 0,
--- and its `true` slot is 5.  So `deg = id` cannot satisfy `deg≤`.
--- ==================================================================
+-- 2. The multiplicative half fails at 0.
 
 zeroSplit : (k : ℕ) → RingSplit mulOp 0
 zeroSplit k = 0 , k , Eq.refl          -- 0 · k ≡ 0, so k is a FACTOR of 0
@@ -135,16 +124,11 @@ mul-part-can-exceed-whole :
   ((n : ℕ) (sp : RingSplit mulOp n) (a : Bool) → RingParts mulOp n sp a ≤ n) → ⊥
 mul-part-can-exceed-whole h = snotz (≤0→≡0 (h 0 (zeroSplit 5) false))
 
--- ==================================================================
--- 3.  ... and no other `deg` rescues it either: on ℕ with BOTH
---     products, every grading is degenerate.
---
--- The parameters are exactly the fields of `GradedFib` other than
--- `fib`, so this quantifies over every graded promodel over `natFib`.
--- ==================================================================
+-- 3. ... and no other `deg` rescues it either: on ℕ with BOTH products,
+-- every grading is degenerate.
 
 -- One parameter, not four: `Grading natFib` is exactly "a grading of
--- THIS promodel", which the bundled `GradedFib` could not say.  See the
+-- THIS `Fibered`", which the bundled `GradedFib` could not say.  See the
 -- note on `Grading` in `TheoryGrammar.Graded`.
 module AnyGrading (G : Grading natFib) where
 
@@ -176,9 +160,7 @@ module AnyGrading (G : Grading natFib) where
                    → Guarded F → Pos F n sh → ⊥
     ℕ-no-inductive = no-guarded
 
--- ==================================================================
 -- 4.  THE REPAIR.  ℕ₊, represented as ℕ with `n` denoting `n + 1`.
--- ==================================================================
 
 data PosOp : Type₀ where
   oneP addP mulP : PosOp
@@ -231,9 +213,7 @@ posPoint .parts-split oneP f = funExt λ ()
 posPoint .parts-split addP f = funExt λ { true → refl ; false → refl }
 posPoint .parts-split mulP f = funExt λ { true → refl ; false → refl }
 
--- ------------------------------------------------------------------
 -- Arithmetic, in the two shapes the degree proofs need.
--- ------------------------------------------------------------------
 
 private
   0<+r : (x y : ℕ) → 0 < y → x < x + y
@@ -270,9 +250,7 @@ PosProper oneP n sp ()
 PosProper addP n sp b = Unit
 PosProper mulP n (i , j , _) b = IsPos (if b then j else i)
 
--- ------------------------------------------------------------------
--- THEOREM.  ℕ₊ with BOTH convolutions is a graded promodel.
--- ------------------------------------------------------------------
+-- THEOREM.  ℕ₊ with BOTH convolutions is a graded `Fibered`.
 
 posGraded : GradedFib posSig ℓ-zero ℓ-zero
 posGraded .fib     = posFib

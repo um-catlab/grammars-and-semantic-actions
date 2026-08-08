@@ -1,36 +1,4 @@
-{-
-  NO TOTAL POINT FOR A FIELD -- and one for its ring fragment.
-
-  The money result.  `Fibered` was split from `LaxPoint` in order to
-  admit partial algebras; this is the proof that the admission is real,
-  i.e. that some `Fibered` in the library has NO `LaxPoint` at all,
-  while the same promodel restricted to a sub-signature has one.
-
-  The refutation is entirely internal down to the last step: it is the
-  SLOTWISE `Domain.no-point` applied to `dom-inv⊢nonzero`, the calculus
-  theorem "being in the domain of inv refutes being zero".  Slotwise
-  suffices only because `invOp` is unary, so tuple and slot coincide;
-  `Field/Joint` redoes it through the joint lemma that survives at a
-  heap, and gets the same statement back.
-
-  Also here: `⊗ˢ o ⊤` is the IMAGE, not the domain.  `zeroOp` is TOTAL
-  and its image is still a proper subgrammar (`no-img-zero`), so
-  "`⊗ˢ o ⊤ = ⊤`" is strictly stronger than totality; the exact
-  condition is `Covering`.
-
-  DEFINES `fillsInv`, `noFieldPoint` (+ `noFieldPoint-explicit`),
-  `ringFragmentPoint`, the ring-side totality `dom-add-total`/
-  `dom-mul-total` and surjectivity `img-add`/`img-mul`/`coverAdd`/
-  `coverMul`/`cover-add-again`, and the five refutations `no-dom-inv`,
-  `no-img-inv`, `no-img-zero`, `no-img-one`, `no-cover-zero`.
-
-  READING THE `no-` NAMES.  Throughout this directory `no-X-o` is
-  `(⊤G ⊢ X o) → ⊥` -- "the grammar `X o` is NOT the unit" -- and NOT
-  "`X o` is empty".  `no-img-zero` is the sharp case: `ImgR zeroR` is
-  inhabited (at f0), just not everywhere.  The prefix is the tree-wide
-  spelling for a refutation (`no-point`, `no-slotwise-L/R`,
-  `noHeapPoint`), which is why it is kept rather than respelled here.
--}
+{- NO TOTAL POINT FOR A FIELD -- and one for its ring fragment. -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Instances.Field.NoPoint where
 
@@ -46,10 +14,8 @@ open import TheoryGrammar.Domain
 open import TheoryGrammar.Instances.Field.Base
 open import TheoryGrammar.Instances.Field.Partial
 
--- ==================================================================
 -- 1.  THE INVERSE SLOT IS FILLABLE (it is the only slot), so a total
 --     point would have to make its domain grammar ⊤.
--- ==================================================================
 
 -- `Fills o i` DENOTES a way to complete a tuple around slot i.  At the
 -- unary `invOp` "the other slots" is empty, so padding is the identity.
@@ -57,12 +23,7 @@ fillsInv : Fills invOp tt
 fillsInv .pad x _ = x
 fillsInv .pad-i x = refl
 
--- ==================================================================
--- 2.  THEOREM.  `fldFib` HAS NO TOTAL POINT.
---
--- One line, and every ingredient is a theorem of the calculus:
--- `no-point` is generic, `dom-inv⊢nonzero` is `Domˢ invOp ⊢ ¬G ⌈ f0 ⌉`.
--- ==================================================================
+-- 2. THEOREM.
 
 noFieldPoint : LaxPoint fldFib → ⊥
 noFieldPoint = no-point invOp tt fillsInv f0 dom-inv⊢nonzero
@@ -77,18 +38,14 @@ noFieldPoint-explicit P =
   where y  = P .op invOp (λ _ → f0)
         sp = P .split invOp (λ _ → f0)
 
--- ==================================================================
 -- 3.  THE FRAGMENT DOES HAVE ONE.  Same carrier, same splittings, same
 --     `parts` -- only `invOp` removed.  So the obstruction is located
 --     exactly at the partial operation and nowhere else.
--- ==================================================================
 
 ringFragmentPoint : LaxPoint rngFib
 ringFragmentPoint = rngPoint
 
--- ==================================================================
 -- 4.  DOMAIN OF DEFINITION vs. `⊗ˢ o ⊤`.
--- ==================================================================
 
 open DomainOf rngFib
   using () renaming (Imgˢ to ImgR; Domˢ to DomR; Fills to FillsR;

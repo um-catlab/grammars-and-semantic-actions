@@ -1,20 +1,5 @@
 {-# OPTIONS -WnoUnsupportedIndexedMatch #-}
-{-
-  THE TRANSDUCER AS AN INDUCTIVE GRAMMAR OVER THE GLUE.
-
-  `Transducer.Trans` is an `Eq`-predicate: it asserts the letterwise
-  property rather than building it.  This file gives the same thing as a
-  `μ` over the GLUED promodel -- `nil ⊕ (Letter ⊗ Var)` at the aligned
-  substrate -- which is the first time `TheoryGrammar.Inductive` meets a
-  carrier whose splittings carry a payload.
-
-  What it measures: the generic container semantics goes through with no
-  adjustment, and the ALGEBRA of the soundness fold is exactly the two
-  multiplicative primitives of `Transducer` -- `transNil` at the `nil`
-  branch, `transTensor` at the `cons` branch.  Nothing about gluing
-  appears in it.
-  PRIMITIVE: `letterTrans` (one `Eq` composite, no match).
--}
+{- THE TRANSDUCER AS AN INDUCTIVE GRAMMAR OVER THE GLUE. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Strings.TransducerMu
@@ -35,11 +20,9 @@ open import TheoryGrammar.Inductive
 import TheoryGrammar.Instances.Strings.Transducer as Tr
 open Tr In Out f public
 
--- ==================================================================
 -- The grammar of ALIGNED SINGLE LETTERS: `(c , f c)`, as a `⊕ᴰ` of a
 -- pair of representables.  This is the only new grammar; everything
 -- else is the description former.
--- ==================================================================
 
 Letter : G.TheoryTy ℓ-zero tt
 Letter g = Σ[ c ∈ In ] ((g .fst Eq.≡ c ∷ []) × (g .snd .fst Eq.≡ f c ∷ []))
@@ -50,9 +33,7 @@ Letter g = Σ[ c ∈ In ] ((g .fst Eq.≡ c ∷ []) × (g .snd .fst Eq.≡ f c �
 letterTrans : (g : Aligned) → Letter g → Trans g
 letterTrans g (c , e₁ , e₂) = Eq.ap (map f) e₁ Eq.∙ Eq.sym e₂
 
--- ==================================================================
 -- THE DESCRIPTION.  One nonterminal, two branches.
--- ==================================================================
 
 open Ind glue ℓ-zero Unit (λ _ → tt)
 
@@ -71,10 +52,8 @@ TransF _ = ⊕e Bool branch
 TransM : Ix → Type _
 TransM = μ TransF
 
--- ==================================================================
 -- SOUNDNESS, as a fold.  The algebra is `transNil` and `transTensor`;
 -- the recursion, the shapes and the index bookkeeping are generic.
--- ==================================================================
 
 μ→Trans : (g : Aligned) → TransM (tt , g) → Trans g
 μ→Trans g t = fold M α (tt , g) t
@@ -92,9 +71,7 @@ TransM = μ TransF
     pay true  = letterTrans (glue .parts appop m sp true) (sh true .lower)
     pay false = rc (false , tt*)
 
--- ==================================================================
 -- A CLOSED ELEMENT, and the fold run on it.
--- ==================================================================
 
 module _ (x : In) where
 

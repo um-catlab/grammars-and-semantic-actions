@@ -1,20 +1,4 @@
-{-
-  What a pass IS -- and the NEGATIVE result that shapes everything here.
-
-  DENOTES: `Out Γ t` is "SOME term, with a derivation that IT is scoped
-  in Γ" -- `⊕ᴰ Raw (λ t _ → Scoped Γ t)`, a family CONSTANT in the
-  index.  So the tempting analogy fails: in `Sorted ⊗ Sorted ⊢ Sorted`
-  the index is preserved and does the work; here it pins nothing, and
-  correctness is NOT a freebie.  `Rename` locates the one exception.
-
-    emit                     `⊕ᴰ-I` at the index itself
-    outVar/outApp/outLam(G)  the three rebuilding rules, and `idAlg`
-                             the pass that uses all three: the FREE
-                             part of every pass, discharged once here
-    tryEmit                  the shared scope move: evidence CARRIED
-    PassAlg/runPass/idPass   one algebra, folded
-    term                     the output term, as a semantic action
--}
+{- What a pass IS -- and the NEGATIVE result that shapes everything here. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Passes.Framework where
 
@@ -47,11 +31,9 @@ module PassKit (Name : Type₀) where
   emit : (Γ : Scope) → Scoped Γ ⊢ Out Γ
   emit Γ t = ⊕ᴰ-I Raw {A = λ t' _ → Scoped Γ t'} t t
 
-  -- ================================================================
   -- The three rebuilding rules: `roll` after an injection, packaged.
   -- Each denotes "this node, put back exactly as it was, with the
   -- derivation reassembled".  These are the FREE part of every pass.
-  -- ================================================================
 
   outVar : (Γ : Scope) → VarG (In Γ) ⊢ Out Γ
   outVar Γ =
@@ -70,12 +52,9 @@ module PassKit (Name : Type₀) where
   outLamG Γ = ⊕ᴰ-E λ n → lam-elim λ _ _ _ o → outLam Γ n (o .fst) (o .snd)
 
   -- The move every pass that lifts a subterm out from under a binder
-  -- makes, and the reason none of them needs a strengthening lemma: if
-  -- `s` is already scoped at the SMALLER Γ, emit it -- carrying the
-  -- derivation the decision produced, never re-deriving it -- else fall
-  -- back.  The fallback may be a different term: `Out Γ s` and `Out Γ t`
-  -- are the same type, which is the constancy above doing visible work.
-  -- The decision is a parameter, so this file stays free of `Decide`.
+  -- makes, and the reason none of them needs a strengthening lemma: if `s`
+  -- is already scoped at the SMALLER Γ, emit it -- carrying the derivation
+  -- the decision produced, never re-deriving it -- else fall back.
   tryEmit : (Γ : Scope) → (⊤G ⊢ Dec⟨ Scoped Γ ⟩) → (s : Raw) → Out Γ s → Out Γ s
   tryEmit Γ dec s fallback =
     ⊕-E {A = Scoped Γ} {C = Out Γ} {B = ¬G (Scoped Γ)}
@@ -85,9 +64,7 @@ module PassKit (Name : Type₀) where
   idAlg : (Γ : Scope) → Step Out Γ ⊢ Out Γ
   idAlg Γ = ⊕-E (outVar Γ) (⊕-E (outApp Γ) (outLamG Γ))
 
-  -- ================================================================
   -- Running a pass: the generic `fold`, exactly as `toDB`.
-  -- ================================================================
 
   -- DENOTES: one rewriting step at each node, given already-rewritten
   -- children.  A pass IS `idAlg` with the one alternative it rewrites
@@ -109,9 +86,6 @@ module PassKit (Name : Type₀) where
   idPass : (Γ : Scope) → Scoped Γ ⊢ Out Γ
   idPass = runPass idAlg
 
-  -- Observing a pass: the output term, as a SEMANTIC ACTION.  `Out Γ`
-  -- is a `⊕ᴰ Raw`, so reading its index off is the GENERIC `tagA`
-  -- (TheoryGrammar.SemanticAction) -- there is nothing pass-specific
-  -- here, and no constant grammar.
+  -- Observing a pass: the output term, as a SEMANTIC ACTION.
   term : (Γ : Scope) → Action (Out Γ) Raw
   term Γ = tagA Raw

@@ -1,20 +1,8 @@
-{-
-  MANY THEORIES ON ONE CARRIER.
-
-  `Fibered` bundles the carrier with the splittings, so two theories over
-  one carrier can only be stated as two `Fibered`s plus an EQUATION
-  between their carriers -- green slime, and a coercion on every `parts`
-  access thereafter (`Refinement`'s `SplitH`/`partsH` is what that costs).
-  Factoring the carrier out as a parameter removes the equation entirely:
-  `Splitting σ X ℓP` is the splittings ALONE, and the coproduct of two
-  theories is then `_⊎Spl_`, a case on the operation.
-
-  Both signatures are taken at the SAME levels.  That is the whole design
-  decision: mismatched levels would force a `Lift` into `Split`, and the
-  point of the construction is that `⊗ˢ (inl o)` is the summand's `⊗ˢ o`
-  ON THE NOSE, not up to isomorphism.  See the `refl` tests below.
-  PRIMITIVE: none.
--}
+{- MANY THEORIES ON ONE CARRIER. `Fibered` bundles the carrier with the
+   splittings, so two theories over one carrier can only be stated as two
+   `Fibered`s plus an EQUATION between their carriers -- green slime, and a
+   coercion on every `parts` access thereafter (`Refinement`'s
+   `SplitH`/`partsH` is... -}
 module TheoryGrammar.Splitting where
 
 open import Cubical.Foundations.Prelude
@@ -28,9 +16,7 @@ open import TheoryGrammar.ChangeOfTheory using (SigMor; onSort; onOp; onAr;
 
 private variable ℓS ℓ ℓ' ℓX ℓP ℓA : Level
 
--- ==================================================================
 -- THE SPLITTINGS, OFF THE CARRIER.
--- ==================================================================
 
 record Splitting {S : Type ℓS} (σ : SortedSig S ℓ ℓ') (X : S → Type ℓX) ℓP
   : Type (ℓ-max ℓ (ℓ-max ℓ' (ℓ-max ℓX (ℓ-suc ℓP)))) where
@@ -64,9 +50,7 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} where
                 → splittingOf ⟪ X , Sp ⟫ ≡ Sp
   splittingOf-η Sp = refl
 
--- ==================================================================
 -- THE COPRODUCT OF TWO SIGNATURES, at one sort set.
--- ==================================================================
 
 module _ {S : Type ℓS} (σ τ : SortedSig S ℓ ℓ') where
 
@@ -93,7 +77,7 @@ _⊎Sig_ : {S : Type ℓS} → SortedSig S ℓ ℓ' → SortedSig S ℓ ℓ' →
 (σ ⊎Sig τ) .sortOf     = SumSortOf σ τ
 (σ ⊎Sig τ) .resultSort = SumResult σ τ
 
--- The two inclusions.  Both coherence fields are `Eq.refl`, which IS the
+-- The two inclusions. Both coherence fields are `Eq.refl`, which IS the
 -- statement that the coproduct introduces no coercion: `ChangeOfTheory`'s
 -- `restrict` transports along `resEq`/`sortEq`, and here it transports
 -- along nothing.
@@ -113,9 +97,7 @@ module _ {S : Type ℓS} (σ τ : SortedSig S ℓ ℓ') where
   inrSig .resEq   = λ _ → Eq.refl
   inrSig .sortEq  = λ _ _ → Eq.refl
 
--- ==================================================================
 -- ... AND OF TWO SPLITTINGS OVER ONE CARRIER.
--- ==================================================================
 
 infixr 5 _⊎Spl_
 
@@ -126,7 +108,7 @@ _⊎Spl_ : {S : Type ℓS} {σ τ : SortedSig S ℓ ℓ'} {X : S → Type ℓX}
 (Sp ⊎Spl Sq) .parts (inl o) m sp a  = Sp .parts o m sp a
 (Sp ⊎Spl Sq) .parts (inr o) m sp a  = Sq .parts o m sp a
 
--- The ergonomic form: take a promodel you already have and ADD a second
+-- The ergonomic form: take a `Fibered` you already have and ADD a second
 -- theory's splittings on its carrier.  Note what is NOT asked for -- an
 -- equation between two carriers.
 infixr 5 _⊎Fib_
@@ -135,12 +117,10 @@ _⊎Fib_ : {S : Type ℓS} {σ τ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX
        → Splitting τ (Fib .carrier) ℓP → Fibered (σ ⊎Sig τ) ℓX ℓP
 Fib ⊎Fib Sq = ⟪ Fib .carrier , splittingOf Fib ⊎Spl Sq ⟫
 
--- ==================================================================
--- THE MEASUREMENT.  A derivation in a summand's calculus IS a derivation
--- in the sum's, with nothing to translate -- the same claim
+-- THE MEASUREMENT. A derivation in a summand's calculus IS a derivation in
+-- the sum's, with nothing to translate -- the same claim
 -- `ChangeOfTheory.reinterpretTerm` makes for a signature morphism, but
 -- here it extends to the MULTIPLICATIVES, which that one cannot do.
--- ==================================================================
 
 module _ {S : Type ℓS} {σ τ : SortedSig S ℓ ℓ'} {X : S → Type ℓX}
          (Sp : Splitting σ X ℓP) (Sq : Splitting τ X ℓP) where

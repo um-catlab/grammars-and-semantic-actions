@@ -1,15 +1,6 @@
-{-
-  DECIDING A REPRESENTABLE.
-
-  `⌈ a ⌉` is the one grammar whose decision is a fact about the promodel
-  and not about any connective, so it is the one place external
-  decidability may enter.  `Discrete` is used to BUILD an internal map,
-  never to case-split on one: the metalanguage `Dec` is consumed by its
-  OWN elimination rule, `decRec`, exactly as an internal `Dec⟨_⟩` is
-  consumed by `dec-elim`.  No `with`, no `yes`/`no` pattern.
-
-  Stated once, generically, so instances stop re-deriving it.
--}
+{- DECIDING A REPRESENTABLE. `⌈ a ⌉` is the one grammar whose decision is a
+   fact about the `Fibered` and not about any connective, so it is the one
+   place external decidability may enter. -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Decidable.Representable where
 

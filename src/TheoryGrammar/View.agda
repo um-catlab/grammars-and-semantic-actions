@@ -68,19 +68,14 @@ open import TheoryGrammar.Decidable.Tensor
 
 private variable ℓS ℓ ℓ' ℓX ℓP ℓA ℓB ℓC ℓM ℓY ℓV : Level
 
--- ==================================================================
 -- The view layer.  Deliberately NOT re-exporting `RulesF` -- instances
 -- already open it themselves, and a second copy would make every
 -- combinator ambiguous at the use site.
 
--- ==================================================================
--- COMPLETENESS, ADDITIVELY.
---
--- Nothing below mentions the operations -- `total` is a map out of `⊤`
--- and `exclusive` uses only `&` and `⊥G` -- so it needs a CARRIER, not
--- a substrate, exactly as `Decidable.Additive` does.  `Views` re-exports
--- it at the substrate level, where the instances use it.
--- ==================================================================
+-- COMPLETENESS, ADDITIVELY. Nothing below mentions the operations --
+-- `total` is a map out of `⊤` and `exclusive` uses only `&` and `⊥G` -- so
+-- it needs a CARRIER, not a substrate, exactly as `Decidable.Additive`
+-- does.
 
 module CompleteViews {S : Type ℓS} (Car : S → Type ℓX) where
 
@@ -96,27 +91,10 @@ module CompleteViews {S : Type ℓS} (Car : S → Type ℓX) where
   Probe : TheoryTy ℓA s → Type (ℓ-max ℓX ℓA)
   Probe P = ⊤G ⊢ Dec⟨ P ⟩
 
-  -- ================================================================
-  -- COMPLETE views: a total map into a disjunction of DISJOINT
-  -- grammars.
-  --
-  --     total     : ⊤G ⊢ ⊕ᴰ Y P
-  --     exclusive : distinct branches are jointly empty
-  --
+  -- COMPLETE views: a total map into a disjunction of DISJOINT grammars.
+  -- total : ⊤G ⊢ ⊕ᴰ Y P exclusive : distinct branches are jointly empty
   -- `Cover P` alone says the branches EXHAUST; this adds that they
-  -- EXCLUDE.  `Decidable.Additive.Decision` is the binary case, and
-  -- `Dec⟨ A ⟩` is ALREADY an instance of it: `¬G A` is a grammar like
-  -- any other and `contra` is its exclusion.  So completeness is not
-  -- what a positive complement buys.
-  --
-  -- What it buys is a better DESCRIPTION of the same fact.  `largest`
-  -- says every complement embeds into `¬G A`, so choosing a positive
-  -- one -- `NonTrivial` rather than `¬G ⌈ [] ⌉`, or the other two
-  -- operations rather than `¬G (⊗ˢ appOp ⊤)` -- refines what the
-  -- rejecting branch tells you without changing what it proves.  The
-  -- n-ary form is here because a syntax's operations partition its
-  -- terms, and that is the shape those refinements take.
-  -- ================================================================
+  -- EXCLUDE.
 
   record Complete (Y : Type ℓY) (P : Y → TheoryTy ℓA s)
     : Type (ℓ-max ℓX (ℓ-max ℓY ℓA)) where
@@ -126,10 +104,9 @@ module CompleteViews {S : Type ℓS} (Car : S → Type ℓX) where
 
   open Complete public
 
-  -- THE USUAL WAY TO BUILD ONE.  Exclusivity is a mouthful stated
-  -- pairwise, but it always comes from the same fact: the branch is a
-  -- FUNCTION OF THE WORLD.  Give that, and the pairwise statement is one
-  -- line -- which is what makes the record cheap to instantiate.
+  -- THE USUAL WAY TO BUILD ONE. Exclusivity is a mouthful stated pairwise,
+  -- but it always comes from the same fact: the branch is a FUNCTION OF
+  -- THE WORLD.
   fromUnique : {Y : Type ℓY} {P : Y → TheoryTy ℓA s}
              → Cover (⊕ᴰ Y P)
              → ((y z : Y) (m : Car s) → P y m → P z m → y ≡ z)
@@ -150,23 +127,10 @@ module CompleteViews {S : Type ℓS} (Car : S → Type ℓX) where
             → P y ⊢ ¬G (P z)
   certifies K y z d = ⇒-I (K .exclusive y z d)
 
-  -- A COMPLETE VIEW DECIDES ITS OWN BRANCHES.
-  --
-  -- Given the partition, deciding `P y` needs no work: land in some
-  -- branch `z`, and either it IS `y` -- so its payload already is a
-  -- `P y` -- or it is not, and `certifies` refutes.  So the per-branch
-  -- decision procedures an instance writes by hand (`⊗-decSplit`, one
-  -- clause per pair of operations) are consequences of the ONE
-  -- partition, not independent facts.
-  --
-  -- WHY THE HYPOTHESIS IS `P z ⊢ P y` AND NOT `Discrete Y`.  With
-  -- `Discrete Y` the diagonal case has to move a `P z` to a `P y` along
-  -- `z ≡ y`, i.e. by `subst` -- and `subst` at a family over a VARIABLE
-  -- world does not reduce.  Every consumer of this that is generic in
-  -- the world (the scope checker is) would then stop computing, and the
-  -- instances' `refl` tests with it.  Asking instead for the coercion
-  -- itself costs nothing at a concrete index -- it is `idg` on the
-  -- diagonal -- and keeps the derivation transport-free.
+  -- A COMPLETE VIEW DECIDES ITS OWN BRANCHES. Given the partition,
+  -- deciding `P y` needs no work: land in some branch `z`, and either it
+  -- IS `y` -- so its payload already is a `P y` -- or it is not, and
+  -- `certifies` refutes.
   decBranch : {Y : Type ℓY} {P : Y → TheoryTy ℓA s}
             → ((y z : Y) → (P z ⊢ P y) ⊎ (y ≡ z → ⊥))
             → Complete Y P → (y : Y) → Probe (P y)
@@ -175,7 +139,6 @@ module CompleteViews {S : Type ℓS} (Car : S → Type ℓX) where
       Sum.rec (λ f   → dec-yes (P y) ∘⊢ f)
               (λ ¬eq → dec-no  (P y) ∘⊢ certifies K z y (λ p → ¬eq (sym p)))
               (cmp y z)
-
 
   -- THE BINARY CASE IS `Decision`.  Not a separate notion: a two-branch
   -- partition and a decision-with-its-exclusion are the same data, and
@@ -198,7 +161,6 @@ module CompleteViews {S : Type ℓS} (Car : S → Type ℓX) where
             ; false → ⊕-I₂ {B = A'} {A = A} }) ∘⊢ K .total
   unbinary K .exclude = K .exclusive true false (λ p → true≢false p)
 
-
 module Views {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP) where
 
   open DecFib Fib
@@ -209,22 +171,16 @@ module Views {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX 
 
   private variable s : S
 
-  -- ================================================================
   -- The three abbreviations.  `_⇛_` is `_⊢_`; that it needs no new
   -- definition is the content, not an oversight.
-  -- ================================================================
 
   _⇛_ : TheoryTy ℓA s → TheoryTy ℓB s → Type (ℓ-max ℓX (ℓ-max ℓA ℓB))
   P ⇛ Q = P ⊢ Q
 
   infix 1 _⇛_
 
-  -- ================================================================
-  -- `with`, internally.
-  --
-  -- A view holds of every world, so it can be added to ANY derivation's
-  -- context.  That is the whole trick, and it is one `&-I`.
-  -- ================================================================
+  -- `with`, internally. A view holds of every world, so it can be added to
+  -- ANY derivation's context.
 
   withView : {B : TheoryTy ℓB s} {P : TheoryTy ℓA s}
            → Cover P → B ⊢ (B & P)
@@ -247,13 +203,7 @@ module Views {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX 
             → B ⊢ C
   viewCaseᴰ Y v f = ⊕ᴰ-E f ∘g ⊕ᴰ-&-in Y ∘g withView v
 
-  -- ================================================================
   -- The degenerate case, named because it is the common one.
-  --
-  -- At `B = ⊤G` there is no payload to carry past the view, so the
-  -- `with` collapses to composition.  Every coalgebra out of `⊤` in the
-  -- instances is of this shape.
-  -- ================================================================
 
   caseOf : {C : TheoryTy ℓC s} {P : TheoryTy ℓA s} {Q : TheoryTy ℓM s}
          → Cover (P ⊕ Q) → P ⊢ C → Q ⊢ C → Cover C
@@ -268,10 +218,8 @@ module Views {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX 
          → P ⇛ Q → Cover P → Cover Q
   refine f v = f ∘g v
 
-  -- ================================================================
   -- Probes: partial views.  Coverage-checking IS decidability, so these
   -- are the `Decidable.Additive` combinators under their view names.
-  -- ================================================================
 
   cover→probe : (P : TheoryTy ℓA s) → Cover P → Probe P
   cover→probe P v = dec-yes P ∘g v
@@ -290,24 +238,16 @@ module Views {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX 
             → P ⇛ Q → Q ⇛ P → Probe P → Probe Q
   probe-map P Q f g p = dec-map P Q f g ∘g p
 
-  -- Forgetting the refutation.  This is NOT specific to probes: a
-  -- `Probe P` is a `Cover (Result (¬G P) P)` and a `Cover (MaybeG P)`
-  -- is a `Cover (Result ⊤G P)`, so weakening one to the other is
-  -- `Result`'s `toMaybe = mapE ⊤-I`, uniform in the error grammar.
+  -- Forgetting the refutation. This is NOT specific to probes: a `Probe P`
+  -- is a `Cover (Result (¬G P) P)` and a `Cover (MaybeG P)` is a `Cover
+  -- (Result ⊤G P)`, so weakening one to the other is `Result`'s `toMaybe =
+  -- mapE ⊤-I`, uniform in the error grammar.
   probe→maybe : (P : TheoryTy ℓA s) → Probe P → Cover (MaybeG P)
   probe→maybe P p = toMaybe P ∘g p
 
-  -- ================================================================
-  -- OBSERVING a view.  There is ONE observer, not one per shape:
-  -- `okA P E : Result E P ⊢ Δ Bool` (TheoryGrammar.SemanticAction) is
-  -- uniform in `E`, so the SAME term reads a probe and a maybe.  The
-  -- two names below are that one term at the two error grammars, kept
-  -- only because they say which shape is expected at the use site.
-  --
-  -- Test suites should go through these -- or through `accepts?`, which
-  -- is `run` of the same thing -- rather than defining their own
-  -- `succeeded`/`isYes`.
-  -- ================================================================
+  -- OBSERVING a view. There is ONE observer, not one per shape: `okA P E :
+  -- Result E P ⊢ Δ Bool` (TheoryGrammar.SemanticAction) is uniform in `E`,
+  -- so the SAME term reads a probe and a maybe.
 
   probe→Bool : (P : TheoryTy ℓA s) → Probe P → Cover (Δ Bool)
   probe→Bool P p = okA P (¬G P) ∘g p
@@ -315,15 +255,8 @@ module Views {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX 
   maybe→Bool : (P : TheoryTy ℓA s) → Cover (MaybeG P) → Cover (Δ Bool)
   maybe→Bool P v = okA P ⊤G ∘g v
 
-  -- ================================================================
-  -- Descending into a tensor.
-  --
-  -- Refining EVERY slot is free -- it is the tensor's own functorial
-  -- action.  Refining ONE NAMED slot is not: picking slot `i` out of the
-  -- arity is the `Discrete (σ .arities o)` obstruction that `Focus`'s
-  -- `Rest` field exists to dodge.  So there is no `⇛-slot` here, and
-  -- that absence is the honest state of affairs.
-  -- ================================================================
+  -- Descending into a tensor. Refining EVERY slot is free -- it is the
+  -- tensor's own functorial action.
 
   ⇛-slots : (o : σ .ops)
             {A : (a : σ .arities o) → TheoryTy ℓA (σ .sortOf o a)}
@@ -332,11 +265,9 @@ module Views {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX 
           → ⊗ˢ o A ⇛ ⊗ˢ o B
   ⇛-slots o f = ⊗ˢ-map o f
 
-  -- ================================================================
   -- Sanity: the payload-carrying forms really do subsume the
   -- degenerate ones, so `caseOf` is an abbreviation and not a
   -- separate rule.  Discharging the payload is `&-E₂`.
-  -- ================================================================
 
   private
     _ : {C : TheoryTy ℓC s} {P : TheoryTy ℓA s} {Q : TheoryTy ℓM s}
@@ -354,15 +285,9 @@ module Views {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX 
       → Cover P → (B & P) ⊢ C → B ⊢ C
     _ = λ v k → k ∘g withView v
 
--- ==================================================================
--- Programming BY a view.
---
--- A description `F` is a pattern with recursive holes, so a family of
--- views -- one per nonterminal -- is exactly a coalgebra out of ⊤.  The
--- recursion is then `hyloC`, and totality is discharged ONCE per view
--- (`Guarded F`) rather than once per program: `Quicksort`'s `qalg` and
--- `qalgV` are two right-hand sides against one such analysis.
--- ==================================================================
+-- Programming BY a view. A description `F` is a pattern with recursive
+-- holes, so a family of views -- one per nonterminal -- is exactly a
+-- coalgebra out of ⊤.
 
 module Rec {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
            (GS : GradedFib σ ℓX ℓP) (ℓA : Level)
@@ -372,26 +297,6 @@ module Rec {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   open FibNotation (GS .fib)
 
   -- ONE VIEW PER NONTERMINAL: a coalgebra out of ⊤.
-  --
-  -- These are now ALIASES rather than definitions.  `Automaton` had
-  -- grown a second copy of both notions under the names `Scanner` and
-  -- `runAut`, and keeping two was the actual problem.  The view NAMES
-  -- are the better ones -- they carry the McBride framing this file is
-  -- built on, and "scanner" only says what strings do with it -- so
-  -- those survive and point at the single definition.
-  --
-  -- The definitions taken are the INTERNAL ones, which differ from what
-  -- stood here in two ways that are corrections rather than respellings:
-  --
-  --   * carried by the terminal GRAMMAR `⊤ᴳ`, and stated as a `⊢` term,
-  --     where this file had a function out of a bare `Unit*`.  A view is
-  --     a term of the calculus, so it should typecheck as one.
-  --
-  --   * taking `LocallyContractive`, not `Guarded`.  The strength is
-  --     what the recursion actually consumes; `Guarded` is the
-  --     syntactic sufficient criterion for it (`guarded→LC`), and
-  --     asking for it directly admits descriptions contractive for
-  --     other reasons.
   ViewsOf : ((x : X) → Functor (xs x)) → Type _
   ViewsOf = Scanner
 
@@ -403,7 +308,5 @@ module Rec {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
          → (x : X) → ⊤G ⊢ A x
   byView = runAut
 
-  -- NOTE.  `Bags.Quicksort.qcoalg` has motive `λ _ → Unit` rather than
-  -- `⊤ᴵ`.  Any contractible motive works and `hyloC` is stated at an
-  -- arbitrary one, so that instance needs no change to be a `ViewsOf`
-  -- in substance -- only in spelling.
+  -- NOTE. `Bags.Quicksort.qcoalg` has motive `λ _ → Unit` rather than
+  -- `⊤ᴵ`.

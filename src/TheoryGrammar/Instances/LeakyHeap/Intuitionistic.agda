@@ -12,7 +12,6 @@
 
       ⇓ A  =  A ∗ emp                    "A holds of SOME sub-heap"
 
-  ------------------------------------------------------------------
   §A  WHAT `⇓` IS.
 
   `emp` is `⊗ˢ nilop`, so `emp v` is `IsNil v`.  Unfolding `A ∗ emp` at a
@@ -31,7 +30,6 @@
   So `⇓ A` is the UPWARD CLOSURE of `A` in the sub-heap order.  Both
   maps of the isomorphism are `⇓→sub`/`sub→⇓` below.
 
-  ------------------------------------------------------------------
   §B  IT IS AN IDEMPOTENT MONAD -- i.e. A CLOSURE OPERATOR.
 
       ⇓-unit : A ⊢ ⇓ A                  keep everything (`subIlv-nilR`)
@@ -42,7 +40,6 @@
   monad that is idempotent is a closure operator, and that is the honest
   description: `⇓` closes a predicate upward.
 
-  ------------------------------------------------------------------
   §C  ITS ALGEBRAS ARE THE INTUITIONISTIC PREDICATES.
 
       Intuitionistic A  =  ⇓ A ⊢ A
@@ -63,7 +60,6 @@
   which is the same shape as `Affine/Base`'s reading of Rust's `Drop` as
   a trait rather than a structural rule.
 
-  ------------------------------------------------------------------
   §D  WHY THE UNIT LAW MUST FAIL, STRUCTURALLY.
 
   The refutation is not a coincidence of a chosen counterexample; it is
@@ -71,7 +67,7 @@
 
       ∗-UpClosed :  (A B : Gr) → UpClosed (A ∗ B)                (§5)
 
-  EVERY separating conjunction is upward closed in the leaky promodel --
+  EVERY separating conjunction is upward closed in the leaky `Fibered` --
   for ARBITRARY `A` and `B`, with no hypothesis at all.  The proof is one
   line: `subIlv-mono` re-indexes the splitting at the bigger heap and the
   two payloads and the disjointness are carried over untouched.  In other
@@ -87,7 +83,6 @@
   This also says precisely WHICH direction survives: `A ⊢ A ∗ emp`
   (`⇓-unit`) holds, so `∗` is LAX unital.  Exactly as in `Affine/Base`.
 
-  ------------------------------------------------------------------
   §E  THE SHARPEST CONSEQUENCE:  `⇓ emp ⊣⊢ ⊤G`.
 
   Every heap has `[]` as a sub-heap, so the upward closure of `emp` is
@@ -107,10 +102,9 @@
   and possibly more".  So the two standard atoms of intuitionistic SL
   are both literally `⇓` of the corresponding exact atom.
 
-  ------------------------------------------------------------------
   NOT DONE (honestly).  `⇓` lax monoidal (`⇓ A ∗ ⇓ B ⊢ ⇓ (A ∗ B)`)
   needs `#` to be monotone under `⊑` and is not built here.  Nor is
-  associativity of `∗` -- `Heap/Emp` declines it for the exact promodel
+  associativity of `∗` -- `Heap/Emp` declines it for the exact `Fibered`
   for the same reason (a rotation lemma with disjointness bookkeeping),
   and nothing below uses it.
 
@@ -137,15 +131,8 @@ open import TheoryGrammar.Precision using (coeEq)
 
 open import TheoryGrammar.Instances.LeakyHeap.Base public
 
--- ==================================================================
--- §1  THE SUB-HEAP ORDER.
---
--- `u ⊑ w` is a leaky splitting with an EMPTY right part.  Writing it
--- that way rather than as a separate inductive family is deliberate:
--- the order is not extra structure, it is the promodel's own splitting
--- relation looked at along the unit, which is exactly why the unit law
--- is what it obstructs.
--- ==================================================================
+-- §1 THE SUB-HEAP ORDER. `u ⊑ w` is a leaky splitting with an EMPTY right
+-- part.
 
 infix 4 _⊑_
 
@@ -156,13 +143,7 @@ u ⊑ w = SubIlv u [] w
 ⊑-refl = subIlv-nilR
 
 -- PRIMITIVE (phase 1): a splitting composed with an enlargement of the
--- whole.  This is the single recursion the whole file runs on: it gives
--- transitivity of `⊑`, the monad multiplication, AND the theorem that
--- `∗` is always upward closed.
---
--- `sright` cannot occur in the second argument (its middle slot is a
--- cons, and the second argument's middle is `[]`), which is why the
--- three-clause analysis of the first argument is exhaustive.
+-- whole.
 subIlv-mono : ∀ {a b u w} → SubIlv a b u → u ⊑ w → SubIlv a b w
 subIlv-mono p          snil      = p
 subIlv-mono p          (leak q)  = leak   (subIlv-mono p q)
@@ -178,9 +159,7 @@ subIlv-mono (leak p)   (sleft q) = leak   (subIlv-mono p q)
 ⊑-bot : (w : Heap) → [] ⊑ w
 ⊑-bot = leakAll
 
--- ==================================================================
 -- §2  THE MONAD.
--- ==================================================================
 
 ⇓ : Gr → Gr
 ⇓ A = A ∗ emp
@@ -195,7 +174,7 @@ subIlv-mono (leak p)   (sleft q) = leak   (subIlv-mono p q)
 sub→⇓ : (A : Gr) (h : Heap) → (Σ[ u ∈ Heap ] (u ⊑ h) × A u) → (⇓ A) h
 sub→⇓ A h (u , s , x) = ∗-mk A emp h u [] s (#-nil u) x (emp-mk tt)
 
--- unit: keep everything.  This direction holds for the EXACT promodel
+-- unit: keep everything.  This direction holds for the EXACT `Fibered`
 -- too -- it is the half of the unit law that `leak` does not touch.
 ⇓-unit : (A : Gr) → A ⊢ ⇓ A
 ⇓-unit A h x = sub→⇓ A h (h , ⊑-refl h , x)
@@ -218,13 +197,7 @@ sub→⇓ A h (u , s , x) = ∗-mk A emp h u [] s (#-nil u) x (emp-mk tt)
 ⇓-idem : (A : Gr) → ⇓ A ⊢ ⇓ (⇓ A)
 ⇓-idem A = ⇓-unit (⇓ A)
 
--- ==================================================================
--- §3  WEAKENING, INTERNALLY, AND `⇓ emp ⊣⊢ ⊤G`.
---
--- `Affine/Base.wkUnit` verbatim.  It is the internal `⊗ˢ`-level
--- statement of "everything may be leaked", with NO hypothesis on the
--- heap -- and it is what the exact promodel refutes.
--- ==================================================================
+-- §3 WEAKENING, INTERNALLY, AND `⇓ emp ⊣⊢ ⊤G`.
 
 -- PRIMITIVE (phase 1)
 wkUnit : ⊤G ⊢ (emp ∗ emp)
@@ -238,9 +211,7 @@ wkUnit h _ = ∗-mk emp emp h [] [] (⊑-bot h) tt (emp-mk tt) (emp-mk tt)
 ⇓emp⊢⊤ : ⇓ emp ⊢ ⊤G
 ⇓emp⊢⊤ = ⊤-I
 
--- ==================================================================
 -- §4  ALGEBRAS = UPWARD-CLOSED = INTUITIONISTIC PREDICATES.
--- ==================================================================
 
 UpClosed : Gr → Type₀
 UpClosed A = {u w : Heap} → u ⊑ w → A u → A w
@@ -265,17 +236,7 @@ up→alg A up h z = up (⇓→sub A h z .snd .fst) (⇓→sub A h z .snd .snd)
 ⊤-Intuitionistic : Intuitionistic ⊤G
 ⊤-Intuitionistic = ⊤-I
 
--- ==================================================================
--- §5  THE STRUCTURAL FACT: `∗` ALWAYS LANDS IN THE INTUITIONISTIC
--- FRAGMENT.
---
--- No hypothesis on `A` or `B`.  `subIlv-mono` re-indexes the splitting
--- at the larger heap; the payloads and the disjointness are carried
--- across untouched, because neither mentions the whole.
---
--- THIS is why the unit law cannot hold: `∗` is a closure, and `emp` is
--- not in its image.
--- ==================================================================
+-- §5 THE STRUCTURAL FACT: `∗` ALWAYS LANDS IN THE INTUITIONISTIC FRAGMENT.
 
 -- PRIMITIVE (phase 1)
 ∗-UpClosed : (A B : Gr) → UpClosed (A ∗ B)
@@ -285,25 +246,17 @@ up→alg A up h z = up (⇓→sub A h z .snd .fst) (⇓→sub A h z .snd .snd)
 ∗-Intuitionistic : (A B : Gr) → Intuitionistic (A ∗ B)
 ∗-Intuitionistic A B = up→alg (A ∗ B) (∗-UpClosed A B)
 
--- ==================================================================
 -- §6  ... AND THE REFUTATIONS.  QUESTION 3, ANSWERED: THE UNIT LAW
 -- FAILS.
--- ==================================================================
 
--- `emp` holds only at `[]`, but `[] ⊑ h` for every `h`.  This is the
--- sharpest counterexample available: the unit of the tensor is not its
--- own upward closure, so `∗` is only LAX unital.  Compare
--- `Affine/Base.𝟙-not-⇓-alg`.
+-- `emp` holds only at `[]`, but `[] ⊑ h` for every `h`.
 emp-not-UpClosed : UpClosed emp → ⊥
 emp-not-UpClosed up = emp-IsNil (up {[]} {single 0 v0} (⊑-bot (single 0 v0)) (emp-mk tt))
 
 emp-not-Intuitionistic : Intuitionistic emp → ⊥
 emp-not-Intuitionistic alg = emp-not-UpClosed (alg→up emp alg)
 
--- THE HEADLINE.  The right unit law of `∗` FAILS in the leaky promodel.
--- (It HOLDS exactly -- `Heap/Emp.∗-emp` -- and it holds without
--- disjointness -- `Base.Cell.∗ᶜ-empR`.  It is the one row of the table
--- that separates this column from both others.)
+-- THE HEADLINE. The right unit law of `∗` FAILS in the leaky `Fibered`.
 no-∗-unitR : ((A : Gr) → (A ∗ emp) ⊢ A) → ⊥
 no-∗-unitR f = emp-not-Intuitionistic (f emp)
 
@@ -323,15 +276,8 @@ unitR→everything-UpClosed :
 unitR→everything-UpClosed f A {u} {w} s x =
   f A w (∗-UpClosed A emp s (⇓-unit A u x))
 
--- ==================================================================
--- §7  THE TWO ATOMS OF INTUITIONISTIC SEPARATION LOGIC ARE `⇓` OF THE
--- EXACT ONES.
---
--- `emp` intuitionises to `⊤G` (§3), and the exact points-to
--- intuitionises to the "contains this cell, possibly more" points-to.
--- Neither exact atom is upward closed, and that is the whole difference
--- between the two logics.
--- ==================================================================
+-- §7 THE TWO ATOMS OF INTUITIONISTIC SEPARATION LOGIC ARE `⇓` OF THE EXACT
+-- ONES.
 
 infix 9 _↦_ _↦ᵢ_
 

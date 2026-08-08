@@ -1,15 +1,6 @@
-{-
-  `refl` TESTS ON SMALL CONCRETE HEAPS.
-
-  Every expected value is a `Heap`, a `Val` or a `Loc`, so a wrong
-  answer is a type error rather than a silently-true equation.  Each
-  block was checked non-vacuous by perturbation.
-
-  What is being tested is that the CONNECTIVES compute: the splittings
-  of a two-cell heap, `∗-comm` (hence `ilv-sym`/`#-sym`), the unit laws,
-  the wand's application through `uncurry∗` (hence `refocus`), and
-  `ilv-det` inside `preciseI-↦`.
--}
+{- `refl` TESTS ON SMALL CONCRETE HEAPS. Every expected value is a `Heap`,
+   a `Val` or a `Loc`, so a wrong answer is a type error rather than a
+   silently-true equation. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 open import Cubical.Foundations.Prelude
 
@@ -34,9 +25,7 @@ open import TheoryGrammar.SemanticAction
 open import TheoryGrammar.Instances.Heap.Adjunction
 open import TheoryGrammar.Instances.Heap.Precision
 
--- ==================================================================
 -- 0.  A two-cell heap.
--- ==================================================================
 
 h2 : Heap
 h2 = (0 , v0) ∷ (1 , v1) ∷ []
@@ -45,12 +34,7 @@ c0 c1 : Heap
 c0 = single 0 v0
 c1 = single 1 v1
 
--- ==================================================================
--- 1.  IT SPLITS FOUR WAYS, and every one is a term of `Split appop`.
--- Disjointness holds in all four because the two locations differ; the
--- SAME heap with both cells at location 0 would admit only the two
--- trivial splittings, which is the partiality.
--- ==================================================================
+-- 1. IT SPLITS FOUR WAYS, and every one is a term of `Split appop`.
 
 sp∅ spL spR spAll : heapFib .Split appop h2
 sp∅   = []  , h2  , ilv-nilL h2      , tt
@@ -69,10 +53,8 @@ private
                ∷ [] ))
   _ = refl
 
--- ==================================================================
 -- 2.  `∗` AT THOSE SPLITTINGS, and `∗-comm` computing on them --
 -- which exercises `ilv-sym` and `#-sym`.
--- ==================================================================
 
 w01 : ((0 ↦ v0) ∗ (1 ↦ v1)) h2
 w01 = spL , boolΠ Eq.refl Eq.refl
@@ -89,11 +71,9 @@ private
                ∷ [] ))
   _ = refl
 
--- ==================================================================
 -- 3.  `emp` IS A UNIT, and the round trip carries a value through.
 -- A grammar constant in the heap makes the test read a `Val` back,
 -- so a broken unit law cannot pass by accident.
--- ==================================================================
 
 private
   V : Gr
@@ -110,12 +90,7 @@ private
   _ : passes ( emp⊢empR [] (empR⊢emp [] Eq.refl) ≔ Eq.refl ∷ [] )
   _ = refl
 
--- ==================================================================
--- 4.  THE WAND APPLIES.  `H` is the grammar that hands back the heap
--- it sits at, so the wand below returns the JOIN -- and `wand-app`
--- must reproduce `h2`.  This runs `uncurry∗`, hence `refocus` and
--- `⊸ᶠ-app`, on real data.
--- ==================================================================
+-- 4. THE WAND APPLIES.
 
 H : Gr
 H _ = Heap
@@ -135,11 +110,9 @@ private
              ∷ [] )
   _ = refl
 
--- ==================================================================
 -- 5.  PRECISION COMPUTES.  `preciseI-↦` merges two decompositions of
 -- `h2` whose `0 ↦ v0` part coincides; `ilv-det` is what identifies
 -- their complements, and both payloads must survive.
--- ==================================================================
 
 private
   L : Gr

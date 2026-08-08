@@ -1,19 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  The trace monoid as a promodel: carrier `Word`, `Split` the I-shuffle.
-
-  Same signature as `Strings` and `Bags` -- partial commutation is an
-  EQUATION, conditional on I, so it changes only the splittings.  The
-  point stays TOTAL (concatenation), but only lax: `ITr Ind u v w` does not
-  imply `u ++ v ≡ w` as soon as one pair is independent.
-
-  `ε'`/`_⊗'_`/`⊗-mk` are the instance's surface spelling of the
-  multiplicative, character for character what `Strings/Connectives` and
-  `Bags/Connectives` write; at this size they do not earn a file.
-
-  DEFINES `MonSplit`, `MonParts`, the promodel `trFib`, its lax point
-  `trPoint`, and the connectives `Gr`/`ε'`/`_⊗'_`/`⊗-mk`.
--}
+{- The trace monoid as a `Fibered`: carrier `Word`, `Split` the I-shuffle. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Traces.Base
@@ -50,10 +36,10 @@ trFib .carrier _ = Word
 trFib .Split     = MonSplit
 trFib .parts     = MonParts
 
--- The total point, separately.  Concatenation is total, so the split
--- costs this instance nothing; what it buys is that the connectives
--- never consult it -- which matters here, because the containment is
--- STRICT (see `Examples.swap-ab`).
+-- The total point, separately. Concatenation is total, so the split costs
+-- this instance nothing; what it buys is that the connectives never
+-- consult it -- which matters here, because the containment is STRICT (see
+-- `Examples.swap-ab`).
 trPoint : LaxPoint trFib
 trPoint .op nilop _   = []
 trPoint .op appop f   = f true ++ f false
@@ -69,9 +55,7 @@ Gr : Type₁
 Gr = TheoryTy ℓ-zero tt
 
 -- `_⊗'_`/`ε'` DENOTE separating conjunction and its unit: `(P ⊗' Q) w`
--- says w shuffles into a P-factor and a Q-factor.  Fixity as at
--- `Strings/Connectives` and `Bags/Connectives`, so the three instances
--- parse alike.
+-- says w shuffles into a P-factor and a Q-factor.
 infixr 20 _⊗'_
 
 _⊗'_ : Gr → Gr → Gr

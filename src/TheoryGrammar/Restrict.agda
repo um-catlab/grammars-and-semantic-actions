@@ -1,26 +1,6 @@
-{-
-  RESTRICTION ALONG AN INJECTION OF OPERATIONS.
-
-  A promodel for a signature is one for any SUB-signature, by
-  composition -- no data is invented, so `Split` and `parts` are
-  literally reused.  That is what makes
-
-      "the ring fragment has a total point, the field does not"
-      "the unit of the separation algebra is total, the join is not"
-
-  statements about ONE promodel rather than about two unrelated ones:
-  the localisation of an obstruction is a statement about `ι`.
-
-  MAIN: `restrictSig` (the sub-signature) and `restrictFib` (its
-  promodel, whose `Split` and `parts` are the original's, precomposed).
-
-  GENERIC over any `SortedSig`/`Fibered`; nothing here mentions an
-  instance.  It lived in `Instances/Field/Base.agda` and was imported
-  from outside the field by `Instances/Heap/Located.agda`, so a HEAP
-  file depended on the FIELD instance.  Both users now read it here.
-
-  PRIMITIVE: none.
--}
+{- RESTRICTION ALONG AN INJECTION OF OPERATIONS. A `Fibered` for a
+   signature is one for any SUB-signature, by composition -- no data is
+   invented, so `Split` and `parts` are literally reused. -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Restrict where
 

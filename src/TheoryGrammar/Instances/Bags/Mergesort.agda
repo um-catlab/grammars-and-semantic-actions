@@ -1,9 +1,6 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- Mergesort: both halves recurse, so guardedness is the uniform rule
-   `<⊗e` -- unlike quicksort, whose two slots need different certificates.
-   The price is that the description must carry each half's nonemptiness,
-   which is why mergesort needs a `length ≤ 1` base case and quicksort
-   does not. -}
+{- Mergesort: both halves recurse, so guardedness is the uniform rule `<⊗e`
+   -- unlike quicksort, whose two slots need different certificates. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Bags.Mergesort (A : Type₀) where
@@ -24,14 +21,7 @@ open import TheoryGrammar.Graded
 
 open import TheoryGrammar.Instances.Bags.Quicksort A public
 
--- `NonTrivial` comes from Graded.  `Small` is its internal complement:
--- empty, or a single atom -- no length anywhere.
-Small : Gr
-Small = ⌈ [] ⌉ ⊕ ⊕ᴰ A (λ x → ⌈ x ∷ [] ⌉)
-
--- a non-trivial bag, from its first element
-ntCons : (x : A) (u : Bag) → NonTrivial (x ∷ u)
-ntCons x u = x , ⊗-mk (left (ilvApp [] u)) Eq.refl tt
+-- `Small`, `NonTrivial` and `ntCons` are theory facts, from `Graded`.
 
 -- each half is a recursive occurrence TOGETHER WITH a proof it is
 -- nonempty; the proof is what makes the splitting proper
@@ -67,12 +57,30 @@ mfGuarded tt = <⊕e Bool MAlt alt
     alt false = <⊗e appop (λ _ → MHalf)
                     (λ _ → ≤&e Bool MSlot ≤MSlot) pr
 
+-- PRIMITIVE (phase 1): mergesort's `outQ`.  Generic in the motive, so
+-- all three algebras below share it.
+outM : (B : Fam)
+     → ⟦ MAlt false ⟧ᴳ B
+     ⊢ ((B tt & Liftg NonTrivial) ⊗' (B tt & Liftg NonTrivial))
+outM B w ((u , v , s) , h) =
+  ⊗-mk s (h true true , h true false) (h false true , h false false)
+
+-- the nonemptiness witnesses are there for `mfGuarded` and nothing
+-- else; `&-E₁` is the discard
+dropNT : (B : Fam)
+       → ((B tt & Liftg NonTrivial) ⊗' (B tt & Liftg NonTrivial))
+       ⊢ (B tt ⊗' B tt)
+dropNT B = ⊗-map &-E₁ &-E₁
+
 -- alternating deal; used only to build the splitting
 dealt : (m : Bag) → Σ[ u ∈ Bag ] Σ[ v ∈ Bag ] Ilv u v m
 dealt []      = [] , [] , nil
 dealt (x ∷ m) = let (u , v , s) = dealt m in (x ∷ v) , u , left (ilvSwap s)
 
-mcoalg : CoalgC MF (λ _ → Unit)
+-- PRIMITIVE (phase 1).  Decomposition: a bag is small, or it deals
+-- into two nonempty halves.  Not a `Cover`, because the nonemptiness
+-- witnesses that make the splitting proper travel in the shape.
+mcoalg : Coalgᴳ MF (λ _ → ⊤G)
 mcoalg tt []          _ = true , lift (inl Eq.refl)
 mcoalg tt (x ∷ [])    _ = true , lift (inr (x , Eq.refl))
 mcoalg tt (x ∷ y ∷ r) _ = false , mkSplit
@@ -92,37 +100,31 @@ module MSort (le : A → A → Bool) where
   merge (x ∷ a) (y ∷ b) =
     if le x y then x ∷ merge a (y ∷ b) else y ∷ merge (x ∷ a) b
 
+  -- the base case, at the two representables `Small` is built from
+  smallBag : Small ⊢ CBag
+  smallBag = ⊕-E (⌈⌉-E []) (⊕ᴰ-E λ x → ⌈⌉-E (x ∷ []))
+
+  -- SEMANTIC ACTION: the carrier is constant, so `mergePerm` becomes a
+  -- separate obligation.  `mergeG` below is what makes it unnecessary.
+  mergeBag : (CBag ⊗' CBag) ⊢ CBag
+  mergeBag w =
+    ⊗E {P = λ b → if b then CBag else CBag} {w = w} λ _ _ _ a b → merge a b
+
   malg : AlgC MF (λ _ → Bag)
   malg tt =
-    ⊕ᴰ-E λ { true  → λ w _ → w
-              ; false → λ w t →
-                  ⊗E {P = λ _ → ⟦ MHalf ⟧c (λ _ → Bag)} {w = w}
-                     (λ _ _ _ l r → merge (l true) (r true)) t }
+    ⊕ᴰ-E λ { true  → smallBag ∘g lowerg
+           ; false → mergeBag ∘g dropNT (λ _ → CBag) ∘g outM (λ _ → CBag) }
 
-  -- The plain sort, still as a TERM.  `Bag → Bag` in a definition has
-  -- already externalised; `Δ Bag` is the grammar carrying the answer and
-  -- `run` is the single exit, in a test.  (`malg`'s carrier is the
-  -- CONSTANT family `λ _ → Bag`, which is precisely why this version
-  -- needs `mergePerm` proved separately and `mergesortV` does not.)
+  -- The plain sort, still a term: `Δ Bag` carries the answer and `run` is
+  -- the single exit, in a test.
   msortP : ⊤G ⊢ Δ Bag
-  msortP m x = hyloC mfGuarded mcoalg malg (tt , m) tt , x
+  msortP = intoΔ Bag ∘g hyloᴳ mfGuarded mcoalg malg tt
 
--- ==================================================================
--- MERGE AS AN INTERNAL TERM, and mergesort as a Cover.
---
--- `Bagged m` is "a listing of the bag `m`".  Since `_⊢_` preserves the
--- index and `⊗ˢ` splits it, a term
---
---     mergeG : (Bagged ⊗ Bagged) ⊢ Bagged
---
--- cannot invent or drop elements: permutation-correctness is carried by
--- the type rather than proved afterwards.  What it costs is the three
--- lemmas in `Permutation` -- `permRefl`, `permInsert`, `permTrans` --
--- because `merge a b` REORDERS `a ++ b` rather than being it.
--- ==================================================================
-
+-- MERGE AS AN INTERNAL TERM. `Bagged m` is "a listing of `m`", and it is
+-- quicksort's `SpecG` on the nose -- the two sorters share a specification
+-- and its monoid, and differ only in the join.
 Bagged : Gr
-Bagged m = Σ[ out ∈ Bag ] Perm out m
+Bagged = SpecG
 
 BaggedIx : Ix → Type₀
 BaggedIx i = Bagged (i .snd)
@@ -136,13 +138,10 @@ module MSortV (le : A → A → Bool) where
   mergePerm []      b  = permRefl b
   mergePerm (x ∷ a) [] =
     subst (Perm (x ∷ a)) (sym (++-unit-r (x ∷ a))) (permRefl (x ∷ a))
-  -- the branch is an ARGUMENT, not a `with`: `with` hides the
-  -- lexicographic descent from the termination checker
   mergePerm (x ∷ a) (y ∷ b) =
     go (le x y) (mergePerm a (y ∷ b)) (mergePerm (x ∷ a) b)
     where
-      -- both recursive results are ARGUMENTS, exactly as `merge`'s own
-      -- `if` makes them; a `with` or a nullary `where` hides the
+      -- both recursive results are ARGUMENTS: a `with` would hide the
       -- lexicographic descent from the termination checker
       go : (bl : Bool)
          → Perm (merge a (y ∷ b)) (a ++ (y ∷ b))
@@ -156,18 +155,20 @@ module MSortV (le : A → A → Bool) where
   mergeAt s (a , pa) (b , pb) =
     merge a b , permTrans (mergePerm a b) (permMerge pa pb s)
 
-  -- PRIMITIVE (phase 1): the internal term.  It matches the splitting,
-  -- which is what a primitive is; every use downstream composes it.
+  -- PRIMITIVE (phase 1): it matches the splitting, which is what a
+  -- primitive is; every use downstream composes it.
   mergeG : (Bagged ⊗' Bagged) ⊢ Bagged
   mergeG w ((u , v , s) , h) = mergeAt s (h true) (h false)
 
-  malgV : AlgC MF BaggedIx
+  -- the unit and singleton of quicksort's monoid; nothing new to prove
+  smallBagged : Small ⊢ Bagged
+  smallBagged = ⊕-E nilSpec (⊕ᴰ-E unitSpec)
+
+  malgV : Algᴳ MF (λ _ → Bagged)
   malgV tt =
-    ⊕ᴰ-E λ { true  → λ w _ → w , permRefl w
-           ; false → λ w t →
-               ⊗E {P = λ _ → ⟦ MHalf ⟧c BaggedIx} {w = w}
-                  (λ u v s l r → mergeAt s (l true) (r true)) t }
+    ⊕ᴰ-E λ { true  → smallBagged ∘g lowerg
+           ; false → mergeG ∘g dropNT (λ _ → Bagged) ∘g outM (λ _ → Bagged) }
 
   -- MERGESORT, as a term of the calculus, permutation-correct by type
   mergesortV : ⊤G ⊢ Bagged
-  mergesortV m _ = hyloC mfGuarded mcoalg malgV (tt , m) tt
+  mergesortV = hyloᴳ mfGuarded mcoalg malgV tt

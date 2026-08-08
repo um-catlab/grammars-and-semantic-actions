@@ -42,9 +42,7 @@ open import TheoryGrammar.Fibered
 
 private variable ℓS ℓ ℓ' ℓX ℓP ℓR : Level
 
--- ==================================================================
 -- The abstract description.
--- ==================================================================
 
 record PointedProModel {S : Type ℓS} (σ : SortedSig S ℓ ℓ') ℓX ℓR
   : Type (ℓ-max ℓS (ℓ-max ℓ (ℓ-max ℓ' (ℓ-max (ℓ-suc ℓX) (ℓ-suc ℓR))))) where
@@ -64,9 +62,7 @@ record PointedProModel {S : Type ℓS} (σ : SortedSig S ℓ ℓ') ℓX ℓR
 
 open PointedProModel public
 
--- ==================================================================
 -- The two presentations translate.
--- ==================================================================
 
 module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} where
 
@@ -93,9 +89,7 @@ module _ {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} where
   toPro Fib Q .graph o m⃗ =
     Q .split o m⃗ , Eq.pathToEq (Q .parts-split o m⃗)
 
-  -- ================================================================
   -- ... and the round trips recover the data, both by refl.
-  -- ================================================================
 
   splitIso : (Fib : Fibered σ ℓX ℓP) (Q : LaxPoint Fib) (o : σ .ops)
              (m : Fib .Fibered.carrier (σ .resultSort o))

@@ -1,20 +1,6 @@
-{-
-  ONE GRAMMAR, ANY CONTEXT SUBSTRATE.
-
-      Uses (var n)   =  Lf n                  -- leaf, possibly modal
-      Uses (app u v) =  Uses u ⊗ᶜ Uses v      -- the context tensor
-      Uses (lam n t) =  Uses t ⟜ᶜ ⌈ n ⌉       -- ITS residual
-
-  DENOTATIONS.  `Γ · Δ` is Γ extended on the right by Δ.  `(A ⊗ᶜ B) Γ`
-  is "Γ decomposes into an A-part beside a B-part".  `(B ⟜ᶜ Δ) Γ` is
-  "B holds of Γ · Δ".  So `Uses t Γ` reads "t is well-used in Γ", and
-  the binder is `⊸ᶠ` at the canonical focus rather than a bump of a
-  nonterminal index: `Γ ⊢ λn.t iff Γ·n ⊢ t` is the residual adjunction,
-  not a definition.
-
-  `check` is the same eliminator at a decision-valued motive; `accepts`
-  and `acceptsLf` observe it.  A MODE supplies only the leaf.
--}
+{- ONE GRAMMAR, ANY CONTEXT SUBSTRATE. Uses (var n) = Lf n -- leaf,
+   possibly modal Uses (app u v) = Uses u ⊗ᶜ Uses v -- the context tensor
+   Uses (lam n t) = Uses t ⟜ᶜ ⌈ n ⌉ -- ITS residual DENOTATIONS. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Modes.Core where
 
@@ -33,7 +19,7 @@ open import TheoryGrammar.Instances.Lambda.Modes.Ctx
 open import TheoryGrammar.Instances.Lambda.Modes.Fold
 open import TheoryGrammar.Instances.Lambda.Signature using (tm)
 
--- The context promodel comes with a total point: `_·_` and the canonical
+-- The context `Fibered` comes with a total point: `_·_` and the canonical
 -- focus are the two places a MODE needs the operation itself.  Everything
 -- else below -- `⊗ᶜ`, `check`, the decision layer -- sees only `CFib`.
 module Core (Name : Type₀)
@@ -71,9 +57,7 @@ module Core (Name : Type₀)
     CDec .dec-⊗ˢ mul (λ b → if b then A else B) Γ
       λ { sp true → dA _ tt ; sp false → dB _ tt }
 
-  -- ================================================================
   -- The residual, at the LEFT slot: "extend the context on the right".
-  -- ================================================================
 
   -- `Rest` names the other slots and `tuple` reassembles: what this
   -- instance forces is that the complement of `mul`'s left slot is ONE
@@ -87,12 +71,7 @@ module Core (Name : Type₀)
 
   open Cn public using (⊸ᶠ; ⊸ᶠ-lam; ⊸ᶠ-app; ⊸ᶠ-β; ⊸ᶠ-η)
 
-  -- The generic residual's hypothesis, discharged.  The complement of
-  -- `mul`'s left slot is ONE slot, so a rest-argument at ⌈Δ⌉ is a single
-  -- equation `f tt Eq.≡ Δ` -- and `singJ` is its induction principle,
-  -- whose computation rule is definitional.  This is the ONLY place the
-  -- singleton shape of the complement is used; nothing here transports
-  -- by hand, and `⟜-lam` below is no longer a primitive.
+  -- The generic residual's hypothesis, discharged.
   repJ : (Δ : Ctx) → ∀ {ℓM}
          (M : (f : Unit → Ctx) → ((r : Unit) → f r Eq.≡ Δ) → Type ℓM)
        → M (λ _ → Δ) (λ _ → Eq.refl)
@@ -129,14 +108,12 @@ module Core (Name : Type₀)
       → ⟜-lam B Δ Γ (⟜-app B Δ Γ h) ≡ h
   ⟜-η B Δ = Res.⊸-η Δ {B = B}
 
-  -- ================================================================
   -- The grammar and its checker.  A mode supplies only the leaf.
-  -- ================================================================
 
   module Mode (Lf : Name → CtxG)
               (decLf : (n : Name) → ⊤G ⊢ Dec⟨ Lf n ⟩) where
 
-    -- `Uses t Γ` : "t is well-used in Γ", at THIS promodel and leaf
+    -- `Uses t Γ` : "t is well-used in Γ", at THIS `Fibered` and leaf
     Uses : Raw → CtxG
     Uses = indRaw (λ _ → CtxG)
                   Lf
@@ -159,10 +136,8 @@ module Core (Name : Type₀)
                 (⟜-lam (Uses t) (sing n)) (⟜-app (Uses t) (sing n))
                 Γ (ct (Γ · sing n) tt)
 
-    -- The same checker read in the AST calculus: ONE map
-    --     ⊤ ⊢ &ᴰ Ctx (λ Γ → Dec⟨ Scoped Γ ⟩)
-    -- exactly as `Lambda.ScopeCheck.check`.  `Dec⟨_⟩` is pointwise, so
-    -- which of the two indices is bound is a matter of reading.
+    -- The same checker read in the AST calculus: ONE map ⊤ ⊢ &ᴰ Ctx (λ Γ →
+    -- Dec⟨ Scoped Γ ⟩) exactly as `Lambda.ScopeCheck.check`.
     private module AST = DecFib λFib
 
     -- `Scoped Γ t` : the same proposition as `Uses t Γ`, at the term sort
@@ -172,13 +147,9 @@ module Core (Name : Type₀)
     checkAST : AST._⊢_ AST.⊤G (AST.&ᴰ Ctx (λ Γ → AST.Dec⟨ Scoped Γ ⟩))
     checkAST t _ Γ = check t Γ tt
 
-    -- Observing a decision.  `okA` (TheoryGrammar.SemanticAction) is
-    -- the generic observer -- it reads a `Result E A` at ANY error
-    -- grammar, and a decision is `Result (¬G A) A`.  The result is a
-    -- TERM `⊤G ⊢ Δ Bool`; `run` is the exit from the calculus and
-    -- belongs at the test site, not here.  The `⊕-E` into a
-    -- hand-written constant grammar this replaces was the same term
-    -- every other test suite in the development wrote for itself.
+    -- Observing a decision. `okA` (TheoryGrammar.SemanticAction) is the
+    -- generic observer -- it reads a `Result E A` at ANY error grammar,
+    -- and a decision is `Result (¬G A) A`.
     accepts : (t : Raw) → ⊤G ⊢ Δ Bool
     accepts t = okA (Uses t) (¬G (Uses t)) ∘g check t
 

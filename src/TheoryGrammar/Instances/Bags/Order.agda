@@ -1,13 +1,6 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{- Order structure on bags: bounds, sortedness, and how they travel
-   along a splitting and along a permutation.
-
-   Placed before the sorters in the chain because BOTH need it --
-   mergesort to state `mergeSorted`, and quicksort to carry the pivot
-   bounds through its description.  `belowPerm` is the one that matters
-   for quicksort: the ordering facts are about the INPUT parts, while
-   sortedness is about the sorted OUTPUTS, and those differ by a
-   permutation. -}
+{- Order structure on bags: bounds, sortedness, and how they travel along a
+   splitting and along a permutation. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Bags.Order (A : Type₀) where
@@ -66,9 +59,7 @@ module Ord (le : A → A → Bool)
           headOf (p ∷ᵇ _) = p
 
   -- the quicksort join: `lo ++ piv ∷ hi` is sorted as soon as the two
-  -- halves are and the pivot separates them.  This is the ONLY genuinely
-  -- order-theoretic content in quicksort's sortedness; everything else
-  -- is bookkeeping that the description carries for us.
+  -- halves are and the pivot separates them.
   belowApp : ∀ {x p a b} → Below x a → le x p Eq.≡ true → Below x b
            → Below x (a ++ p ∷ b)
   belowApp []ᵇ       q bb = q ∷ᵇ bb

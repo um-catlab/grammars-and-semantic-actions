@@ -1,21 +1,5 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  REGRESSION TESTS FOR THE RESULTS `Tests.agda` DOES NOT COVER.
-
-  `Tests.agda` exercises the connectives and precision at concrete heaps.
-  This file covers the four things added since, which are theorems rather
-  than computations and would therefore break SILENTLY:
-
-    1. the guarded `μ` actually builds and unrolls  (`Array`)
-    2. `NonEmp` is load-bearing in `precise-no-dup`  (`emp` IS duplicable)
-    3. `no-dup` and `cell-no-apart` still typecheck at concrete arguments
-    4. the heap/cell contrast is still a contrast
-
-  For (1) the test is a round trip: build `Array 0 2` with the surface
-  constructors, unroll it, and check by `refl` that the cell comes back.
-  That is the check most likely to break under a change to `arrF` or to
-  `heapGrading`, and it is the one nothing else makes.
--}
+{- REGRESSION TESTS FOR THE RESULTS `Tests.agda` DOES NOT COVER. -}
 open import Cubical.Foundations.Prelude
 
 module TheoryGrammar.Instances.Heap.ArrayTests where
@@ -36,9 +20,7 @@ open import TheoryGrammar.SemanticAction using (Case; passes; _↦_; _at_)
 
 open import TheoryGrammar.Instances.Heap.Array public
 
--- ==================================================================
 -- 1.  THE GUARDED μ BUILDS, AND UNROLLS BACK.
--- ==================================================================
 
 private
   c0 c1 : Heap
@@ -80,15 +62,7 @@ private
                ∷ [] ))
   _ = refl
 
--- ==================================================================
--- 2.  `NonEmp` IS LOAD-BEARING.
---
--- `emp` is precise -- it pins the heap to `[]` -- so if `precise-no-dup`
--- needed only precision it would refute `emp ∗ emp`.  It does not, and
--- here is the witness: the empty heap splits as `[] ⊎ []`, disjointly.
--- So the `A ⊢ NonEmp` hypothesis is exactly what excludes the unit, and
--- is not decoration.
--- ==================================================================
+-- 2. `NonEmp` IS LOAD-BEARING.
 
 private
   empPins : Pins emp
@@ -102,11 +76,9 @@ private
                           (heapFib .parts appop [] ([] , [] , nil , tt) a)}
              (tt , λ ()) (tt , λ ()))
 
--- ==================================================================
 -- 3.  THE REFUTATIONS STILL APPLY.  Typechecking IS the test: these are
 -- metatheorems, so instantiating them at concrete arguments is all the
 -- coverage there is.
--- ==================================================================
 
 private
   _ : (⌈ single 0 v0 ⌉ ⊢ (⌈ single 0 v0 ⌉ ∗ ⌈ single 0 v0 ⌉)) → ⊥
@@ -119,11 +91,9 @@ private
   _ : (⌈ single 0 v0 ⌉ ∗ ⌈ single 0 v0 ⌉) ⊢ ⊥G
   _ = apart-self' 0 v0
 
--- ==================================================================
 -- 4.  THE CONTRAST IS STILL A CONTRAST.  Same carrier, same `parts`,
 -- same `Ilv`; one conjunct apart.  Heaps refute the separation
 -- statement's negation; cells refute the separation statement itself.
--- ==================================================================
 
 private
   _ : ((C.⌈ single 0 v0 ⌉ ∗c C.⌈ single 0 v0 ⌉) C.⊢ C.⊥G) → ⊥

@@ -1,16 +1,5 @@
-{-
-  The promodel: raw lambda terms, with splittings as output-indexed
-  data rather than an equation.
-
-  Each `Is*` family has exactly ONE constructor.  That is unique
-  readability of the AST, it is what makes `parts` a projection instead
-  of an inversion lemma, and it is a property of the promodel rather
-  than of any grammar written over it.
-
-  Defines `Raw`, the sorted `Carrier`, the splitting families
-  `IsVar`/`IsApp`/`IsLam` and their projection `LParts`; assembles
-  `λFib` and `λPoint`, and proves the substrate law `λ-unsplit`.
--}
+{- The `Fibered`: raw lambda terms, with splittings as output-indexed data
+   rather than an equation. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Fibered where
 
@@ -77,21 +66,15 @@ module Terms (Name : Type₀) where
   λPoint .split varOp f = mkVar (f tt)
   λPoint .split appOp f = mkApp (f true) (f false)
   λPoint .split lamOp f = mkLam (f true) (f false)
-  -- MEASUREMENT: `varOp` is refl because `Unit` has definitional η, so
-  -- `λ a → f tt` already IS `f`.  The `Bool`-arity operations need
-  -- funExt, with refl at each slot -- the same cost the string instance
-  -- reports for `⟜-η`, and for the same reason.
+  -- MEASUREMENT: `varOp` is refl because `Unit` has definitional η, so `λ
+  -- a → f tt` already IS `f`.
   λPoint .parts-split varOp f = refl
   λPoint .parts-split appOp f = funExt λ { true → refl ; false → refl }
   λPoint .parts-split lamOp f = funExt λ { true → refl ; false → refl }
 
-  -- SUBSTRATE SOUNDNESS.  `parts-split` says a tuple splits its own
+  -- SUBSTRATE SOUNDNESS. `parts-split` says a tuple splits its own
   -- composite; this is the CONVERSE -- a splitting's parts reassemble to
-  -- the thing they came from.  It is `Representable.Repr`'s `unsplit`
-  -- hypothesis, and it is what makes the tensor ELIMINATORS derivable
-  -- rather than primitive (`Initial.VarA-E`/`AppA-E`/`LamA-E`).  It is
-  -- `Eq.refl` in every clause -- and it must be `Eq.≡`, not a path, or
-  -- the transports it licenses stop reducing.
+  -- the thing they came from.
   λ-unsplit : (o : LOp) (m : Raw) (sp : LSplit o m) → Op o (LParts o m sp) Eq.≡ m
   λ-unsplit varOp _ (mkVar n)   = Eq.refl
   λ-unsplit appOp _ (mkApp u v) = Eq.refl

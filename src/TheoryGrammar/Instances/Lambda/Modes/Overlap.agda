@@ -1,19 +1,4 @@
-{-
-  RELEVANT CONTEXTS: the free commutative IDEMPOTENT monoid.  `Split` is
-  interleaving WITH SHARING.
-
-  DENOTES: `Ilv3 u v Γ` is "Γ is u and v shuffled, allowing a name to
-  go to BOTH".  That one extra constructor, `both`, IS contraction:
-  `A ⊢ A ⊗ A` becomes a splitting rather than a rule, so the grammar
-  over this promodel is unchanged.  Nothing is ever dropped, so
-  weakening is still absent -- which is exactly relevant logic.
-
-    Ilv3      `Bags.Base`'s `Ilv` plus `both`
-    ilv3App   every concatenation splits (the point's totality)
-    ilv3NilJ  only `nil` lands at the empty context
-    decTen    PRIMITIVE (1 of 1): one recursive call per constructor
-    dec       those packaged as `DecSplittings`
--}
+{- RELEVANT CONTEXTS: the free commutative IDEMPOTENT monoid. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.Lambda.Modes.Overlap where
 
@@ -48,7 +33,7 @@ module Overlap (Name : Type₀) where
 
   open Substrate Name Ilv3 nil ilv3App ilv3NilJ public
 
-  -- PRIMITIVE (1 of 1 for this promodel).  Three `chain`s, one per
+  -- PRIMITIVE (1 of 1 for this `Fibered`).  Three `chain`s, one per
   -- constructor -- left, right, shared -- and only the innermost
   -- branch, where all three were refuted, enumerates them again.
   decTen : (A : Fam) (Γ : Ctx)

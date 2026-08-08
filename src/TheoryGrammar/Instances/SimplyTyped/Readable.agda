@@ -1,20 +1,5 @@
-{-
-  What this instance owes `TheoryGrammar.Decidable`: a `DecReadable`,
-  and the two PARTITIONS its `decSplit` is read off.
-
-  Three promodel facts -- at most one splitting, decidably so, and
-  slotwise decisions combine -- give `dec-⊗`; `Split-isProp` alone gives
-  `⊗-refute`, `⊗-merge` and `merge2` (all `UniqueSplit`'s);
-  `Fibered.unsplit` gives `⌈⌉-into`/`⌈⌉-from`, and with `Split-isProp`
-  also `op-inj`.
-
-  PRIMITIVE inventory: THREE -- `Split-isProp`, the two partitions
-  (`tmCase`/`tyCase`, one per result sort), and `stDecSlots`.
-  `⊗-decSplit` is `View.decBranch` at the partitions, and disjointness
-  of the head operations is their `exclusive`; neither is primitive.
-  Everything the rest of the instance uses about the representation
-  comes from here.
--}
+{- What this instance owes `TheoryGrammar.Decidable`: a `DecReadable`, and
+   the two PARTITIONS its `decSplit` is read off. -}
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
 module TheoryGrammar.Instances.SimplyTyped.Readable where
 
@@ -47,29 +32,12 @@ module StReadable (Name : Type₀) where
   Split-isProp baseOp _ mkBase      mkBase      = refl
   Split-isProp arrOp  _ (mkArr _ _) (mkArr _ _) = refl
 
-  -- `⊗-refute`, `⊗-merge` AND `merge2` now all come from `UniqueSplit`
-  -- -- one hypothesis, read with either sign.  (The module was called
-  -- `Precise`; its parameter is unique readability, not precision.)
-  -- `merge2` -- merge two tensors at the same operation, then eliminate
-  -- -- used to be written out here even though it names nothing but
-  -- `⊗-merge` and `⊗ˢ-E`; it now sits beside `⊗-merge` upstream.
+  -- `⊗-refute`, `⊗-merge` AND `merge2` now all come from `UniqueSplit` --
+  -- one hypothesis, read with either sign.
   open UniqueSplit Split-isProp public
   open Repr stlcFib stlcPoint unsplit public using (⌈⌉-into; ⌈⌉-from; op-inj)
 
-  -- PRIMITIVE.  And it is decidable whether there is one, internally.
-  -- ================================================================
-  -- THE OPERATIONS PARTITION THE CARRIER -- ONCE PER SORT.
-  --
-  -- This instance's operations span TWO sorts, so it is two partitions,
-  -- not one: `Complete Y P` fixes a sort, and `⊗ˢ o ⊤` lives at
-  -- `TResult o`.  That is the honest shape -- a syntax with several
-  -- sorts partitions each of them separately -- and it is why the index
-  -- type is a parameter of `Complete` rather than `σ .ops`.
-  --
-  -- Both are built by `fromUnique`: the branch is a function of the
-  -- world, and the split constructor pins the world, so each clause of
-  -- `opOf-split` is `refl`.
-  -- ================================================================
+  -- PRIMITIVE. And it is decidable whether there is one, internally.
 
   -- `TmOp`/`TyOp` denote the branch labels of the two partitions -- the
   -- term-forming and type-forming subsets of `TOp`, as their own types
@@ -134,16 +102,7 @@ module StReadable (Name : Type₀) where
       discrim base     _ = oBase , (mkBase  , λ _ → tt)
       discrim (A ⇒ᵗ B) _ = oArr  , (mkArr A B , λ _ → tt)
 
-  -- ================================================================
   -- ... and therefore `⊗-decSplit` is DERIVED, as in `Lambda.Readable`.
-  --
-  -- The comparison `decBranch` asks for is `(P z ⊢ P y) ⊎ (y ≢ z)`, not
-  -- `Discrete`: on the diagonal it must be `idg`, since a `subst` there
-  -- would block reduction for every consumer generic in the world.  The
-  -- off-diagonal half is uniform by encode-decode -- `TmCode y z` is
-  -- `⊥` off the diagonal, so `tmEncode y z` IS the disequality and no
-  -- arithmetic on tags appears.
-  -- ================================================================
 
   private
     TmCode : TmOp → TmOp → Type₀
@@ -210,14 +169,9 @@ module StReadable (Name : Type₀) where
   ⊗-decSplit baseOp = decBranch tyB-cmp tyCase oBase
   ⊗-decSplit arrOp  = decBranch tyB-cmp tyCase oArr
 
-
-  -- Slotwise decisions combine.  Matches on the OPERATION, never on a
-  -- term and never on a sum: each alternative names its slots and hands
-  -- them to `UniqueSplit`'s `decSlots¹`/`decSlots²`.  `baseOp` is the
-  -- degenerate case -- an empty arity has nothing to combine, so the
-  -- answer is always yes.  The two-slot family is
-  -- `Decidable.Tensor.decSlotsBool`, `Bool`'s own dependent eliminator,
-  -- which both `Readable`s used to define for themselves.
+  -- Slotwise decisions combine. Matches on the OPERATION, never on a term
+  -- and never on a sum: each alternative names its slots and hands them to
+  -- `UniqueSplit`'s `decSlots¹`/`decSlots²`.
   stDecSlots : (o : TOp) (A : (a : TAr o) → TheoryTy ℓ-zero (TSortOf o a))
                (m : Carrier (TResult o)) (sp : TSplit o m)
              → ((a : TAr o) → Dec⟨ A a ⟩ (TParts o m sp a))
@@ -240,21 +194,8 @@ module StReadable (Name : Type₀) where
 
   open DecTensor stDR public using (dec-⊗)
 
-  -- ================================================================
-  -- DERIVED.  Two views of the SAME world cannot use different head
-  -- operations.  That is not a new fact about the representation: it is
-  -- the partition's own `exclusive`, pulled back along the maps that
-  -- forget the slots -- `Decidable.Tensor.⊗-erase`, the same map
-  -- `⊗-miss` applies to a refutation, here applied to a pair of
-  -- witnesses.  (It was written out locally as `forget`; it is named
-  -- once upstream now.)  The disequality of tags is
-  -- `tmEncode`/`tyEncode`, already needed for `tmB-cmp`/`tyB-cmp`.
-  --
-  -- At `tm`, only the three pairs the inference rules can confuse are
-  -- needed; `Unique.agda`'s six impossible cases are these three and
-  -- their swaps.  At `ty` there is only one pair, and it is what makes
-  -- `Types.base≢arr` a consequence rather than an absurd match.
-  -- ================================================================
+  -- DERIVED. Two views of the SAME world cannot use different head
+  -- operations.
 
   varApp-⊥ : {P : NmG} {A B : TmG} → (VarG P & AppG A B) ⊢ ⊥G
   varApp-⊥ {P} {A} {B} =

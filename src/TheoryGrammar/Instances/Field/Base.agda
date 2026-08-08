@@ -1,31 +1,6 @@
-{-
-  A GENUINELY PARTIAL THEORY: 𝔽₃ WITH INVERSION.
-
-  `Fibered` already IS the notion of a partial algebra -- `Split o m`
-  lists the decompositions of `m`, and nothing forces a tuple to
-  compose.  A field is the smallest natural theory that needs this:
-  `inv` is undefined at 0, and here that is not a side condition but
-
-      Split invOp f0  =  ⊥.
-
-  On 𝔽₃ = {f0,f1,f2} `inv` is the identity off zero, so every table
-  reduces and the tests are `refl`.
-
-  The ring fragment is the same promodel restricted along `ιR`, which is
-  what makes "the ring fragment has a point, the field does not" a
-  statement about ONE promodel.  `restrictSig`/`restrictFib` used to be
-  defined here even though they are generic and `Heap/Located` uses them
-  too; they are now `TheoryGrammar.Restrict`'s, and this file is only a
-  CLIENT of them.
-
-  DEFINES `𝔽`, `Slot`, the tables `_+𝔽_`/`_·𝔽_`/`inv`, the predicates
-  `IsZero`/`IsUnit`/`Nz`, the signature `fldSig` and promodel `fldFib`,
-  and the ring fragment `rngSig`/`rngFib`/`rngPoint`/`rngHonest`.
-
-  PRIMITIVE: `_+𝔽_`, `_·𝔽_`, `inv`, `Nz`, `IsZero`, `IsUnit`,
-  `FldSplit`, `FldParts`.  Nothing else in `Instances/Field/` may match
-  on 𝔽.
--}
+{- A GENUINELY PARTIAL THEORY: 𝔽₃ WITH INVERSION. `Fibered` already IS the
+   notion of a partial algebra -- `Split o m` lists the decompositions of
+   `m`, and nothing forces a tuple to compose. -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Instances.Field.Base where
 
@@ -41,17 +16,13 @@ open import TheoryGrammar.Restrict using (restrictSig; restrictFib)
 
 private variable ℓS ℓ ℓ' ℓ₂ ℓX ℓP : Level
 
--- ==================================================================
 -- Slots.  A two-element arity type of its own, so `parts` is a match
 -- on the SLOT and no `Bool` leaks into a statement.
--- ==================================================================
 
 data Slot : Type₀ where
   lhs rhs : Slot
 
--- ==================================================================
 -- The carrier and its tables.  PRIMITIVE.
--- ==================================================================
 
 -- `𝔽` DENOTES the three-element field ℤ/3, written additively as
 -- {0,1,2}.  Three constructors rather than `Fin 3` so every table below
@@ -130,9 +101,7 @@ nz-not-f0 f2 _ ()
 nz-transport : {a b : 𝔽} → a Eq.≡ b → Nz a → Nz b
 nz-transport Eq.refl n = n
 
--- ==================================================================
 -- The signature: four ring operations and one PARTIAL one.
--- ==================================================================
 
 data FldOp : Type₀ where
   zeroOp addOp oneOp mulOp invOp : FldOp
@@ -150,11 +119,9 @@ fldSig .arities      = FldAr
 fldSig .sortOf _ _   = tt
 fldSig .resultSort _ = tt
 
--- ==================================================================
 -- The splittings.  `Split invOp m` is "m is somebody's inverse", which
 -- in a field is exactly "m ≠ 0"; it is EMPTY at f0, and that emptiness
 -- is the only trace partiality leaves.
--- ==================================================================
 
 FldSplit : (o : FldOp) → 𝔽 → Type₀       -- PRIMITIVE
 FldSplit zeroOp m = IsZero m
@@ -180,9 +147,7 @@ fldFib .carrier _ = 𝔽
 fldFib .Split     = FldSplit
 fldFib .parts     = FldParts
 
--- ==================================================================
--- The ring fragment: the same promodel, four operations.
--- ==================================================================
+-- The ring fragment: the same `Fibered`, four operations.
 
 data RngOp : Type₀ where
   zeroR addR oneR mulR : RngOp

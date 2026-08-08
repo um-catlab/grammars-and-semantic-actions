@@ -1,11 +1,6 @@
-{-
-  `refl` TESTS AT 𝔽₃.
-
-  Every decision is OBSERVED through a sanctioned eliminator (`⊕-E-at`,
-  `dec-elim`) rather than matched, and every expected value is an
-  element of 𝔽, so a wrong table is a type error.  Each block was
-  checked non-vacuous by perturbation.
--}
+{- `refl` TESTS AT 𝔽₃. Every decision is OBSERVED through a sanctioned
+   eliminator (`⊕-E-at`, `dec-elim`) rather than matched, and every
+   expected value is an element of 𝔽, so a wrong table is a type error. -}
 {-# OPTIONS --lossy-unification #-}
 module TheoryGrammar.Instances.Field.Tests where
 
@@ -25,9 +20,7 @@ open import TheoryGrammar.Instances.Field.NoPoint
 
 open ActFib fldFib using (Δ; run; caseA; pureA; refute; witness)
 
--- ==================================================================
 -- 1.  The tables.
--- ==================================================================
 
 private
   _ : f1 +𝔽 f2 ≡ f0
@@ -42,11 +35,9 @@ private
   _ : f2 ·𝔽 f1 ≡ f2
   _ = refl
 
--- ==================================================================
 -- 2.  THE INVERSE, READ OFF A SPLITTING.  `parts invOp m sp tt` is the
 -- element whose inverse is m; the splitting comes from the internal
 -- proof that m is nonzero, so nothing here inspects 𝔽.
--- ==================================================================
 
 inverse-of : (m : 𝔽) → Nonzero m → 𝔽
 inverse-of m k = fldFib .parts invOp m (nonzero⊢img-inv m k .fst) tt
@@ -72,11 +63,9 @@ private
   _ : nonzero⊢dom-inv f1 nonzero-f1 .fst ≡ f1
   _ = refl
 
--- ==================================================================
 -- 3.  THE COVERING WITNESSES for + and ·, through the generic
 -- `covering→img`.  These exercise `splitEq` (transport of a splitting
 -- along an `Eq`), which computes because the equation is `Eq.refl`.
--- ==================================================================
 
 private
   _ : rngFib .parts addR f2 (img-add f2 tt .fst) lhs ≡ f0
@@ -107,10 +96,8 @@ private
   _ : dom-mul-total f1 tt .fst ≡ f1
   _ = refl
 
--- ==================================================================
 -- 4.  THE POINT OF THE FRAGMENT still computes: `rngPoint` is a real
 -- total algebra on the same carrier.
--- ==================================================================
 
 private
   _ : rngPoint .op addR (λ { lhs → f2 ; rhs → f2 }) ≡ f1
@@ -122,15 +109,7 @@ private
   _ : rngPoint .op oneR (λ ()) ≡ f1
   _ = refl
 
--- ==================================================================
--- 5.  THE DECISION, OBSERVED AS A TERM.
---
--- A reader of type `𝔽 → 𝔽` would externalise at the DEFINITION, one
--- step early.  These observations are `⊤G ⊢ Δ 𝔽` instead -- built from
--- `caseA`/`pureA`, so still inside the calculus -- and `run` belongs in
--- the `refl` line.  Batching the cases into a suite writes the term
--- under test once.
--- ==================================================================
+-- 5. THE DECISION, OBSERVED AS A TERM.
 
 imgA decA : ⊤G ⊢ Δ 𝔽
 imgA = caseA (pureA 𝔽 f1) (pureA 𝔽 f0) ∘⊢ dec-inv
@@ -144,17 +123,8 @@ _ = refl
 _ : passes (run decA at (f0 ↦ f0 ∷ f1 ↦ f1 ∷ f2 ↦ f1 ∷ []))
 _ = refl
 
--- ==================================================================
--- 6.  THE REJECTION IS A THEOREM, and this instance shows why a
--- POSITIVE complement is worth having.
---
--- `refute` (TheoryGrammar.SemanticAction) turns a negative observation
--- into whatever the error branch carries.  `dec-invOp` carries
--- `¬G (Imgˢ invOp)` and yields a refutation; `dec-inv` carries the
--- REPRESENTABLE `⌈ f0 ⌉` and yields the proof that the element IS zero.
--- Same combinator, same `refl`, strictly more information -- because
--- `invDecision`'s complement was chosen positively.
--- ==================================================================
+-- 6. THE REJECTION IS A THEOREM, and this instance shows why a POSITIVE
+-- complement is worth having.
 
 no-img-f0 : (¬G (Imgˢ invOp)) f0
 no-img-f0 = refute (Imgˢ invOp) (¬G (Imgˢ invOp)) dec-invOp f0 refl

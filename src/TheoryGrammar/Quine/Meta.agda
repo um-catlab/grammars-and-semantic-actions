@@ -1,47 +1,6 @@
 {-# OPTIONS --lossy-unification -WnoUnsupportedIndexedMatch #-}
-{-
-  THE META-CIRCULAR QUINE:  a text that parses itself AND says what
-  grammar it was parsed by.
-
-  `Quine.Tiny`'s `0#00` prints itself, but its data is arbitrary -- any
-  bit string would have done, and the fixpoint is only about the text.
-  Here the data is not arbitrary: the code half of the program is an
-  ENCODING OF THE GRAMMAR'S OWN RULE TABLE, so
-
-      metaSrc  =  ⌜G⌝  #  quote ⌜G⌝           where G is THIS grammar
-
-  and the single `refl` at the end of the file asserts three things at
-  once, by running the decision procedure on `metaSrc`:
-
-      (1) `metaSrc` DERIVES from `S` -- it is a program of `G`;
-      (2) its output is `metaSrc` -- it is a quine;
-      (3) the table it decodes to is `theTable` -- and `theTable` is
-          `allRules` reified, the very table the decision procedure is
-          driven by (`inTable`, below, is `allComplete` -- the
-          completeness hypothesis `Decide` demands -- transported along
-          the reification).
-
-  So the loop closes: the text is in the language of the grammar it
-  describes, and describes the grammar that accepts it.
-
-  ------------------------------------------------------------------
-  WHAT IS AND IS NOT ACHIEVED.
-
-  ACHIEVED.  The self-description is checked against the parser's own
-  rule table -- not against a copy of it -- and the check is by
-  evaluation, at the literal text, with `⌈_⌉` pinning the text (see
-  `metaLit`).  Nothing is postulated.
-
-  NOT ACHIEVED.  The decoder `decTable` is a metalanguage function on
-  the decoded bit string, not a second GRAMMAR: `G` parses `metaSrc` as
-  "bits, a hash, and pairs", and the production structure of the
-  description is then read off by `decProd`.  The fully meta-circular
-  statement would have `G` itself be a grammar OF GRAMMAR DESCRIPTIONS,
-  so that the parse tree of `metaSrc` already IS the rule table and
-  `decTable` disappears.  That is a strictly bigger grammar, and its own
-  description is correspondingly longer; see the note at the foot of
-  this file for the measured obstruction.
--}
+{- THE META-CIRCULAR QUINE: a text that parses itself AND says what grammar
+   it was parsed by. -}
 module TheoryGrammar.Quine.Meta where
 
 open import Cubical.Foundations.Prelude
@@ -58,14 +17,9 @@ open import TheoryGrammar.Enumerable
 open import TheoryGrammar.SemanticAction using (passes; _↦_; _at_)
 open import TheoryGrammar.Quine.Base
 
--- ==================================================================
--- §1  THE GRAMMAR, REIFIED.
---
--- `Rule P` is the description's own notion of production, and
--- `allRules`/`allComplete` are the finite table the decision procedure
--- consumes.  `reify` forgets the proofs; `inTable` says nothing was
--- lost, and its proof is `allComplete` and nothing else.
--- ==================================================================
+-- §1 THE GRAMMAR, REIFIED. `Rule P` is the description's own notion of
+-- production, and `allRules`/`allComplete` are the finite table the
+-- decision procedure consumes.
 
 data Prod : Type₀ where
   unitP : NT → Chr → Prod
@@ -108,12 +62,8 @@ _ : theTable ≡ ( unitP ntH c#            -- H → '#'
                ∷ [] )
 _ = refl
 
--- ==================================================================
--- §2  THE CODEC.  Three bits a nonterminal, two a letter, one to say
---     which kind of production.  General for any CNF grammar over six
---     nonterminals and three letters -- nothing here is tuned to the
---     particular rules above.
--- ==================================================================
+-- §2 THE CODEC. Three bits a nonterminal, two a letter, one to say which
+-- kind of production.
 
 encNT : NT → String
 encNT ntS = c0 ∷ c0 ∷ c0 ∷ []
@@ -186,15 +136,10 @@ decTable s = decT (length s) s
 _ : decTable (encTable theTable) ≡ just theTable
 _ = refl
 
--- ==================================================================
--- §3  THE PROGRAM.
---
---     metaSrc  =  ⌜theTable⌝  #  quote ⌜theTable⌝
---
--- 80 bits of description, a hash, and 160 letters of quoted
--- description: 241 characters, every one of them decided by the
--- decision procedure at typecheck time.
--- ==================================================================
+-- §3 THE PROGRAM. metaSrc = ⌜theTable⌝ # quote ⌜theTable⌝ 80 bits of
+-- description, a hash, and 160 letters of quoted description: 241
+-- characters, every one of them decided by the decision procedure at
+-- typecheck time.
 
 theCode : String
 theCode = encTable theTable
@@ -202,14 +147,7 @@ theCode = encTable theTable
 metaSrc : String
 metaSrc = theCode ++ (c# ∷ enc theCode)
 
--- ==================================================================
--- §4  THE ROOT ACTION: print, AND read the grammar back.
---
--- `Interp` is parameterised by what a program does once its data has
--- been decoded; here it does both jobs at once, so ONE run of the
--- decision procedure settles the quine equation and the
--- self-description together.
--- ==================================================================
+-- §4 THE ROOT ACTION: print, AND read the grammar back.
 
 Out : Type₀
 Out = String × Maybe Table
@@ -219,16 +157,10 @@ metaRoot b d = emit b d , decTable d
 
 module M = Interp Out ([] , nothing) metaRoot
 
--- ==================================================================
--- §5  THE FIXPOINT, checked.
---
---   left of the ↦ : the literal source text
---   right of it   : (its own text , the grammar that parsed it)
---
--- Both components of the answer mention only names introduced above --
--- `metaSrc` and `theTable` -- so nothing is written twice and nothing
--- can drift.
--- ==================================================================
+-- §5 THE FIXPOINT, checked. left of the ↦ : the literal source text right
+-- of it : (its own text , the grammar that parsed it) Both components of
+-- the answer mention only names introduced above -- `metaSrc` and
+-- `theTable` -- so nothing is written twice and nothing can drift.
 
 metaQuine : passes (M.runOut ntS at (metaSrc ↦ just (metaSrc , just theTable) ∷ []))
 metaQuine = refl
@@ -241,30 +173,7 @@ metaDeriv = witness (Deriv ntS) (¬G Deriv ntS) (derives? ntS) metaSrc refl
 metaLit : ⌈ metaSrc ⌉ ⊢ Deriv ntS
 metaLit = ⌈⌉-E metaDeriv
 
-{-
-  ------------------------------------------------------------------
-  THE OBSTRUCTION, measured.
-
-  The decision procedure is `löb` with no tabulation: `▷ Chart` is "the
-  chart at every shorter string", which is the right well-founded
-  structure but shares nothing between consultations.  On this grammar
-  -- right-linear, so every wrong cut dies at the literal matcher -- the
-  cost is empirically cubic in the length of the text:
-
-        49 letters   ≈ 0.4 s
-       121 letters   ≈ 6.5 s
-       241 letters   ≈ 60 s        -- this file runs the decision twice,
-                                   -- for `metaQuine` and `metaDeriv`,
-                                   -- and elaborates in about 2 minutes
-
-  A grammar rich enough to parse GRAMMAR DESCRIPTIONS (nonterminal
-  names, arrows, alternation) needs perhaps 15-25 nonterminals, and its
-  own description in any comparable encoding runs to several hundred
-  bits; at 3 characters of source per bit that is a four-figure input,
-  which this evaluator will not finish.  The missing ingredient is not
-  an idea about quines, it is a TABULATED fixpoint -- the same gap
-  `Instances.Spans.Examples` records.  With one, the meta-circular
-  grammar-of-grammars is a straightforward extension of this file: the
-  parse tree of the description already IS the rule table, and `decProd`
-  is deleted.
--}
+{- THE OBSTRUCTION, measured. The decision procedure is `löb` with no
+   tabulation: `▷ Chart` is "the chart at every shorter string", which is
+   the right well-founded structure but shares nothing between
+   consultations. -}

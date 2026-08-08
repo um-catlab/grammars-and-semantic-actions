@@ -17,7 +17,7 @@
   the content.
 
   TRUE — the direction claim, and the shape claim.  §1 below makes the
-  two motions into honest relations on the total space of the promodel
+  two motions into honest relations on the total space of the `Fibered`
   and PROVES the degree conditions:
 
       ≽-lowers  :  m ≽ x  →  deg x ≤ deg m          (from Grading.deg≤)
@@ -58,7 +58,7 @@
        the slot `a`.  `Fibered`'s header is explicit that `Split o m` is
        deliberately not a proposition ("`w` has `length w + 1` cuts"),
        so the axiom is contradicted by design, not by accident.  §2
-       proves it for a fifteen-line self-contained promodel (ℕ under
+       proves it for a fifteen-line self-contained `Fibered` (ℕ under
        addition) so that the refutation depends on no instance file.
 
   So the honest categorical reading of `⊗ˢ` / `⊸ᶠ` is: a multicategorical
@@ -155,13 +155,7 @@ open import TheoryGrammar.Grading
 
 private variable ℓS ℓ ℓ' ℓX ℓP ℓL ℓR : Level
 
--- ==================================================================
--- §1.  THE TWO MOTIONS, AS RELATIONS ON THE TOTAL SPACE.
---
--- Both are given as inductive families so that no sort-coercion or
--- transport ever appears; this is the same trick `Fibered` uses to keep
--- `Split` indexed by its output.
--- ==================================================================
+-- §1. THE TWO MOTIONS, AS RELATIONS ON THE TOTAL SPACE.
 
 module Motions {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                (Fib : Fibered σ ℓX ℓP) (G : Grading Fib) where
@@ -175,11 +169,9 @@ module Motions {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
   val : Tot → Σ[ s ∈ S ] Fib .carrier s
   val t = t
 
-  -- ------------------------------------------------------------------
   -- LOWERING: the projection out of a splitting.  This is the motion
   -- `⊗ˢ` ranges over -- `⊗ˢ o A m` is a Σ over `Split o m` of a Π over
   -- the slots, i.e. a colimit over exactly the `m ≽ _` below `m`.
-  -- ------------------------------------------------------------------
   data _≽_ : Tot → Tot → Type (ℓ-max ℓS (ℓ-max ℓ (ℓ-max ℓ' (ℓ-max ℓX ℓP)))) where
     proj : (o : σ .ops) (m : Fib .carrier (σ .resultSort o))
            (sp : Fib .Split o m) (a : σ .arities o)
@@ -197,21 +189,7 @@ module Motions {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
              < degT (σ .resultSort o , m)
   ≽-strict o m sp a pr = G .deg< o m sp a pr
 
-  -- ------------------------------------------------------------------
   -- RAISING: embedding a part into a whole, via `Focus`.
-  --
-  -- IMPROVEMENT #1.  `Focus` as it stands in `TheoryGrammar.Fibered`
-  -- has no field relating `SplitAt x` to `Fib .Split o (whole sa)`, so
-  -- a `Grading` -- which grades only `Split` -- says NOTHING about
-  -- `deg (whole sa)`.  The raising condition is therefore not derivable
-  -- as the record is written.  `FocusCoherent` is the missing axiom,
-  -- and it is the obvious one: a focused splitting forgets to a genuine
-  -- splitting of its own whole, whose slot i is what you focused on.
-  --
-  -- Proposed as an addition to `Focus` itself (two fields, no proof
-  -- obligation on existing instances beyond what they already have,
-  -- since every instance builds `SplitAt` out of `Split` anyway).
-  -- ------------------------------------------------------------------
   record FocusCoherent (o : σ .ops) (i : σ .arities o) (Φ : Focus Fib o i)
     : Type (ℓ-max ℓ' (ℓ-max ℓX ℓP)) where
     field
@@ -236,14 +214,7 @@ module Motions {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
             (Φc .at-i sa)
             (G .deg≤ o (Φ .whole sa) (Φc .forget sa) i)
 
--- ==================================================================
--- §2.  UNIQUE FACTORISATION FAILS.
---
--- The Reedy axiom, specialised to the identity of a whole `m`: lower
--- out of `m` and raise straight back in.  The intermediate object is
--- `parts o m sp a`, determined by a splitting AND a slot, and the axiom
--- demands it be unique.
--- ==================================================================
+-- §2. UNIQUE FACTORISATION FAILS.
 
 module Interpolant {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                    (Fib : Fibered σ ℓX ℓP) where
@@ -265,12 +236,8 @@ module Interpolant {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                → Type (ℓ-max ℓS (ℓ-max ℓ' (ℓ-max ℓX ℓP)))
   UniqueInterp o m = (u v : Interp o m) → through o m u ≡ through o m v
 
--- ------------------------------------------------------------------
 -- The counterexample, self-contained: ℕ under addition, one sort, one
--- binary operation.  `Split o n` = the ways of writing n as u + v, of
--- which there are n+1 -- the arithmetic shadow of `Fibered`'s own
--- remark that a string `w` has `length w + 1` cuts.
--- ------------------------------------------------------------------
+-- binary operation.
 module ℕCounterexample where
 
   σℕ : SortedSig Unit ℓ-zero ℓ-zero
@@ -294,10 +261,8 @@ module ℕCounterexample where
   proj₂nd : Tot → ℕ
   proj₂nd (_ , n) = n
 
-  -- THEOREM.  The whole-to-parts / parts-to-whole span does NOT admit
-  -- unique lowering-then-raising factorisation.  Hence it is not a
-  -- Reedy structure, and no amount of extra coherence on `Focus` can
-  -- make it one: the failure is in `Fibered` itself.
+  -- THEOREM. The whole-to-parts / parts-to-whole span does NOT admit
+  -- unique lowering-then-raising factorisation.
   noUniqueInterp : ¬ (UniqueInterp tt 1)
   noUniqueInterp u = znots (cong proj₂nd (u (cut₀ , true) (cut₁ , true)))
 
@@ -308,19 +273,11 @@ module ℕCounterexample where
   _ : through tt 1 (cut₁ , true) ≡ (tt , 1)
   _ = refl
 
--- ==================================================================
--- §3.  THE KORONKEVICH–BOWMAN LEVEL ALGEBRA.
---
--- "Type Universes as Kripke Worlds" §5 abstracts their system to: a set
--- of levels L; a relation `l_r R l_s` between a reference's level and
--- what it stores, with `l_s + 1 R l_s`; and a function
--- `l_f = F(l_i, l_o, l_c, …)` giving a composite's level from its
--- parts', theirs being `≥`.
---
--- Read over a signature, `F ≥ each part` is precisely "no part
--- outgrows its whole", and `l_s + 1 R l_s` is precisely "a reference
--- step is a strict increase".  Those are `deg≤` and `deg<`.
--- ==================================================================
+-- §3. THE KORONKEVICH–BOWMAN LEVEL ALGEBRA. "Type Universes as Kripke
+-- Worlds" §5 abstracts their system to: a set of levels L; a relation `l_r
+-- R l_s` between a reference's level and what it stores, with `l_s + 1 R
+-- l_s`; and a function `l_f = F(l_i, l_o, l_c, …)` giving a composite's
+-- level from its...
 
 record KBLevelAlgebra {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                       (Fib : Fibered σ ℓX ℓP) ℓL ℓR
@@ -365,13 +322,7 @@ gradingIsKB Fib G .Ref    = G .Proper
 gradingIsKB Fib G .F-dom  = G .deg≤
 gradingIsKB Fib G .R-step = G .deg<
 
--- ==================================================================
--- §4.  POLARITY, AND WHY IT IS NOT A REEDY SPLIT.
---
--- Polarity is a Z/2 grading on OCCURRENCES: an occurrence to the left
--- of an arrow flips sign, and polarities of nested occurrences
--- multiply.  Write + as `true`.
--- ==================================================================
+-- §4. POLARITY, AND WHY IT IS NOT A REEDY SPLIT.
 
 Pol : Type
 Pol = Bool
@@ -389,9 +340,7 @@ _∘p_ : Pol → Pol → Pol
 idPol : Pol
 idPol = +
 
--- ------------------------------------------------------------------
 -- THE POSITIVE CLASS IS A WIDE SUBCATEGORY.
--- ------------------------------------------------------------------
 
 posHasId : idPol ≡ +
 posHasId = refl
@@ -399,16 +348,7 @@ posHasId = refl
 posClosed : (p q : Pol) → p ≡ + → q ≡ + → p ∘p q ≡ +
 posClosed p q pp qq i = pp i ∘p qq i
 
--- ------------------------------------------------------------------
--- THE NEGATIVE CLASS IS NOT.  Two independent failures, both by `refl`.
---
--- This is the refutation of "C₋ = negative occurrences": a Reedy C₋ must
--- be a WIDE SUBCATEGORY, and the negative occurrences are neither wide
--- (no identity) nor a subcategory (not closed under composition).  With
--- no candidate for C₋ there is nothing for the unique-factorisation
--- axiom to be true or false of, so the conjecture does not merely fail
--- -- it does not typecheck as a conjecture.
--- ------------------------------------------------------------------
+-- THE NEGATIVE CLASS IS NOT. Two independent failures, both by `refl`.
 
 negNotClosed : - ∘p - ≡ +
 negNotClosed = refl
@@ -423,19 +363,8 @@ negClosureCollapses : (N : Pol → Type ℓ)
                     → N - → N +
 negClosureCollapses N cl n = cl - - n n
 
--- ------------------------------------------------------------------
--- WHAT TO USE INSTEAD.  A polarity grading is an EXTRA Z/2 label on
--- slots, orthogonal to the ℕ degree, not a second subcategory.  The
--- termination condition then reads: an occurrence at NEGATIVE polarity
--- must strictly drop degree (that is stratification, still needed
--- because negative recursion has no initial algebra); an occurrence at
--- POSITIVE polarity need not (that is positivity, and it is discharged
--- by the initial-algebra argument instead).
---
--- Stated over an existing `Grading`, this is a two-line refinement --
--- and note it degenerates to the present `Grading` when every slot is
--- negative, which is why nothing in the development changes.
--- ------------------------------------------------------------------
+-- WHAT TO USE INSTEAD. A polarity grading is an EXTRA Z/2 label on slots,
+-- orthogonal to the ℕ degree, not a second subcategory.
 
 record PolGrading {S : Type ℓS} {σ : SortedSig S ℓ ℓ'}
                   (Fib : Fibered σ ℓX ℓP) (G : Grading Fib)
@@ -455,9 +384,7 @@ open PolGrading public
 
 -- The present development is the all-negative case: `Guarded` in
 -- `TheoryGrammar.Grading` demands a strict drop at every recursive
--- occurrence, which is stratification everywhere.  It is SOUND because
--- the description language (`⌜_⌝ | Var | ⊕e | &e | ⊗e`) has no
--- exponential, hence no negative occurrence to be conservative about.
+-- occurrence, which is stratification everywhere.
 allNegative : {S : Type ℓS} {σ : SortedSig S ℓ ℓ'} (Fib : Fibered σ ℓX ℓP)
               (G : Grading Fib)
             → ((o : σ .ops) (m : Fib .carrier (σ .resultSort o))
